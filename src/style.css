@@ -1,0 +1,21 @@
+:root { color-scheme: dark; font-family: 'Oswald', system-ui, sans-serif; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #9fb4cc; }
+#app, #app canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#loader { position: fixed; inset: 0; display: grid; place-items: center; z-index: 20;
+  background: radial-gradient(ellipse at 50% 30%, #7d9bbd 0%, #3a5470 55%, #1d2b38 100%); transition: opacity .8s ease; }
+#loader.hidden { opacity: 0; pointer-events: none; }
+.loader-inner { text-align: center; color: #f3ecd8; width: min(420px, 80vw); }
+.loader-title { font-family: 'Rye', serif; font-size: clamp(36px, 7vw, 64px); letter-spacing: 2px; text-shadow: 0 3px 0 #2a1d12; }
+.loader-sub { font-weight: 600; letter-spacing: 4px; font-size: 13px; opacity: .85; margin: 6px 0 22px; text-transform: uppercase; }
+.loader-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.18); overflow: hidden; }
+#loader-fill { height: 100%; width: 0; background: linear-gradient(90deg, #f2c94c, #e2552b); transition: width .25s ease; }
+#loader-status { margin-top: 12px; font-size: 13px; letter-spacing: 1px; opacity: .8; }
+#hud { position: fixed; left: 18px; bottom: 16px; z-index: 5; color: #fff; pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,.55); }
+#hud .title { font-family: 'Rye', serif; font-size: 22px; }
+#hud-shot { font-weight: 600; font-size: 14px; letter-spacing: 1px; opacity: .95; }
+#hud .keys { font-size: 12px; opacity: .8; margin-top: 4px; letter-spacing: .5px; }
+#hud-stats { position: fixed; right: 14px; bottom: 12px; z-index: 5; color: #fff; font-size: 12px; opacity: .75; text-shadow: 0 1px 2px #000; pointer-events: none; }
+#toast { position: fixed; left: 50%; top: 18px; transform: translate(-50%, -20px); background: rgba(20,24,30,.85); color: #fff;
+  padding: 8px 14px; border-radius: 6px; font-size: 13px; opacity: 0; transition: all .3s ease; z-index: 30; pointer-events: none; }
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+body.no-ui #hud, body.no-ui #hud-stats, body.no-ui .lil-gui { display: none !important; }
