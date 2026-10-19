@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#08131d" />
+    <meta name="description" content="Take the controls of a Viper and climb from the desert runway to 16,000 feet." />
+    <title>VIPER 11 — Flight Simulator</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="flight" id="flight" data-state="menu">
+      <canvas id="world" aria-label="View from the Viper 11 fighter jet" role="img"></canvas>
+      <div class="vignette" aria-hidden="true"></div>
+      <div class="grain" aria-hidden="true"></div>
+
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Viper 11 home">
+          <span class="brand-mark">V<span>11</span></span>
+          <span class="brand-copy"><strong>VIPER 11</strong><small>FLIGHT TEST // 01</small></span>
+        </a>
+        <div class="top-center"><i class="status-light"></i><span id="flightStatus">SYSTEMS STANDBY</span></div>
+        <button class="pause-button" id="pauseButton" type="button" aria-label="Pause flight" hidden>
+          <span></span><span></span><b>PAUSE</b>
+        </button>
+      </header>
+
+      <section class="mission-brief" aria-label="Mission objective">
+        <div class="brief-label"><span>MISSION 01</span><span>DESERT ASCENT</span></div>
+        <div class="brief-title">CLIMB TO <strong>16,000 FT</strong></div>
+        <div class="progress-track"><span id="missionProgress"></span></div>
+        <div class="brief-foot"><span>ALTITUDE TARGET</span><span id="missionPercent">0%</span></div>
+      </section>
+
+      <section class="readout readout-speed" aria-label="Airspeed">
+        <span class="readout-label">AIRSPEED</span>
+        <div class="readout-number"><strong id="speedReadout">000</strong><small>KT</small></div>
+        <div class="readout-meter"><span id="speedMeter"></span></div>
+        <span class="readout-caption" id="speedCaption">GROUND ROLL</span>
+      </section>
+
+      <section class="readout readout-altitude" aria-label="Altitude">
+        <span class="readout-label">ALTITUDE</span>
+        <div class="readout-number"><strong id="altitudeReadout">00000</strong><small>FT</small></div>
+        <div class="readout-meter"><span id="altitudeMeter"></span></div>
+        <span class="readout-caption" id="verticalReadout">+000 FT/MIN</span>
+      </section>
+
+      <div class="center-hud" aria-hidden="true">
+        <div class="pitch-ladder" id="pitchLadder">
+          <span class="ladder-line line-up line-up-1"><b>10</b></span>
+          <span class="ladder-line line-up line-up-2"><b>20</b></span>
+          <span class="ladder-line line-down line-down-1"><b>10</b></span>
+          <span class="ladder-line line-down line-down-2"><b>20</b></span>
+        </div>
+        <div class="flight-director"><i></i><span></span><i></i></div>
+        <div class="heading-cue" id="headingCue">HDG <b>000</b></div>
+      </div>
+
+      <div class="throttle-readout"><span>THR</span><div><i id="throttleMeter"></i></div><b id="throttleValue">68%</b></div>
+
+      <section class="screen-panel" id="launchPanel" aria-labelledby="gameTitle">
+        <div class="panel-kicker"><span></span> FIGHTER FLIGHT // 01</div>
+        <h1 id="gameTitle">VIPER <em>11</em></h1>
+        <p class="panel-copy">The runway is yours. Punch through the cloud deck<br class="desktop-break" /> and climb to <strong>16,000 feet.</strong></p>
+        <button class="launch-button" id="startButton" type="button"><span>START FLIGHT</span><b aria-hidden="true">↗</b></button>
+        <div class="launch-meta"><span>F-16 // DESERT RANGE</span><span>NO CHECKPOINTS</span></div>
+        <div class="panel-rule"></div>
+        <div class="control-summary">
+          <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>FLIGHT CONTROL</span></div>
+          <div><kbd>Q</kbd><kbd>E</kbd><span>THROTTLE</span></div>
+          <div><kbd>SHIFT</kbd><span>AFTERBURNER</span></div>
+        </div>
+      </section>
+
+      <section class="screen-panel compact-panel" id="pausePanel" aria-labelledby="pauseTitle" hidden>
+        <div class="panel-kicker"><span></span> FLIGHT CONTROL</div>
+        <h2 id="pauseTitle">HOLD POSITION</h2>
+        <p class="panel-copy">Your flight is paused.</p>
+        <button class="launch-button" id="resumeButton" type="button"><span>RESUME FLIGHT</span><b aria-hidden="true">↗</b></button>
+        <div class="control-summary mini-summary"><div><kbd>ESC</kbd><span>RESUME</span></div><div><kbd>R</kbd><span>RESTART</span></div></div>
+      </section>
+
+      <section class="screen-panel compact-panel" id="resultPanel" aria-labelledby="resultTitle" hidden>
+        <div class="panel-kicker"><span></span><span id="resultKicker">FLIGHT REPORT</span></div>
+        <h2 id="resultTitle">MISSION COMPLETE</h2>
+        <p class="panel-copy" id="resultCopy">You made the climb.</p>
+        <div class="result-stats"><div><span>PEAK ALTITUDE</span><strong id="resultAltitude">16,000 FT</strong></div><div><span>TOP SPEED</span><strong id="resultSpeed">000 KT</strong></div></div>
+        <button class="launch-button" id="replayButton" type="button"><span>FLY AGAIN</span><b aria-hidden="true">↗</b></button>
+      </section>
+
+      <div class="bottom-label"><span>RANGE 04</span><i></i><span>VISUAL FLIGHT // DAY</span></div>
+      <div class="touch-controls" id="touchControls" aria-label="Touch flight controls">
+        <div class="touch-pad">
+          <button type="button" data-control="left" aria-label="Bank left">‹</button>
+          <button type="button" data-control="down" aria-label="Pitch down">⌄</button>
+          <button type="button" data-control="up" aria-label="Pitch up">⌃</button>
+          <button type="button" data-control="right" aria-label="Bank right">›</button>
+        </div>
+        <div class="touch-throttle"><button type="button" data-control="throttle-down" aria-label="Reduce throttle">−</button><span>THR</span><button type="button" data-control="throttle-up" aria-label="Increase throttle">+</button><button type="button" data-control="afterburner" class="afterburner-button">AB</button></div>
+      </div>
+    </main>
+    <script type="module" src="/game.js"></script>
+  </body>
+</html>
