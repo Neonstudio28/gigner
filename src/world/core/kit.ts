@@ -9,7 +9,28 @@ export interface PartOpts {
   cast?: boolean;
 }
 
+/** How a material key renders: the merged bucket it lands in plus per-vertex surface parameters. */
+export interface MatSpec {
+  bucket: string;
+  layer: number;
+  tile: number;
+  rough: number;
+  metal: number;
+}
+export interface MatResolver {
+  spec(key: string): MatSpec;
+}
+/** A sign's rectangle inside a sign-atlas page. */
+export interface SignRef {
+  page: number;
+  u0: number;
+  v0: number;
+  u1: number;
+  v1: number;
+}
+
 const KEEP = new Set(['position', 'normal', 'uv', 'color']);
+const DEFAULT_SPEC: MatSpec = { bucket: 'world', layer: -1, tile: 1, rough: 0.9, metal: 0 };
 const _col = new THREE.Color();
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
@@ -18,13 +39,21 @@ const _v = new THREE.Vector3();
 const _s = new THREE.Vector3(1, 1, 1);
 const UP = new THREE.Vector3(0, 1, 0);
 
-/** Normalises any geometry to non-indexed position/normal/uv/color so everything can be merged. */
-export function prepare(src: THREE.BufferGeometry, color: Col): THREE.BufferGeometry {
+/**
+ * Normalises any geometry to non-indexed position/normal/uv/color plus the `layer` (texture-array
+ * slice) and `pbr` (roughness, metalness) attributes read by the shared world material.
+ */
+export function prepare(src: THREE.BufferGeometry, color: Col, spec: MatSpec = DEFAULT_SPEC): THREE.BufferGeometry {
   const g = src.index ? src.toNonIndexed() : src.clone();
   for (const name of Object.keys(g.attributes)) if (!KEEP.has(name)) g.deleteAttribute(name);
   if (!g.attributes.normal) g.computeVertexNormals();
   const n = g.attributes.position.count;
   if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(n * 2), 2));
+  else if (spec.layer >= 0 && spec.tile !== 1) {
+    const uv = g.attributes.uv as THREE.BufferAttribute;
+    const k = 1 / spec.tile;
+    for (let i = 0; i < n; i++) uv.setXY(i, uv.getX(i) * k, uv.getY(i) * k);
+  }
   if (!g.attributes.color) {
     _col.set(color);
     const arr = new Float32Array(n * 3);
@@ -35,6 +64,13 @@ export function prepare(src: THREE.BufferGeometry, color: Col): THREE.BufferGeom
     }
     g.setAttribute('color', new THREE.Float32BufferAttribute(arr, 3));
   }
+  g.setAttribute('layer', new THREE.Float32BufferAttribute(new Float32Array(n).fill(spec.layer), 1));
+  const pbr = new Float32Array(n * 2);
+  for (let i = 0; i < n; i++) {
+    pbr[i * 2] = spec.rough;
+    pbr[i * 2 + 1] = spec.metal;
+  }
+  g.setAttribute('pbr', new THREE.Float32BufferAttribute(pbr, 2));
   g.morphAttributes = {};
   g.clearGroups();
   return g;
@@ -69,10 +105,13 @@ interface Bucket {
   geos: THREE.BufferGeometry[];
 }
 
-/** Collects static geometry and merges it per material and spatial chunk (keeps frustum culling useful). */
+/** Collects static geometry and merges it per bucket and spatial chunk (keeps frustum culling useful). */
 export class Batcher {
   private buckets = new Map<string, Bucket>();
-  constructor(public chunkSize = 90, public chunked = true) {}
+  constructor(
+    public chunkSize = 150,
+    public chunked = true,
+  ) {}
 
   add(geo: THREE.BufferGeometry, mat: string, cast = true) {
     geo.computeBoundingSphere();
@@ -117,9 +156,12 @@ export class Batcher {
  */
 export class Kit {
   private stack: THREE.Matrix4[] = [new THREE.Matrix4()];
+  /** Receives world-space collision rectangles registered with `solid()`. */
+  onSolid?: (x: number, z: number, w: number, d: number, ry: number) => void;
+
   constructor(
     public batch: Batcher,
-    public signMat: (tex: THREE.Texture) => string,
+    public lib: MatResolver,
   ) {}
 
   get matrix(): THREE.Matrix4 {
@@ -143,12 +185,26 @@ export class Kit {
   toWorld(x: number, y: number, z: number): THREE.Vector3 {
     return new THREE.Vector3(x, y, z).applyMatrix4(this.matrix);
   }
+  /** World yaw of a local heading `ry` (local +X rotated by ry). */
+  worldYaw(ry = 0): number {
+    const e = this.matrix.elements;
+    const lx = Math.cos(ry);
+    const lz = -Math.sin(ry);
+    return Math.atan2(-(e[2] * lx + e[10] * lz), e[0] * lx + e[8] * lz);
+  }
+  /** Registers a solid footprint (local coordinates) for vehicle collisions. */
+  solid(x: number, z: number, w: number, d: number, ry = 0) {
+    if (!this.onSolid) return;
+    const p = this.toWorld(x, 0, z);
+    this.onSolid(p.x, p.z, w, d, this.worldYaw(ry));
+  }
 
   add(geo: THREE.BufferGeometry, color: Col, mat = 'paint', local?: THREE.Matrix4, cast = true) {
-    const g = prepare(geo, color);
+    const spec = this.lib.spec(mat);
+    const g = prepare(geo, color, spec);
     geo.dispose();
     g.applyMatrix4(local ? _m.multiplyMatrices(this.matrix, local) : this.matrix);
-    this.batch.add(g, mat, cast);
+    this.batch.add(g, spec.bucket, cast);
   }
 
   local(x: number, y: number, z: number, o?: PartOpts, sx = 1, sy = 1, sz = 1): THREE.Matrix4 {
@@ -220,7 +276,7 @@ export class Kit {
     for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w, uv.getY(i) * d);
     this.add(g, color, mat, this.local(x, y, z, o), o?.cast ?? false);
   }
-  /** Vertical plane facing +Z centred at (x,y,z); UVs 0..1 (signage). */
+  /** Vertical plane facing +Z centred at (x,y,z); UVs 0..1. */
   vplane(x: number, y: number, z: number, w: number, h: number, color: Col, mat = 'paint', o?: PartOpts) {
     this.add(new THREE.PlaneGeometry(w, h), color, mat, this.local(x, y, z, o), o?.cast ?? false);
   }
@@ -235,23 +291,30 @@ export class Kit {
     this.add(new THREE.TubeGeometry(curve, segs, r, 3, false), color, mat, undefined, cast);
   }
 
-  /** A sign board: backing box plus a textured face on its +Z side. */
+  /** Textured plane facing +Z, mapped to a sign-atlas rectangle. */
+  signPlane(x: number, y: number, z: number, w: number, h: number, ref: SignRef, o?: PartOpts) {
+    const g = new THREE.PlaneGeometry(w, h);
+    const uv = g.attributes.uv as THREE.BufferAttribute;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, ref.u0 + uv.getX(i) * (ref.u1 - ref.u0), ref.v0 + uv.getY(i) * (ref.v1 - ref.v0));
+    this.add(g, 0xffffff, `signs${ref.page}`, this.local(x, y, z, o), o?.cast ?? false);
+  }
+
+  /** A sign board: optional backing box plus a textured face on its +Z side. */
   sign(
     x: number,
     y: number,
     z: number,
     w: number,
     h: number,
-    tex: THREE.Texture,
+    ref: SignRef,
     o: { ry?: number; back?: Col; thick?: number; frame?: number; twoSided?: boolean } = {},
   ) {
     const thick = o.thick ?? 0.12;
     const frame = o.frame ?? 0;
     this.push(x, y, z, o.ry ?? 0);
     if (o.back !== undefined) this.boxC(0, 0, 0, w + frame * 2, h + frame * 2, thick, o.back);
-    const key = this.signMat(tex);
-    this.vplane(0, 0, thick / 2 + 0.01, w, h, 0xffffff, key);
-    if (o.twoSided) this.vplane(0, 0, -thick / 2 - 0.01, w, h, 0xffffff, key, { ry: Math.PI });
+    this.signPlane(0, 0, thick / 2 + 0.01, w, h, ref);
+    if (o.twoSided) this.signPlane(0, 0, -thick / 2 - 0.01, w, h, ref, { ry: Math.PI });
     this.pop();
   }
 
@@ -265,11 +328,50 @@ export class Kit {
     const g = new THREE.ExtrudeGeometry(s, { depth: w, bevelEnabled: false });
     g.translate(0, 0, -w / 2);
     g.rotateY(Math.PI / 2);
-    // Re-map UVs to metres so siding/brick lines stay horizontal.
     const pos = g.attributes.position as THREE.BufferAttribute;
     const uv = g.attributes.uv as THREE.BufferAttribute;
     for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getZ(i) + pos.getX(i), pos.getY(i) + y);
     this.add(g, color, mat, this.local(x, y, z));
+  }
+
+  /** Pediment: triangle facing +Z (width along X), extruded `depth` along Z. */
+  pediment(x: number, y: number, z: number, w: number, rise: number, depth: number, color: Col, mat = 'paint') {
+    const s = new THREE.Shape();
+    s.moveTo(-w / 2, 0);
+    s.lineTo(w / 2, 0);
+    s.lineTo(0, rise);
+    s.closePath();
+    this.extrude(s, depth, color, mat, x, y, z);
+  }
+
+  /** Hipped roof over a w×d rectangle (ridge along X when w > d). */
+  hipRoof(x: number, y: number, z: number, w: number, d: number, rise: number, color: Col, mat = 'roofMetal', overhang = 0.5) {
+    const W = w / 2 + overhang;
+    const D = d / 2 + overhang;
+    const r = Math.max(0, W - D);
+    const P = (px: number, py: number, pz: number) => [px, py, pz];
+    const e0 = P(-W, 0, D);
+    const e1 = P(W, 0, D);
+    const e2 = P(W, 0, -D);
+    const e3 = P(-W, 0, -D);
+    const r0 = P(-r, rise, 0);
+    const r1 = P(r, rise, 0);
+    const tris = [e0, e1, r1, e0, r1, r0, e2, e3, r0, e2, r0, r1, e1, e2, r1, e3, e0, r0];
+    const pos = new Float32Array(tris.flat());
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    // UVs in metres: u runs along each face's eave, v up the slope (seams run downhill)
+    const uv = new Float32Array((pos.length / 3) * 2);
+    for (let i = 0; i < pos.length / 3; i++) {
+      const sideFace = i >= 12;
+      uv[i * 2] = sideFace ? pos[i * 3 + 2] : pos[i * 3];
+      uv[i * 2 + 1] = pos[i * 3 + 1] * 1.6;
+    }
+    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    g.computeVertexNormals();
+    this.add(g, color, mat, this.local(x, y, z));
+    // soffit so the eaves are not see-through from below
+    this.boxC(x, y - 0.05, z, W * 2, 0.1, D * 2, color, mat);
   }
 
   /**
@@ -334,7 +436,6 @@ export class Kit {
         for (const sx of [-1, 1]) {
           this.add(boxGeo(0.1, thick + 0.16, L), o.trim, 'paint', this.local(sx * (w / 2 + goh + 0.04), cy - nY * 0.04, cz - nZ * 0.04, { rx: theta }));
         }
-        // fascia along the eave
         if (i === 0 || i === pts.length - 2) {
           const ez = i === 0 ? z0 : z1;
           const ey = i === 0 ? y0 : y1;
@@ -357,14 +458,21 @@ export interface Rect {
   hd: number;
   c: number;
   s: number;
+  ry: number;
 }
 
-/** Spatial hash of rotated rectangles used to keep trees/props off roads and buildings. */
+/** Spatial hash of rotated rectangles (keeps trees off roads/buildings; vehicle collision). */
 export class Occupancy {
   private cells = new Map<string, Rect[]>();
+  /** Every rectangle added (used to draw the minimap). */
+  readonly list: Rect[] = [];
+  /** When set, solid additions are mirrored here without padding (vehicle collision). */
+  solids: Occupancy | null = null;
   constructor(private size = 40) {}
-  add(cx: number, cz: number, w: number, d: number, ry = 0, pad = 0) {
-    const r: Rect = { cx, cz, hw: w / 2 + pad, hd: d / 2 + pad, c: Math.cos(ry), s: Math.sin(ry) };
+
+  add(cx: number, cz: number, w: number, d: number, ry = 0, pad = 0, solid = true) {
+    const r: Rect = { cx, cz, hw: w / 2 + pad, hd: d / 2 + pad, c: Math.cos(ry), s: Math.sin(ry), ry };
+    this.list.push(r);
     const ext = Math.hypot(r.hw, r.hd);
     const x0 = Math.floor((cx - ext) / this.size);
     const x1 = Math.floor((cx + ext) / this.size);
@@ -377,18 +485,41 @@ export class Occupancy {
         if (!arr) this.cells.set(k, (arr = []));
         arr.push(r);
       }
+    if (solid && this.solids) this.solids.add(cx, cz, w, d, ry, 0, false);
   }
+
   blocked(x: number, z: number, pad = 0): boolean {
     const arr = this.cells.get(`${Math.floor(x / this.size)},${Math.floor(z / this.size)}`);
     if (!arr) return false;
     for (const r of arr) {
       const dx = x - r.cx;
       const dz = z - r.cz;
-      // inverse of ry rotation (local = R(-ry) * d)
       const lx = dx * r.c - dz * r.s;
       const lz = dx * r.s + dz * r.c;
       if (Math.abs(lx) <= r.hw + pad && Math.abs(lz) <= r.hd + pad) return true;
     }
     return false;
+  }
+}
+
+/** Axis-aligned raised surfaces (sidewalks, plazas) so vehicles ride up kerbs instead of sinking. */
+export class SurfaceMap {
+  private cells = new Map<string, { x0: number; x1: number; z0: number; z1: number; h: number }[]>();
+  constructor(private size = 32) {}
+  add(x0: number, x1: number, z0: number, z1: number, h: number) {
+    const r = { x0, x1, z0, z1, h };
+    for (let i = Math.floor(x0 / this.size); i <= Math.floor(x1 / this.size); i++)
+      for (let j = Math.floor(z0 / this.size); j <= Math.floor(z1 / this.size); j++) {
+        const k = `${i},${j}`;
+        let arr = this.cells.get(k);
+        if (!arr) this.cells.set(k, (arr = []));
+        arr.push(r);
+      }
+  }
+  at(x: number, z: number): number {
+    const arr = this.cells.get(`${Math.floor(x / this.size)},${Math.floor(z / this.size)}`);
+    let h = -Infinity;
+    if (arr) for (const r of arr) if (x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1 && r.h > h) h = r.h;
+    return h;
   }
 }

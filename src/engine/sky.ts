@@ -24,6 +24,8 @@ export class SkyRig {
   hazeDensity = 0.00014;
   shadowExtent = 0;
   private fog: THREE.FogExp2;
+  /** Sky dome sampling the equirect directly (avoids the equirect→cube background conversion). */
+  readonly dome: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
   private snapRight = new THREE.Vector3();
   private snapUp = new THREE.Vector3();
 
@@ -42,7 +44,20 @@ export class SkyRig {
     this.hemi = new THREE.HemisphereLight(0xd6e4f5, 0x6a6f4a, 0.28);
     this.fog = new THREE.FogExp2(0xa9afc0, this.hazeDensity);
     scene.fog = this.fog;
-    scene.add(this.sun, this.sun.target, this.hemi);
+    const geo = new THREE.SphereGeometry(1, 96, 48);
+    // match three's equirect lookup: u = atan2(dir.z, dir.x) / 2π + 0.5
+    const uv = geo.attributes.uv as THREE.BufferAttribute;
+    for (let i = 0; i < uv.count; i++) uv.setX(i, 1 - uv.getX(i));
+    this.dome = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false }));
+    this.dome.name = 'sky-dome';
+    this.dome.renderOrder = -1000;
+    this.dome.frustumCulled = false;
+    this.dome.scale.setScalar(18000);
+    this.dome.onBeforeRender = (_r, _s, cam) => {
+      this.dome.position.copy(cam.position);
+      this.dome.updateMatrixWorld();
+    };
+    scene.add(this.sun, this.sun.target, this.hemi, this.dome);
   }
 
   async load(base: string) {
@@ -50,10 +65,11 @@ export class SkyRig {
     hdr.mapping = THREE.EquirectangularReflectionMapping;
     const bg = await new THREE.TextureLoader().loadAsync(`${base}assets/sky/sky_4k.jpg`);
     bg.colorSpace = THREE.SRGBColorSpace;
-    bg.mapping = THREE.EquirectangularReflectionMapping;
     bg.anisotropy = 4;
     this.scene.environment = hdr;
-    this.scene.background = bg;
+    this.scene.background = new THREE.Color(0xa9afc0);
+    this.dome.material.map = bg;
+    this.dome.material.needsUpdate = true;
     this.apply();
   }
 
@@ -65,7 +81,7 @@ export class SkyRig {
     // Rotate the HDRI so its sun sits at the same compass bearing as the light.
     const hdriPhi = (HDRI_SUN_U - 0.5) * Math.PI * 2;
     const rot = hdriPhi - Math.atan2(this.dir.z, this.dir.x);
-    this.scene.backgroundRotation.set(0, rot, 0);
+    this.dome.rotation.set(0, rot, 0);
     this.scene.environmentRotation.set(0, rot, 0);
     const e = this.exposure;
     // warmer, dimmer sun as it approaches the horizon
@@ -74,7 +90,7 @@ export class SkyRig {
     this.sun.intensity = this.sunIntensity * e * (0.35 + 0.65 * low);
     this.hemi.intensity = 0.28 * e;
     this.scene.environmentIntensity = this.envIntensity * e;
-    this.scene.backgroundIntensity = this.skyIntensity * e;
+    this.dome.material.color.setScalar(this.skyIntensity * e);
     this.fog.density = this.hazeDensity;
     this.snapRight.crossVectors(new THREE.Vector3(0, 1, 0), this.dir).normalize();
     this.snapUp.crossVectors(this.dir, this.snapRight).normalize();

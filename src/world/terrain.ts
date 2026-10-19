@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createNoise2D } from 'simplex-noise';
-import { Rng, smoothstep, clamp } from './core/rng';
+import { Rng, smoothstep, clamp, lerp } from './core/rng';
 
 const rng = new Rng(4242);
 const nA = createNoise2D(() => rng.next());
@@ -37,10 +37,18 @@ function ridged(x: number, z: number, oct = 5): number {
 
 export const TOWN = { rx: 400, rz: 340 };
 export const LAKE = { x: 700, z: 420, rx: 300, rz: 165, level: -0.7 };
+/** Drivable/explorable radius. */
+export const MAP_RADIUS = 1850;
+/** SR-9 runs north–south along x = 0 and ends at ±SR9_END. */
+export const SR9_END = 1800;
 const VOLCANO = { x: 2900, z: -7300, h: 1550, r: 3700 };
 const GRID_HALF = 2000;
+const GRID_SEG = 250;
 const RING_IN = 1880;
 const RING_OUT = 15000;
+/** Half-width of SR-9's perfectly flat cross-section (matches the 16 m terrain grid). */
+const CORRIDOR_FLAT = 18;
+const CORRIDOR_BLEND = 62;
 
 export function townEllipse(x: number, z: number) {
   return Math.hypot(x / TOWN.rx, z / TOWN.rz);
@@ -50,7 +58,11 @@ function lakeEllipse(x: number, z: number) {
   return Math.hypot((x - LAKE.x) / LAKE.rx, (z - LAKE.z) / LAKE.rz) + nC(x * 0.006, z * 0.006) * 0.08;
 }
 
-/** Rolling foothills; the town ellipse, highway valley and lake are flattened. */
+export function isWater(x: number, z: number) {
+  return lakeEllipse(x, z) < 0.98;
+}
+
+/** Rolling foothills; the town ellipse and the US-20 valley are flattened. */
 function baseHeight(x: number, z: number): number {
   const r = Math.hypot(x, z);
   const hills = 26 * (fbm(x * 0.0032, z * 0.0032) + 0.5) + 9 * fbm(x * 0.011 + 7, z * 0.011 - 3, 3);
@@ -69,7 +81,7 @@ function mountainExtra(x: number, z: number): number {
   return Math.max(0, peaks * env * pass) + v * (0.85 + 0.15 * nC(x * 0.002, z * 0.002));
 }
 
-export function heightAt(x: number, z: number): number {
+function rawHeight(x: number, z: number): number {
   const te = townEllipse(x, z);
   const tm = smoothstep(1.0, 1.55, te);
   let h = tm > 0 ? baseHeight(x, z) * tm : 0;
@@ -82,14 +94,62 @@ export function heightAt(x: number, z: number): number {
   return h;
 }
 
+export interface FlatPad {
+  x: number;
+  z: number;
+  hw: number;
+  hd: number;
+  fall: number;
+  h: number;
+}
+const pads: FlatPad[] = [];
+
+function withPads(x: number, z: number): number {
+  let h = rawHeight(x, z);
+  for (const p of pads) {
+    const dx = Math.max(0, Math.abs(x - p.x) - p.hw);
+    const dz = Math.max(0, Math.abs(z - p.z) - p.hd);
+    const d = Math.hypot(dx, dz);
+    if (d < p.fall) h = lerp(p.h, h, smoothstep(0, p.fall, d));
+  }
+  return h;
+}
+
+/**
+ * Flattens an axis-aligned area (farmyards) to a single height and returns that height.
+ * Must be called before the terrain mesh is built. `h` defaults to the SR-9 road height so
+ * farm driveways meet the highway level.
+ */
+export function addFlatPad(x: number, z: number, w: number, d: number, fall = 32, h?: number): number {
+  const height = h ?? heightAt(0, z);
+  pads.push({ x, z, hw: w / 2, hd: d / 2, fall, h: height });
+  return height;
+}
+
+/** Ground height of the near terrain (metres). SR-9's corridor is flat across its width. */
+export function heightAt(x: number, z: number): number {
+  const ax = Math.abs(x);
+  if (ax < CORRIDOR_BLEND) {
+    const road = withPads(0, z);
+    if (ax <= CORRIDOR_FLAT) return road;
+    return lerp(road, withPads(x, z), smoothstep(CORRIDOR_FLAT, CORRIDOR_BLEND, ax));
+  }
+  return withPads(x, z);
+}
+
+/** Height anywhere, including the distant mountain ring (for pylons beyond the near grid). */
+export function farHeight(x: number, z: number): number {
+  return Math.hypot(x, z) < RING_IN ? heightAt(x, z) : baseHeight(x, z) + mountainExtra(x, z);
+}
+
 /** 0..1: how forested a spot is (used by the vegetation scatter and ground tint). */
 export function forestDensity(x: number, z: number): number {
   const te = townEllipse(x, z);
   let d = smoothstep(0.98, 1.3, te);
   const clearing = smoothstep(-0.35, 0.1, nC(x * 0.004 + 11, z * 0.004 - 5));
   d *= 0.25 + 0.75 * clearing;
-  // meadows along the valley floor
   d *= smoothstep(18, 140, Math.abs(z)) * 0.7 + 0.3 * smoothstep(18, 40, Math.abs(z));
+  d *= smoothstep(14, 40, Math.abs(x)) * 0.8 + 0.2;
   const le = lakeEllipse(x, z);
   d *= smoothstep(1.08, 1.35, le);
   return d;
@@ -112,7 +172,8 @@ const COL = {
   lakebed: C(0x5b6a5a),
 };
 
-function faceColor(cx: number, cy: number, cz: number, ny: number, out: THREE.Color) {
+/** Representative ground colour at a point (also used by the minimap). */
+export function groundColor(cx: number, cy: number, cz: number, ny: number, out: THREE.Color) {
   const te = townEllipse(cx, cz);
   const n = nC(cx * 0.01, cz * 0.01);
   const le = lakeEllipse(cx, cz);
@@ -142,6 +203,7 @@ function facetMesh(verts: Float32Array, cols: number, rows: number, wrap: boolea
   const a = new THREE.Vector3();
   const b = new THREE.Vector3();
   const c = new THREE.Vector3();
+  const d = new THREE.Vector3();
   const e1 = new THREE.Vector3();
   const e2 = new THREE.Vector3();
   const tmp = new THREE.Color();
@@ -150,23 +212,22 @@ function facetMesh(verts: Float32Array, cols: number, rows: number, wrap: boolea
     const k = (j * cols + (i % cols)) * 3;
     return out.set(verts[k], verts[k + 1], verts[k + 2]);
   };
-  const tri = (A: THREE.Vector3, B: THREE.Vector3, Cc: THREE.Vector3) => {
-    B = B.clone();
-    Cc = Cc.clone();
+  const tri = (A: THREE.Vector3, B0: THREE.Vector3, C0: THREE.Vector3) => {
+    let B = B0;
+    let Cc = C0;
     e1.subVectors(B, A);
     e2.subVectors(Cc, A);
     const nrm = e1.cross(e2).normalize();
     if (nrm.y < 0) {
       // keep every face wound counter-clockwise seen from above
       nrm.negate();
-      const t = B;
-      B = Cc;
-      Cc = t;
+      B = C0;
+      Cc = B0;
     }
     const cx = (A.x + B.x + Cc.x) / 3;
     const cy = (A.y + B.y + Cc.y) / 3;
     const cz = (A.z + B.z + Cc.z) / 3;
-    faceColor(cx, cy, cz, nrm.y, tmp);
+    groundColor(cx, cy, cz, nrm.y, tmp);
     for (const v of [A, B, Cc]) {
       pos[p] = v.x;
       pos[p + 1] = v.y - (sink ? sink(v.x, v.z) : 0);
@@ -182,8 +243,7 @@ function facetMesh(verts: Float32Array, cols: number, rows: number, wrap: boolea
       V(i, j, a);
       V(i + 1, j, b);
       V(i, j + 1, c);
-      const d = V(i + 1, j + 1, new THREE.Vector3());
-      // alternate the diagonal for a less regular low-poly look
+      V(i + 1, j + 1, d);
       if ((i + j) % 2 === 0) {
         tri(a, c, b);
         tri(b, c, d);
@@ -200,25 +260,43 @@ function facetMesh(verts: Float32Array, cols: number, rows: number, wrap: boolea
   return g;
 }
 
+/** z coordinates of the near-grid rows (SR-9's ribbon samples exactly these so it sits on the mesh). */
+export function gridRowsBetween(z0: number, z1: number): number[] {
+  const step = (GRID_HALF * 2) / GRID_SEG;
+  const out: number[] = [];
+  const a = Math.min(z0, z1);
+  const b = Math.max(z0, z1);
+  for (let j = 0; j <= GRID_SEG; j++) {
+    const z = -GRID_HALF + j * step;
+    if (z > a && z < b) out.push(z);
+  }
+  out.unshift(a);
+  out.push(b);
+  return z0 < z1 ? out : out.reverse();
+}
+
 export function createTerrain(): THREE.Group {
   const group = new THREE.Group();
   group.name = 'terrain';
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1, metalness: 0 });
   mat.name = 'terrain';
 
-  // Near grid (16 m cells) — town floor, foothills and lake basin.
-  const seg = 250;
-  const cols = seg + 1;
+  const cols = GRID_SEG + 1;
   const grid = new Float32Array(cols * cols * 3);
   const jitter = new Rng(99);
   for (let j = 0; j < cols; j++)
     for (let i = 0; i < cols; i++) {
-      let x = -GRID_HALF + (i / seg) * GRID_HALF * 2;
-      let z = -GRID_HALF + (j / seg) * GRID_HALF * 2;
+      let x = -GRID_HALF + (i / GRID_SEG) * GRID_HALF * 2;
+      let z = -GRID_HALF + (j / GRID_SEG) * GRID_HALF * 2;
       const inTown = townEllipse(x, z) < 1.05;
-      if (!inTown && i > 0 && j > 0 && i < seg && j < seg) {
+      const nearPad = pads.some((p) => Math.abs(x - p.x) < p.hw + p.fall && Math.abs(z - p.z) < p.hd + p.fall);
+      // corridor and farm pads stay on the regular grid so road ribbons and yards match exactly
+      if (!inTown && !nearPad && Math.abs(x) > 70 && i > 0 && j > 0 && i < GRID_SEG && j < GRID_SEG) {
         x += jitter.range(-4, 4);
         z += jitter.range(-4, 4);
+      } else {
+        jitter.next();
+        jitter.next();
       }
       const k = (j * cols + i) * 3;
       grid[k] = x;
@@ -232,7 +310,6 @@ export function createTerrain(): THREE.Group {
   ground.matrixAutoUpdate = false;
   group.add(ground);
 
-  // Mountain ring (polar grid) — shares the same height function at its inner edge.
   const ang = 320;
   const rad = 96;
   const ring = new Float32Array(ang * rad * 3);
@@ -256,7 +333,6 @@ export function createTerrain(): THREE.Group {
   mountains.matrixAutoUpdate = false;
   group.add(mountains);
 
-  // Lake surface: reflects the HDRI sky through the environment map.
   const lakeShape = new THREE.Shape();
   for (let i = 0; i <= 64; i++) {
     const a = (i / 64) * Math.PI * 2;
@@ -267,10 +343,7 @@ export function createTerrain(): THREE.Group {
   }
   const lakeGeo = new THREE.ShapeGeometry(lakeShape);
   lakeGeo.rotateX(-Math.PI / 2);
-  const water = new THREE.Mesh(
-    lakeGeo,
-    new THREE.MeshStandardMaterial({ color: 0x3d6b80, roughness: 0.07, metalness: 0.35, envMapIntensity: 1.2 }),
-  );
+  const water = new THREE.Mesh(lakeGeo, new THREE.MeshStandardMaterial({ color: 0x3d6b80, roughness: 0.07, metalness: 0.35, envMapIntensity: 1.2 }));
   water.material.name = 'water';
   water.position.set(LAKE.x, LAKE.level, LAKE.z);
   water.receiveShadow = true;

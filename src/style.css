@@ -19,3 +19,18 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #9fb4cc; }
   padding: 8px 14px; border-radius: 6px; font-size: 13px; opacity: 0; transition: all .3s ease; z-index: 30; pointer-events: none; }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 body.no-ui #hud, body.no-ui #hud-stats, body.no-ui .lil-gui { display: none !important; }
+#drive-hud { display: none; position: fixed; inset: 0; pointer-events: none; z-index: 6; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+#drive-hud.show { display: block; }
+#drive-hud .minimap { position: absolute; left: 18px; bottom: 18px; width: 220px; height: 220px; border-radius: 50%; box-shadow: 0 4px 18px rgba(0,0,0,.35); }
+#drive-hud .speedo { position: absolute; right: 26px; bottom: 34px; display: flex; align-items: baseline; gap: 8px; }
+#drive-hud .spd { font-family: 'Bebas Neue', 'Oswald', sans-serif; font-size: 86px; line-height: .9; letter-spacing: 1px; }
+#drive-hud .unit { font-weight: 600; font-size: 16px; letter-spacing: 2px; opacity: .85; }
+#drive-hud .gear { font-weight: 700; font-size: 22px; margin-left: 8px; padding: 2px 10px; border: 2px solid rgba(255,255,255,.75); border-radius: 6px; }
+#drive-hud .loc { position: absolute; left: 252px; bottom: 40px; font-family: 'Rye', serif; font-size: 24px; }
+#drive-hud .surface { position: absolute; left: 254px; bottom: 22px; font-weight: 600; font-size: 13px; letter-spacing: 3px; color: #ffd24a; }
+#drive-hud .drive-keys { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); font-size: 12px; opacity: .8; letter-spacing: .5px; white-space: nowrap; }
+#drive-hud .bigmap { display: none; position: absolute; left: 50%; top: 50%; width: min(80vh, 80vw); height: min(80vh, 80vw); transform: translate(-50%, -50%);
+  border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,.5); border: 3px solid rgba(255,255,255,.8); }
+#drive-hud .bigmap.show { display: block; }
+body.driving #hud, body.driving #hud-shot { display: none; }
+body.no-ui #drive-hud .drive-keys { display: none; }

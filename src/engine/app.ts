@@ -3,6 +3,8 @@ import { SkyRig, type Quality } from './sky';
 import { PostFX, patchFlatShadingNaN } from './post';
 import { CameraDirector } from './controls';
 import { createUI } from './ui';
+import { DriveMode, DRIVABLE } from './drive';
+import { DriveHUD } from './hud';
 import { createTownWorld } from '../world';
 
 export interface AppHandle {
@@ -10,7 +12,14 @@ export interface AppHandle {
   setShot: (id: string) => void;
   /** Render n frames then idle again (used by `?still=1` capture mode). */
   renderFrames: (n: number) => void;
-  info: () => Record<string, number>;
+  /** Enter the drivable car at a spot (scripted captures / game hooks). */
+  drive: (type?: string, x?: number, z?: number, heading?: number) => void;
+  /** Hold keys and simulate `seconds` of driving at 60 Hz without rendering. */
+  simulate: (seconds: number, keys: string[]) => void;
+  exitDrive: () => void;
+  /** Place the orbit camera (captures / debugging). */
+  look: (pos: [number, number, number], target: [number, number, number], fov?: number) => void;
+  info: () => Record<string, number | string>;
 }
 
 declare global {
@@ -35,7 +44,9 @@ export async function startApp(container: HTMLElement) {
 
   patchFlatShadingNaN();
   const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality === 'high' ? 2 : 1));
+  const maxDpr = Math.min(window.devicePixelRatio, quality === 'high' ? 1.5 : 1);
+  let dpr = maxDpr;
+  renderer.setPixelRatio(dpr);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NoToneMapping; // tone mapping happens in the post stack
@@ -44,7 +55,7 @@ export async function startApp(container: HTMLElement) {
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.6, 21000);
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.4, 21000);
 
   setProgress(0.01, 'Loading Poly Haven sky');
   const sky = new SkyRig(scene, quality);
@@ -58,13 +69,37 @@ export async function startApp(container: HTMLElement) {
   director.goTo(startShot, true);
   director.tour = params.get('tour') === '1';
 
+  const drive = new DriveMode(world, scene, camera, renderer.domElement);
+  const hud = new DriveHUD(world);
+  const driveState = { vehicle: DRIVABLE[0].name, color: '#' + new THREE.Color(DRIVABLE[0].color).getHexString() };
+  const enterDrive = (at?: { x: number; z: number; heading: number }) => {
+    const d = DRIVABLE.find((v) => v.name === driveState.vehicle) ?? DRIVABLE[0];
+    const col = d.color === 0 ? 0 : new THREE.Color(driveState.color).getHex();
+    director.tour = false;
+    director.setMode('orbit');
+    director.orbit.enabled = false;
+    drive.enter(d, col, at);
+    hud.setVisible(true);
+    document.body.classList.add('driving');
+  };
+  const exitDrive = () => {
+    if (!drive.active) return;
+    drive.exit();
+    hud.setVisible(false);
+    document.body.classList.remove('driving');
+    // hand the camera back to the orbit controls, looking at the car's last spot
+    director.orbit.enabled = true;
+    director.orbit.target.copy(drive.pos).setY(drive.pos.y + 1);
+    director.orbit.update();
+  };
+
   const post = new PostFX(renderer, scene, camera, quality);
   if (params.get('ao') === '0') post.ao.enabled = false;
 
   setProgress(0.94, 'Compiling shaders');
   await renderer.compileAsync(scene, camera);
 
-  if (showUI) createUI({ sky, post, director, world, renderer });
+  if (showUI) createUI({ sky, post, director, world, renderer, drive, driveState, enterDrive, exitDrive });
   else document.body.classList.add('no-ui');
 
   const hudShot = document.getElementById('hud-shot');
@@ -77,13 +112,21 @@ export async function startApp(container: HTMLElement) {
 
   window.addEventListener('keydown', (e) => {
     if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
+    if (e.code === 'KeyV') return drive.active ? exitDrive() : enterDrive();
+    if (e.code === 'KeyH') return document.body.classList.toggle('no-ui');
+    if (drive.active) {
+      if (e.code === 'Escape') exitDrive();
+      else if (e.code === 'KeyC') drive.camMode = (drive.camMode + 1) % 3;
+      else if (e.code === 'KeyR') drive.reset();
+      else if (e.code === 'KeyM') hud.setBig(!hud.bigMap);
+      return;
+    }
     if (e.code.startsWith('Digit')) {
       const n = Number(e.code.slice(5));
       director.goTo(n === 0 ? 9 : n - 1);
     } else if (e.code === 'KeyF') director.setMode(director.mode === 'fly' ? 'orbit' : 'fly');
     else if (e.code === 'KeyT') director.tour = !director.tour;
     else if (e.code === 'KeyN') director.goTo(director.current + 1);
-    else if (e.code === 'KeyH') document.body.classList.toggle('no-ui');
   });
 
   const onResize = () => {
@@ -104,28 +147,54 @@ export async function startApp(container: HTMLElement) {
   let fps = 0;
   let calls = 0;
   let tris = 0;
+  let lowFor = 0;
   renderer.info.autoReset = false;
+
+  /** Adaptive resolution: trade pixels for frame rate on slower GPUs. */
+  const adapt = () => {
+    if (still) return;
+    if (fps < 45 && dpr > 0.7) lowFor++;
+    else lowFor = 0;
+    let next = dpr;
+    if (lowFor >= 2) {
+      next = Math.max(0.7, dpr - 0.15);
+      lowFor = 0;
+    } else if (fps > 58 && dpr < maxDpr) next = Math.min(maxDpr, dpr + 0.1);
+    if (Math.abs(next - dpr) > 0.01) {
+      dpr = next;
+      renderer.setPixelRatio(dpr);
+      onResize();
+    }
+  };
 
   const frame = () => {
     const now = performance.now();
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     elapsed += dt;
-    director.update(dt);
-    world.update(dt, elapsed);
-    director.focus(focus);
-    sky.updateShadows(focus, THREE.MathUtils.clamp(director.viewDistance() * 1.1, 45, 280));
+    if (drive.active) {
+      drive.update(dt);
+      drive.focus(focus);
+      hud.update(drive.pos.x, drive.pos.z, drive.heading, drive.speed, drive.onRoad);
+      sky.updateShadows(focus, 70);
+    } else {
+      director.update(dt);
+      director.focus(focus);
+      sky.updateShadows(focus, THREE.MathUtils.clamp(director.viewDistance() * 1.1, 45, 280));
+    }
+    world.update(dt, elapsed, camera.position, drive.active ? drive.pos : null);
     renderer.info.reset();
     post.render(dt);
     calls = renderer.info.render.calls;
     tris = renderer.info.render.triangles;
     frames++;
     fpsT += dt;
-    if (fpsT > 0.5) {
+    if (fpsT > 1) {
       fps = frames / fpsT;
       frames = 0;
       fpsT = 0;
-      if (stats) stats.textContent = `${fps.toFixed(0)} fps · ${calls} draws · ${(tris / 1e6).toFixed(2)}M tris`;
+      adapt();
+      if (stats) stats.textContent = `${fps.toFixed(0)} fps · ${calls} draws · ${(tris / 1e6).toFixed(2)}M tris · ${dpr.toFixed(2)}x`;
     }
     if (!handle.ready) {
       handle.ready = true;
@@ -139,14 +208,55 @@ export async function startApp(container: HTMLElement) {
 
   const handle: AppHandle = {
     ready: false,
-    setShot: (id) => director.goTo(Math.max(0, world.shots.findIndex((s) => s.id === id)), true),
+    setShot: (id) => {
+      exitDrive();
+      director.goTo(Math.max(0, world.shots.findIndex((s) => s.id === id)), true);
+    },
     renderFrames: (n) => {
       document.body.dataset.ready = '0';
       framesLeft = n;
       last = performance.now();
       renderer.setAnimationLoop(frame);
     },
-    info: () => ({ fps, calls, tris, programs: renderer.info.programs?.length ?? 0, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }),
+    drive: (type, x, z, heading) => {
+      const d = DRIVABLE.find((v) => v.id === type);
+      if (d) {
+        driveState.vehicle = d.name;
+        driveState.color = '#' + new THREE.Color(d.color).getHexString();
+      }
+      exitDrive();
+      enterDrive(x !== undefined && z !== undefined ? { x, z, heading: heading ?? 0 } : undefined);
+    },
+    simulate: (seconds, keys) => {
+      drive.setKeys(keys);
+      for (let i = 0; i < Math.round(seconds * 60); i++) {
+        drive.update(1 / 60);
+        world.update(1 / 60, (elapsed += 1 / 60), camera.position, drive.pos);
+      }
+      drive.setKeys([]);
+    },
+    exitDrive,
+    look: (p, t, fov) => {
+      exitDrive();
+      director.tour = false;
+      camera.position.set(...p);
+      director.orbit.target.set(...t);
+      if (fov) camera.fov = fov;
+      camera.updateProjectionMatrix();
+      director.orbit.update();
+    },
+    info: () => ({
+      fps,
+      calls,
+      tris,
+      dpr,
+      programs: renderer.info.programs?.length ?? 0,
+      geometries: renderer.info.memory.geometries,
+      textures: renderer.info.memory.textures,
+      speed: drive.speed,
+      x: drive.pos.x,
+      z: drive.pos.z,
+    }),
   };
   window.__town = handle;
   renderer.setAnimationLoop(frame);
