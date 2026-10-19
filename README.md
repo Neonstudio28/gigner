@@ -2,6 +2,8 @@
 
 A rural American PNW town in a forested valley, built entirely in **Three.js** in the stylised low-poly look of the reference shots. It has a brick Main Street with Don's Donuts and its giant rooftop donut, 86 Gasoline, a sheriff's office, a motel and the Burger Barn drive-in. North of Main is a dense downtown: Court Street restaurants and shops, the Liberty Theater, Hotel Cascade, and a **courthouse square** with a clock-tower courthouse, a gazebo, a fountain and a memorial. Around the square are the **Town Hall**, a **police station**, a fire station, a library and a church. Beyond downtown are homes, four farms, a lumber yard, a used-car lot and the Tex Outpost. Two highways (US-20 and SR-9) and a **high-voltage line with its substation** cross the valley, and pine forest runs all the way to the snow-capped mountains. **Every road can be driven**: press `V`.
 
+![Courthouse square, Court Street, downtown aerial, drive mode on Main Street and SR-9, Miller Dairy](docs/screenshots/pine-hollow-v2.jpg)
+
 ## Run
 
 ```bash
