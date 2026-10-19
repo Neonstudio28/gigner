@@ -1,0 +1,30 @@
+{
+  "name": "pine-hollow-lowpoly-town",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Low-poly Pacific Northwest rural town world built with Three.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/alfa-slab-one": "^5.3.0",
+    "@fontsource/bebas-neue": "^5.3.0",
+    "@fontsource/lobster": "^5.3.0",
+    "@fontsource/oswald": "^5.3.0",
+    "@fontsource/rye": "^5.3.0",
+    "lil-gui": "^0.21.0",
+    "n8ao": "^2.0.1",
+    "postprocessing": "^6.39.5",
+    "simplex-noise": "^4.0.3",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.186.0",
+    "typescript": "5.9",
+    "vite": "^8.3.4"
+  }
+}
