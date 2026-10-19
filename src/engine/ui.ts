@@ -6,9 +6,20 @@ import type { SkyRig } from './sky';
 import type { PostFX } from './post';
 import type { CameraDirector } from './controls';
 import type { TownWorld } from '../world';
+import { DRIVABLE, type DriveMode } from './drive';
 
-export function createUI(o: { sky: SkyRig; post: PostFX; director: CameraDirector; world: TownWorld; renderer: THREE.WebGLRenderer }) {
-  const { sky, post, director, world, renderer } = o;
+export function createUI(o: {
+  sky: SkyRig;
+  post: PostFX;
+  director: CameraDirector;
+  world: TownWorld;
+  renderer: THREE.WebGLRenderer;
+  drive: DriveMode;
+  driveState: { vehicle: string; color: string };
+  enterDrive: () => void;
+  exitDrive: () => void;
+}) {
+  const { sky, post, director, world, renderer, drive, driveState } = o;
   const gui = new GUI({ title: 'Pine Hollow' });
   gui.close();
 
@@ -29,6 +40,31 @@ export function createUI(o: { sky: SkyRig; post: PostFX; director: CameraDirecto
     cam.shot = s.id;
     fCam.controllers[0].updateDisplay();
   };
+
+  const fDrive = gui.addFolder('Drive');
+  const dv = {
+    toggle: () => (drive.active ? o.exitDrive() : o.enterDrive()),
+    sound: true,
+  };
+  fDrive.add(dv, 'toggle').name('Enter / exit car (V)');
+  fDrive
+    .add(driveState, 'vehicle', DRIVABLE.map((d) => d.name))
+    .name('Vehicle')
+    .onChange((name: string) => {
+      const d = DRIVABLE.find((v) => v.name === name);
+      if (d) {
+        driveState.color = '#' + new THREE.Color(d.color || 0x888888).getHexString();
+        colorCtl.updateDisplay();
+      }
+      if (drive.active) {
+        o.exitDrive();
+        o.enterDrive();
+      }
+    });
+  const colorCtl = fDrive.addColor(driveState, 'color').name('Paint');
+  fDrive.add(drive, 'camMode', { Chase: 0, 'Far chase': 1, Cockpit: 2 }).name('Camera (C)').listen();
+  fDrive.add(dv, 'sound').name('Engine sound').onChange((v: boolean) => drive.audio.setEnabled(v));
+  fDrive.open();
 
   const fLight = gui.addFolder('Lighting');
   const apply = () => sky.apply();

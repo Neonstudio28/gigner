@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Kit, Col, Occupancy } from '../core/kit';
+import type { Kit, Col, Occupancy, SurfaceMap, SignRef } from '../core/kit';
 import type { Rng } from '../core/rng';
 import type { SignBook, SignId } from '../signs';
 import { P } from '../palette';
@@ -11,6 +11,18 @@ export interface Ctx {
   signs: SignBook;
   /** Builds geometry into its own group (for animated parts like windmill rotors). */
   dyn: (name: string, build: (k: Kit) => void) => THREE.Group;
+  /** Raised walkable surfaces (sidewalks, plazas) for the vehicle's ride height. */
+  surf: SurfaceMap;
+  /** Road rectangles for the minimap, spawn points and on-road grip. */
+  roads: RoadRect[];
+}
+
+export interface RoadRect {
+  x0: number;
+  x1: number;
+  z0: number;
+  z1: number;
+  kind: 'road' | 'alley' | 'highway' | 'dirt';
 }
 
 export interface WinOpts {
@@ -152,7 +164,7 @@ export function downspout(k: Kit, x: number, z: number, h: number, color: Col = 
   k.box(x, 0.1, z, 0.1, h - 0.1, 0.1, color);
 }
 
-export function billboardFrame(k: Kit, x: number, y: number, z: number, w: number, h: number, tex?: THREE.Texture) {
+export function billboardFrame(k: Kit, x: number, y: number, z: number, w: number, h: number, tex?: SignRef) {
   const col = 0xc8cacd;
   const cols = Math.max(3, Math.round(w / 1.6));
   for (let i = 0; i <= cols; i++) {
@@ -175,4 +187,50 @@ export function flagPole(k: Kit, signs: SignBook, x: number, z: number, h = 9) {
 
 export function signId(id: SignId): SignId {
   return id;
+}
+
+/** Steel fire escape on a wall facing +Z (surface at zf) spanning floors 2..n. */
+export function fireEscape(k: Kit, x: number, zf: number, floors: number, floorH = 3.6, base = 0.4, w = 3.2) {
+  const col = 0x2b2d30;
+  for (let f = 1; f < floors; f++) {
+    const y = base + f * floorH - 0.15;
+    k.box(x, y, zf + 0.6, w, 0.06, 1.2, col, 'metal');
+    k.box(x, y + 0.95, zf + 1.18, w, 0.05, 0.05, col, 'metal');
+    for (let i = 0; i <= 6; i++) k.box(x - w / 2 + (w * i) / 6, y, zf + 1.18, 0.04, 1.0, 0.04, col, 'metal');
+    for (const s of [-1, 1]) k.box(x + (s * w) / 2, y, zf + 0.6, 0.04, 1.0, 1.2, col, 'metal');
+    for (const s of [-1, 1]) k.beam({ x: x + s * (w / 2 - 0.2), y: y - 0.05, z: zf + 0.05 }, { x: x + s * (w / 2 - 0.2), y: y - 0.7, z: zf + 0.05 }, 0.05, 0.05, col, 'metal');
+    k.beam({ x: x - w / 2 + 0.4, y, z: zf + 0.6 }, { x: x + w / 2 - 0.4, y: y - floorH, z: zf + 0.6 }, 0.55, 0.06, col, 'metal');
+  }
+  // drop ladder
+  const y1 = base + floorH - 0.15;
+  for (const s of [-0.22, 0.22]) k.box(x + w / 2 - 0.5 + s, y1 - 2.2, zf + 1.1, 0.04, 2.2, 0.04, col, 'metal');
+  for (let i = 0; i < 7; i++) k.box(x + w / 2 - 0.5, y1 - 2.1 + i * 0.3, zf + 1.1, 0.44, 0.03, 0.03, col, 'metal');
+}
+
+/** Alternating stone quoins up a wall corner. */
+export function quoins(k: Kit, x: number, z: number, h: number, color: Col, base = 0) {
+  for (let y = base, i = 0; y < h - 0.4; y += 0.6, i++) k.box(x, y, z, i % 2 ? 0.75 : 0.5, 0.5, i % 2 ? 0.5 : 0.75, color);
+}
+
+/** Classical column: base, shaft, capital. */
+export function column(k: Kit, x: number, y: number, z: number, h: number, r: number, color: Col) {
+  k.box(x, y, z, r * 2.6, 0.35, r * 2.6, color);
+  k.cyl(x, y + 0.35, z, r * 0.9, r, h - 0.85, 12, color);
+  k.cyl(x, y + h - 0.5, z, r * 1.25, r * 0.9, 0.2, 12, color);
+  k.box(x, y + h - 0.3, z, r * 2.7, 0.3, r * 2.7, color);
+}
+
+/** Balustrade along X centred at (x, y, z). */
+export function balustrade(k: Kit, x: number, y: number, z: number, len: number, color: Col, h = 0.9) {
+  k.box(x, y, z, len, 0.15, 0.4, color);
+  k.box(x, y + h - 0.12, z, len, 0.14, 0.45, color);
+  const n = Math.floor(len / 0.32);
+  for (let i = 0; i <= n; i++) k.cyl(x - len / 2 + (len * i) / n, y + 0.15, z, 0.07, 0.1, h - 0.27, 6, color);
+}
+
+/** Window with a small triangular pediment cap (classical façades). */
+export function pedWindow(k: Kit, x: number, y: number, zf: number, w: number, h: number, trim: Col, glass?: Col) {
+  windowAt(k, x, y, zf, w, h, { frame: trim, mx: 2, my: 3, glass });
+  k.pediment(x, y + h + 0.12, zf + 0.08, w + 0.6, 0.45, 0.16, trim);
+  k.box(x, y + h + 0.04, zf + 0.08, w + 0.6, 0.1, 0.16, trim);
 }

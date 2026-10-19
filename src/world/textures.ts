@@ -7,19 +7,7 @@ export function makeCanvas(w: number, h: number): [HTMLCanvasElement, Ctx2D] {
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
-  return [c, c.getContext('2d')!];
-}
-
-function toTex(c: HTMLCanvasElement, tileM?: number | [number, number], wrap = true): THREE.CanvasTexture {
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
-  if (wrap) t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  if (tileM) {
-    const [a, b] = Array.isArray(tileM) ? tileM : [tileM, tileM];
-    t.repeat.set(1 / a, 1 / b);
-  }
-  return t;
+  return [c, c.getContext('2d', { willReadFrequently: true })!];
 }
 
 function shade(hex: string, l: number): string {
@@ -41,10 +29,11 @@ function speckle(g: Ctx2D, w: number, h: number, rng: Rng, n: number, amp: numbe
   }
 }
 
-// ---------------------------------------------------------------- tiling surfaces
+// ---------------------------------------------------------------- tiling surfaces (512² array layers)
 
-export function brickTexture(brick: string, mortar: string, seed: number): THREE.CanvasTexture {
-  const S = 1024;
+const S = 512;
+
+function brick(brickCol: string, mortar: string, seed: number): HTMLCanvasElement {
   const [c, g] = makeCanvas(S, S);
   const rng = new Rng(seed);
   g.fillStyle = mortar;
@@ -56,19 +45,17 @@ export function brickTexture(brick: string, mortar: string, seed: number): THREE
   for (let r = 0; r < rows; r++) {
     const off = (r % 2) * (bw / 2);
     for (let i = -1; i <= per; i++) {
-      g.fillStyle = shade(brick, rng.range(-0.06, 0.05));
-      g.fillRect(i * bw + off + 2, r * rh + 2, bw - 4, rh - 4);
+      g.fillStyle = shade(brickCol, rng.range(-0.06, 0.05));
+      g.fillRect(i * bw + off + 1, r * rh + 1, bw - 2, rh - 2);
       g.fillStyle = 'rgba(255,255,255,0.06)';
-      g.fillRect(i * bw + off + 2, r * rh + 2, bw - 4, 3);
+      g.fillRect(i * bw + off + 1, r * rh + 1, bw - 2, 2);
     }
   }
-  speckle(g, S, S, rng, 5000, 0.08);
-  return toTex(c, 2.6);
+  speckle(g, S, S, rng, 2500, 0.08);
+  return c;
 }
 
-/** Greyscale multiply textures: the vertex colour supplies the hue. */
-export function lapSidingTexture(): THREE.CanvasTexture {
-  const S = 512;
+function lapSiding(): HTMLCanvasElement {
   const [c, g] = makeCanvas(S, S);
   const boards = 10;
   const bh = S / boards;
@@ -83,11 +70,10 @@ export function lapSidingTexture(): THREE.CanvasTexture {
     g.fillStyle = grey(150);
     g.fillRect(0, y + bh - 3, S, 3);
   }
-  return toTex(c, 2.0);
+  return c;
 }
 
-export function boardBattenTexture(): THREE.CanvasTexture {
-  const S = 512;
+function boardBatten(): HTMLCanvasElement {
   const [c, g] = makeCanvas(S, S);
   const rng = new Rng(7);
   g.fillStyle = grey(228);
@@ -106,11 +92,10 @@ export function boardBattenTexture(): THREE.CanvasTexture {
     g.fillStyle = grey(185);
     g.fillRect(x + step + 3, 0, 2, S);
   }
-  return toTex(c, 2.0);
+  return c;
 }
 
-export function roofMetalTexture(): THREE.CanvasTexture {
-  const S = 512;
+function roofMetal(): HTMLCanvasElement {
   const [c, g] = makeCanvas(S, S);
   g.fillStyle = grey(222);
   g.fillRect(0, 0, S, S);
@@ -129,11 +114,30 @@ export function roofMetalTexture(): THREE.CanvasTexture {
     g.fillStyle = grey(150);
     g.fillRect(x + 3, 0, 3, S);
   }
-  return toTex(c, 3.2);
+  return c;
 }
 
-export function shingleTexture(): THREE.CanvasTexture {
-  const S = 512;
+function corrugated(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(S, S);
+  const n = 32;
+  for (let i = 0; i < n; i++) {
+    const x = (i * S) / n;
+    const grd = g.createLinearGradient(x, 0, x + S / n, 0);
+    grd.addColorStop(0, grey(176));
+    grd.addColorStop(0.5, grey(250));
+    grd.addColorStop(1, grey(176));
+    g.fillStyle = grd;
+    g.fillRect(x, 0, S / n + 1, S);
+  }
+  const rng = new Rng(41);
+  for (let i = 0; i < 40; i++) {
+    g.fillStyle = `rgba(120,70,40,${rng.range(0.03, 0.09)})`;
+    g.fillRect(rng.range(0, S), rng.range(0, S), rng.range(4, 30), rng.range(20, 120));
+  }
+  return c;
+}
+
+function shingle(): HTMLCanvasElement {
   const [c, g] = makeCanvas(S, S);
   const rng = new Rng(11);
   const rows = 8;
@@ -150,11 +154,10 @@ export function shingleTexture(): THREE.CanvasTexture {
     g.fillRect(0, r * rh + rh - 4, S, 4);
   }
   speckle(g, S, S, rng, 3000, 0.1);
-  return toTex(c, 2.0);
+  return c;
 }
 
-export function cinderTexture(): THREE.CanvasTexture {
-  const S = 512;
+function cinder(): HTMLCanvasElement {
   const [c, g] = makeCanvas(S, S);
   const rng = new Rng(19);
   g.fillStyle = grey(196);
@@ -171,11 +174,41 @@ export function cinderTexture(): THREE.CanvasTexture {
     }
   }
   speckle(g, S, S, rng, 6000, 0.05);
-  return toTex(c, 2.4);
+  return c;
 }
 
-export function concreteTexture(): THREE.CanvasTexture {
-  const S = 512;
+function stone(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(S, S);
+  const rng = new Rng(57);
+  g.fillStyle = grey(190);
+  g.fillRect(0, 0, S, S);
+  const rows = 8;
+  const rh = S / rows;
+  for (let r = 0; r < rows; r++) {
+    let x = -rng.range(0, 60);
+    while (x < S) {
+      const bw = rng.range(70, 140);
+      g.fillStyle = grey(rng.range(232, 250));
+      g.fillRect(x + 2, r * rh + 2, bw - 4, rh - 4);
+      g.fillStyle = 'rgba(255,255,255,0.12)';
+      g.fillRect(x + 2, r * rh + 2, bw - 4, 3);
+      x += bw;
+    }
+  }
+  speckle(g, S, S, rng, 7000, 0.06);
+  return c;
+}
+
+function stucco(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(S, S);
+  const rng = new Rng(61);
+  g.fillStyle = grey(240);
+  g.fillRect(0, 0, S, S);
+  speckle(g, S, S, rng, 26000, 0.07);
+  return c;
+}
+
+function concrete(): HTMLCanvasElement {
   const [c, g] = makeCanvas(S, S);
   const rng = new Rng(23);
   g.fillStyle = grey(238);
@@ -186,47 +219,73 @@ export function concreteTexture(): THREE.CanvasTexture {
     g.fillRect(i * (S / 2), 0, 3, S);
     g.fillRect(0, i * (S / 2), S, 3);
   }
-  return toTex(c, 3.0);
+  return c;
 }
 
-export function asphaltTexture(): THREE.CanvasTexture {
-  const S = 1024;
+function asphalt(): HTMLCanvasElement {
   const [c, g] = makeCanvas(S, S);
   const rng = new Rng(29);
   g.fillStyle = grey(232);
   g.fillRect(0, 0, S, S);
-  speckle(g, S, S, rng, 30000, 0.06);
-  // soft patches
-  for (let i = 0; i < 14; i++) {
+  speckle(g, S, S, rng, 14000, 0.06);
+  for (let i = 0; i < 10; i++) {
     const x = rng.range(0, S);
     const y = rng.range(0, S);
-    const r = rng.range(40, 160);
+    const r = rng.range(20, 80);
     const grd = g.createRadialGradient(x, y, 0, x, y, r);
     grd.addColorStop(0, `rgba(0,0,0,${rng.range(0.03, 0.08)})`);
     grd.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = grd;
     g.fillRect(x - r, y - r, r * 2, r * 2);
   }
-  // crack sealant lines
   g.strokeStyle = 'rgba(40,40,40,0.35)';
-  g.lineWidth = 2;
-  for (let i = 0; i < 6; i++) {
+  g.lineWidth = 1.5;
+  for (let i = 0; i < 5; i++) {
     g.beginPath();
     let x = rng.range(0, S);
     let y = rng.range(0, S);
     g.moveTo(x, y);
-    for (let k = 0; k < 12; k++) {
-      x += rng.range(-30, 30);
-      y += rng.range(-30, 30);
+    for (let k = 0; k < 10; k++) {
+      x += rng.range(-16, 16);
+      y += rng.range(-16, 16);
       g.lineTo(x, y);
     }
     g.stroke();
   }
-  return toTex(c, 14);
+  return c;
 }
 
-export function planksTexture(): THREE.CanvasTexture {
-  const S = 512;
+function gravel(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(S, S);
+  const rng = new Rng(67);
+  g.fillStyle = grey(225);
+  g.fillRect(0, 0, S, S);
+  for (let i = 0; i < 9000; i++) {
+    g.fillStyle = grey(rng.range(170, 255));
+    const s = rng.range(2, 6);
+    g.fillRect(rng.range(0, S), rng.range(0, S), s, s * rng.range(0.6, 1));
+  }
+  return c;
+}
+
+function field(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(S, S);
+  const rng = new Rng(71);
+  const rows = 16;
+  for (let i = 0; i < rows; i++) {
+    const y = (i * S) / rows;
+    const grd = g.createLinearGradient(0, y, 0, y + S / rows);
+    grd.addColorStop(0, grey(250));
+    grd.addColorStop(0.55, grey(225));
+    grd.addColorStop(1, grey(180));
+    g.fillStyle = grd;
+    g.fillRect(0, y, S, S / rows);
+  }
+  speckle(g, S, S, rng, 8000, 0.08);
+  return c;
+}
+
+function planks(): HTMLCanvasElement {
   const [c, g] = makeCanvas(S, S);
   const rng = new Rng(31);
   const n = 12;
@@ -242,13 +301,12 @@ export function planksTexture(): THREE.CanvasTexture {
     g.fillRect(0, i * ph + ph - 2, S, 2);
     g.fillRect(rng.range(0, S), i * ph, 2, ph);
   }
-  return toTex(c, 2.0);
+  return c;
 }
 
-export function rollupTexture(): THREE.CanvasTexture {
-  const S = 256;
+function rollup(): HTMLCanvasElement {
   const [c, g] = makeCanvas(S, S);
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 16; i++) {
     const y = i * 32;
     const grd = g.createLinearGradient(0, y, 0, y + 32);
     grd.addColorStop(0, grey(250));
@@ -258,19 +316,59 @@ export function rollupTexture(): THREE.CanvasTexture {
     g.fillStyle = grey(140);
     g.fillRect(0, y + 30, S, 2);
   }
-  return toTex(c, 1.0);
+  return c;
 }
 
-export function stripeTexture(a: string, b: string): THREE.CanvasTexture {
-  const [c, g] = makeCanvas(128, 16);
-  g.fillStyle = a;
-  g.fillRect(0, 0, 64, 16);
-  g.fillStyle = b;
-  g.fillRect(64, 0, 64, 16);
-  return toTex(c, [1.0, 1.0]);
+function stripes(a: string, b: string): HTMLCanvasElement {
+  const [c, g] = makeCanvas(S, S);
+  for (let i = 0; i < 2; i++) {
+    g.fillStyle = a;
+    g.fillRect(i * 256, 0, 128, S);
+    g.fillStyle = b;
+    g.fillRect(i * 256 + 128, 0, 128, S);
+  }
+  return c;
 }
 
-// ---------------------------------------------------------------- signage
+export interface LayerDef {
+  name: string;
+  canvas: HTMLCanvasElement;
+  tile: number;
+  rough: number;
+  metal: number;
+}
+
+/** Every tiling surface used by the town, packed later into one texture array. */
+export function createLayers(): LayerDef[] {
+  const L = (name: string, canvas: HTMLCanvasElement, tile: number, rough = 0.9, metal = 0): LayerDef => ({ name, canvas, tile, rough, metal });
+  return [
+    L('brickRed', brick('#a4473a', '#cfc6bb', 3), 2.6, 0.92),
+    L('brickTan', brick('#c9a77c', '#e6dccd', 5), 2.6, 0.92),
+    L('brickPaint', brick('#ecebe6', '#cfcdc6', 9), 2.6, 0.9),
+    L('brickBrown', brick('#7c4a35', '#c2b4a4', 13), 2.6, 0.92),
+    L('brickPurple', brick('#5e3d5c', '#b6a9b0', 17), 2.6, 0.92),
+    L('brickDark', brick('#7a3328', '#a89a8f', 21), 2.6, 0.92),
+    L('siding', lapSiding(), 2.0, 0.86),
+    L('boards', boardBatten(), 2.0, 0.9),
+    L('roofMetal', roofMetal(), 3.2, 0.5, 0.3),
+    L('shingle', shingle(), 2.0, 0.95),
+    L('cinder', cinder(), 2.4, 0.92),
+    L('concrete', concrete(), 3.0, 0.95),
+    L('asphalt', asphalt(), 10, 0.95),
+    L('planks', planks(), 2.0, 0.9),
+    L('rollup', rollup(), 2.0, 0.55, 0.3),
+    L('awningRed', stripes('#9b2335', '#f4f0e6'), 1.0, 0.8),
+    L('awningGreen', stripes('#2f6b4a', '#f4f0e6'), 1.0, 0.8),
+    L('awningBlue', stripes('#2a4f8c', '#f4f0e6'), 1.0, 0.8),
+    L('stone', stone(), 3.0, 0.88),
+    L('corrugated', corrugated(), 2.0, 0.45, 0.45),
+    L('stucco', stucco(), 3.0, 0.95),
+    L('gravel', gravel(), 4.0, 0.97),
+    L('field', field(), 6.0, 0.98),
+  ];
+}
+
+// ---------------------------------------------------------------- signage (canvases packed into an atlas)
 
 export interface Line {
   text: string;
@@ -284,6 +382,7 @@ export interface Line {
   weight?: string;
   shadow?: boolean;
   letter?: number;
+  x?: number; // 0..1 horizontal centre
 }
 
 export function drawLines(g: Ctx2D, w: number, h: number, lines: Line[]) {
@@ -299,21 +398,36 @@ export function drawLines(g: Ctx2D, w: number, h: number, lines: Line[]) {
     }
     g.textAlign = 'center';
     g.textBaseline = 'middle';
+    const x = (l.x ?? 0.5) * w;
     const y = l.y * h;
     if (l.shadow) {
       g.fillStyle = 'rgba(0,0,0,0.35)';
-      g.fillText(l.text, w / 2 + size * 0.04, y + size * 0.05);
+      g.fillText(l.text, x + size * 0.04, y + size * 0.05);
     }
     if (l.stroke) {
       g.lineJoin = 'round';
       g.strokeStyle = l.stroke;
       g.lineWidth = l.strokeW ?? size * 0.12;
-      g.strokeText(l.text, w / 2, y);
+      g.strokeText(l.text, x, y);
     }
     g.fillStyle = l.color;
-    g.fillText(l.text, w / 2, y);
+    g.fillText(l.text, x, y);
     (g as unknown as { letterSpacing: string }).letterSpacing = '0px';
   }
+}
+
+export function roundRect(g: Ctx2D, x: number, y: number, w: number, h: number, r: number) {
+  g.beginPath();
+  if (r <= 0) {
+    g.rect(x, y, w, h);
+    return;
+  }
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
 }
 
 export function panelSign(
@@ -322,7 +436,7 @@ export function panelSign(
   bg: string | null,
   lines: Line[],
   o: { border?: string; borderW?: number; inner?: string; radius?: number; draw?: (g: Ctx2D, w: number, h: number) => void } = {},
-): THREE.CanvasTexture {
+): HTMLCanvasElement {
   const [c, g] = makeCanvas(w, h);
   if (bg) {
     g.fillStyle = bg;
@@ -345,24 +459,14 @@ export function panelSign(
   }
   o.draw?.(g, w, h);
   drawLines(g, w, h, lines);
-  return toTex(c, undefined, false);
+  return c;
 }
 
-function roundRect(g: Ctx2D, x: number, y: number, w: number, h: number, r: number) {
-  g.beginPath();
-  if (r <= 0) {
-    g.rect(x, y, w, h);
-    return;
-  }
-  g.moveTo(x + r, y);
-  g.arcTo(x + w, y, x + w, y + h, r);
-  g.arcTo(x + w, y + h, x, y + h, r);
-  g.arcTo(x, y + h, x, y, r);
-  g.arcTo(x, y, x + w, y, r);
-  g.closePath();
+export function textOnly(w: number, h: number, lines: Line[]): HTMLCanvasElement {
+  return panelSign(w, h, null, lines);
 }
 
-function star(g: Ctx2D, cx: number, cy: number, R: number, r: number, fill: string) {
+export function star(g: Ctx2D, cx: number, cy: number, R: number, r: number, fill: string) {
   g.beginPath();
   for (let i = 0; i < 10; i++) {
     const a = -Math.PI / 2 + (i * Math.PI) / 5;
@@ -374,33 +478,37 @@ function star(g: Ctx2D, cx: number, cy: number, R: number, r: number, fill: stri
   g.fill();
 }
 
-export function flagTexture(): THREE.CanvasTexture {
-  const W = 380;
-  const H = 200;
-  const [c, g] = makeCanvas(W, H);
+/** US flag; also used as a background for banners. */
+export function drawFlag(g: Ctx2D, x: number, y: number, W: number, H: number, alpha = 1) {
+  g.save();
+  g.globalAlpha = alpha;
   for (let i = 0; i < 13; i++) {
     g.fillStyle = i % 2 ? '#f5f2ea' : '#b22234';
-    g.fillRect(0, (i * H) / 13, W, H / 13 + 1);
+    g.fillRect(x, y + (i * H) / 13, W, H / 13 + 1);
   }
   g.fillStyle = '#3c3b6e';
-  g.fillRect(0, 0, W * 0.4, (H * 7) / 13);
+  g.fillRect(x, y, W * 0.4, (H * 7) / 13);
+  const sx = (W * 0.4) / 12.5;
+  const sy = ((H * 7) / 13) / 10;
   for (let r = 0; r < 9; r++)
-    for (let k = 0; k < (r % 2 ? 5 : 6); k++) {
-      const x = 12 + k * 25 + (r % 2 ? 12 : 0);
-      const y = 9 + r * 10.5;
-      star(g, x, y, 4, 1.8, '#ffffff');
-    }
-  return toTex(c, undefined, false);
+    for (let k = 0; k < (r % 2 ? 5 : 6); k++) star(g, x + sx * (1 + k * 2 + (r % 2 ? 1 : 0)), y + sy * (1 + r), sx * 0.55, sx * 0.22, '#ffffff');
+  g.restore();
 }
 
-export function stopSignTexture(): THREE.CanvasTexture {
-  const S = 256;
-  const [c, g] = makeCanvas(S, S);
+export function flagCanvas(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(380, 200);
+  drawFlag(g, 0, 0, 380, 200);
+  return c;
+}
+
+export function stopSign(): HTMLCanvasElement {
+  const SZ = 256;
+  const [c, g] = makeCanvas(SZ, SZ);
   const oct = (r: number, fill: string) => {
     g.beginPath();
     for (let i = 0; i < 8; i++) {
       const a = Math.PI / 8 + (i * Math.PI) / 4;
-      g.lineTo(S / 2 + Math.cos(a) * r, S / 2 + Math.sin(a) * r);
+      g.lineTo(SZ / 2 + Math.cos(a) * r, SZ / 2 + Math.sin(a) * r);
     }
     g.closePath();
     g.fillStyle = fill;
@@ -408,19 +516,19 @@ export function stopSignTexture(): THREE.CanvasTexture {
   };
   oct(127, '#ffffff');
   oct(117, '#c8102e');
-  drawLines(g, S, S, [{ text: 'STOP', font: 'Oswald', weight: '700', color: '#ffffff', y: 0.52, size: 0.34, maxW: 0.78 }]);
-  return toTex(c, undefined, false);
+  drawLines(g, SZ, SZ, [{ text: 'STOP', font: 'Oswald', weight: '700', color: '#ffffff', y: 0.52, size: 0.34, maxW: 0.78 }]);
+  return c;
 }
 
-export function diamondSignTexture(kind: 'ped' | 'curve'): THREE.CanvasTexture {
-  const S = 256;
-  const [c, g] = makeCanvas(S, S);
+export function diamondSign(kind: 'ped' | 'curve' | 'deer' | 'tractor'): HTMLCanvasElement {
+  const SZ = 256;
+  const [c, g] = makeCanvas(SZ, SZ);
   const dia = (r: number, fill: string) => {
     g.beginPath();
-    g.moveTo(S / 2, S / 2 - r);
-    g.lineTo(S / 2 + r, S / 2);
-    g.lineTo(S / 2, S / 2 + r);
-    g.lineTo(S / 2 - r, S / 2);
+    g.moveTo(SZ / 2, SZ / 2 - r);
+    g.lineTo(SZ / 2 + r, SZ / 2);
+    g.lineTo(SZ / 2, SZ / 2 + r);
+    g.lineTo(SZ / 2 - r, SZ / 2);
     g.closePath();
     g.fillStyle = fill;
     g.fill();
@@ -430,6 +538,7 @@ export function diamondSignTexture(kind: 'ped' | 'curve'): THREE.CanvasTexture {
   g.strokeStyle = '#111';
   g.fillStyle = '#111';
   g.lineCap = 'round';
+  g.lineJoin = 'round';
   if (kind === 'ped') {
     g.lineWidth = 12;
     g.beginPath();
@@ -446,60 +555,104 @@ export function diamondSignTexture(kind: 'ped' | 'curve'): THREE.CanvasTexture {
     g.moveTo(126, 104);
     g.lineTo(156, 128);
     g.stroke();
-  } else {
+  } else if (kind === 'curve') {
     g.lineWidth = 18;
     g.beginPath();
     g.moveTo(110, 190);
     g.quadraticCurveTo(110, 110, 150, 90);
     g.stroke();
+  } else if (kind === 'deer') {
+    // leaping deer silhouette
+    g.beginPath();
+    g.moveTo(72, 150);
+    g.lineTo(96, 128);
+    g.lineTo(150, 122);
+    g.lineTo(172, 98);
+    g.lineTo(186, 92);
+    g.lineTo(192, 104);
+    g.lineTo(178, 114);
+    g.lineTo(168, 140);
+    g.lineTo(186, 176);
+    g.lineTo(176, 180);
+    g.lineTo(150, 150);
+    g.lineTo(112, 156);
+    g.lineTo(88, 186);
+    g.lineTo(78, 182);
+    g.lineTo(92, 158);
+    g.closePath();
+    g.fill();
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(176, 94);
+    g.lineTo(170, 70);
+    g.moveTo(172, 80);
+    g.lineTo(160, 72);
+    g.moveTo(182, 92);
+    g.lineTo(190, 70);
+    g.stroke();
+  } else {
+    // tractor
+    g.lineWidth = 10;
+    g.beginPath();
+    g.arc(95, 160, 28, 0, Math.PI * 2);
+    g.stroke();
+    g.beginPath();
+    g.arc(170, 172, 16, 0, Math.PI * 2);
+    g.stroke();
+    g.fillRect(90, 110, 50, 30);
+    g.fillRect(140, 128, 40, 22);
+    g.fillRect(96, 78, 8, 34);
   }
-  return toTex(c, undefined, false);
+  return c;
 }
 
-export function routeShieldTexture(num: string): THREE.CanvasTexture {
-  const S = 256;
-  const [c, g] = makeCanvas(S, S);
+export function routeShield(num: string, state = false): HTMLCanvasElement {
+  const SZ = 256;
+  const [c, g] = makeCanvas(SZ, SZ);
+  if (state) {
+    g.fillStyle = '#111';
+    roundRect(g, 8, 8, SZ - 16, SZ - 16, 20);
+    g.fill();
+    g.fillStyle = '#fff';
+    g.beginPath();
+    g.arc(SZ / 2, SZ / 2, 100, 0, Math.PI * 2);
+    g.fill();
+    drawLines(g, SZ, SZ, [{ text: num, font: 'Oswald', weight: '700', color: '#111', y: 0.53, size: 0.5, maxW: 0.6 }]);
+    return c;
+  }
   g.fillStyle = '#111';
-  g.fillRect(8, 8, S - 16, S - 16);
+  g.fillRect(8, 8, SZ - 16, SZ - 16);
   g.fillStyle = '#fff';
   g.beginPath();
   g.moveTo(40, 34);
-  g.quadraticCurveTo(S / 2, 52, S - 40, 34);
-  g.lineTo(S - 30, 150);
-  g.quadraticCurveTo(S - 50, 210, S / 2, 232);
+  g.quadraticCurveTo(SZ / 2, 52, SZ - 40, 34);
+  g.lineTo(SZ - 30, 150);
+  g.quadraticCurveTo(SZ - 50, 210, SZ / 2, 232);
   g.quadraticCurveTo(50, 210, 30, 150);
   g.closePath();
   g.fill();
-  drawLines(g, S, S, [{ text: num, font: 'Oswald', weight: '700', color: '#111', y: 0.52, size: 0.42, maxW: 0.6 }]);
-  return toTex(c, undefined, false);
+  drawLines(g, SZ, SZ, [{ text: num, font: 'Oswald', weight: '700', color: '#111', y: 0.52, size: 0.42, maxW: 0.6 }]);
+  return c;
 }
 
-export function sheriffDoorTexture(): THREE.CanvasTexture {
+export function lawDoor(title: string, sub: string, starCol = '#c9a227', ink = '#141414'): HTMLCanvasElement {
   const W = 512;
   const H = 256;
   const [c, g] = makeCanvas(W, H);
-  star(g, 70, 128, 58, 26, '#c9a227');
-  star(g, 70, 128, 44, 19, '#e4c04a');
-  drawLines(g, W, H, [
-    { text: 'SHERIFF', font: 'Oswald', weight: '700', color: '#141414', y: 0.44, size: 0.42, maxW: 0.66 },
-    { text: 'COUNTY', font: 'Oswald', weight: '600', color: '#141414', y: 0.8, size: 0.18, maxW: 0.4 },
+  star(g, 70, 128, 58, 26, starCol);
+  star(g, 70, 128, 44, 19, shade(starCol, 0.12));
+  g.save();
+  g.translate(64, 0);
+  drawLines(g, W - 64, H, [
+    { text: title, font: 'Oswald', weight: '700', color: ink, y: 0.44, size: 0.42, maxW: 0.66, x: 0.56 },
+    { text: sub, font: 'Oswald', weight: '600', color: ink, y: 0.8, size: 0.18, maxW: 0.5, x: 0.56 },
   ]);
-  // shift text right of the star
-  const shifted = makeCanvas(W, H);
-  shifted[1].drawImage(c, 0, 0, 140, H, 0, 0, 140, H);
-  shifted[1].drawImage(c, 0, 0, W, H, 60, 0, W, H);
-  const t = new THREE.CanvasTexture(shifted[0]);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
-  return t;
-}
-
-export function textOnly(w: number, h: number, lines: Line[]): THREE.CanvasTexture {
-  return panelSign(w, h, null, lines);
+  g.restore();
+  return c;
 }
 
 /** Round "86" logo + GASOLINE wordmark used on the canopy and pylon. */
-export function gasLogoTexture(withWord: boolean): THREE.CanvasTexture {
+export function gasLogo(withWord: boolean): HTMLCanvasElement {
   const W = withWord ? 1024 : 256;
   const H = 256;
   const [c, g] = makeCanvas(W, H);
@@ -530,43 +683,95 @@ export function gasLogoTexture(withWord: boolean): THREE.CanvasTexture {
     g.fillStyle = '#2b2b2b';
     g.fillText('GASOLINE', 280, 138);
   }
-  return toTex(c, undefined, false);
+  return c;
 }
 
-export interface TextureSet {
-  brickRed: THREE.Texture;
-  brickTan: THREE.Texture;
-  brickPaint: THREE.Texture;
-  brickBrown: THREE.Texture;
-  siding: THREE.Texture;
-  boards: THREE.Texture;
-  roofMetal: THREE.Texture;
-  shingle: THREE.Texture;
-  cinder: THREE.Texture;
-  concrete: THREE.Texture;
-  asphalt: THREE.Texture;
-  planks: THREE.Texture;
-  rollup: THREE.Texture;
-  awningRed: THREE.Texture;
-  awningGreen: THREE.Texture;
+export function clockFace(): HTMLCanvasElement {
+  const SZ = 256;
+  const [c, g] = makeCanvas(SZ, SZ);
+  g.fillStyle = '#1d1d1d';
+  g.beginPath();
+  g.arc(128, 128, 127, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#f6f2e6';
+  g.beginPath();
+  g.arc(128, 128, 116, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#1d1d1d';
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    g.save();
+    g.translate(128 + Math.sin(a) * 98, 128 - Math.cos(a) * 98);
+    g.rotate(a);
+    g.fillRect(-3, -10, 6, i % 3 === 0 ? 22 : 14);
+    g.restore();
+  }
+  g.lineCap = 'round';
+  g.strokeStyle = '#1d1d1d';
+  g.lineWidth = 9;
+  g.beginPath();
+  g.moveTo(128, 128);
+  g.lineTo(128 + Math.sin(-0.9) * 56, 128 - Math.cos(-0.9) * 56);
+  g.stroke();
+  g.lineWidth = 6;
+  g.beginPath();
+  g.moveTo(128, 128);
+  g.lineTo(128 + Math.sin(2.1) * 86, 128 - Math.cos(2.1) * 86);
+  g.stroke();
+  g.beginPath();
+  g.arc(128, 128, 9, 0, Math.PI * 2);
+  g.fill();
+  return c;
 }
 
-export function createTextures(): TextureSet {
-  return {
-    brickRed: brickTexture('#a4473a', '#cfc6bb', 3),
-    brickTan: brickTexture('#c9a77c', '#e6dccd', 5),
-    brickPaint: brickTexture('#ecebe6', '#cfcdc6', 9),
-    brickBrown: brickTexture('#7c4a35', '#c2b4a4', 13),
-    siding: lapSidingTexture(),
-    boards: boardBattenTexture(),
-    roofMetal: roofMetalTexture(),
-    shingle: shingleTexture(),
-    cinder: cinderTexture(),
-    concrete: concreteTexture(),
-    asphalt: asphaltTexture(),
-    planks: planksTexture(),
-    rollup: rollupTexture(),
-    awningRed: stripeTexture('#9b2335', '#f4f0e6'),
-    awningGreen: stripeTexture('#2f6b4a', '#f4f0e6'),
-  };
+/** Vertical lettered blade sign (LIQUOR, MOTEL, LIBERTY…). */
+export function verticalSign(text: string, bg: string, fg: string, font: string, border: string, bulbs = false): HTMLCanvasElement {
+  const W = 220;
+  const H = Math.round(220 * text.length * 0.82 + 60);
+  const [c, g] = makeCanvas(W, H);
+  g.fillStyle = bg;
+  g.fillRect(0, 0, W, H);
+  g.strokeStyle = border;
+  g.lineWidth = 14;
+  g.strokeRect(7, 7, W - 14, H - 14);
+  if (bulbs) {
+    g.fillStyle = '#fff3c4';
+    for (let y = 24; y < H - 16; y += 26) {
+      g.beginPath();
+      g.arc(22, y, 6, 0, Math.PI * 2);
+      g.arc(W - 22, y, 6, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  g.fillStyle = fg;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = `700 160px "${font}"`;
+  const step = (H - 60) / text.length;
+  [...text].forEach((ch, i) => g.fillText(ch, W / 2, 30 + step * (i + 0.5) + 6));
+  return c;
+}
+
+/** Theatre marquee with black letter-board rows and a bulb border. */
+export function marquee(title: string, line2: string): HTMLCanvasElement {
+  const W = 1024;
+  const H = 300;
+  const [c, g] = makeCanvas(W, H);
+  g.fillStyle = '#f5efe0';
+  g.fillRect(0, 0, W, H);
+  g.fillStyle = '#c8262c';
+  g.fillRect(0, 0, W, 40);
+  g.fillRect(0, H - 40, W, 40);
+  g.fillStyle = '#fff6c9';
+  for (let x = 18; x < W; x += 34) {
+    g.beginPath();
+    g.arc(x, 20, 8, 0, Math.PI * 2);
+    g.arc(x, H - 20, 8, 0, Math.PI * 2);
+    g.fill();
+  }
+  drawLines(g, W, H, [
+    { text: title, font: 'Bebas Neue', color: '#141414', y: 0.38, size: 0.3, letter: 8 },
+    { text: line2, font: 'Bebas Neue', color: '#141414', y: 0.66, size: 0.22, letter: 6 },
+  ]);
+  return c;
 }

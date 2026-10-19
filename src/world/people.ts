@@ -22,6 +22,7 @@ export function person(k: Kit, x: number, z: number, ry: number, o: PersonOpts) 
     z,
     ry,
     () => {
+      k.solid(0, 0, 0.6, 0.6);
       for (const s of [-1, 1]) {
         k.box(s * 0.11, 0, 0.03, 0.17, 0.09, 0.3, 0x1f1b18);
         k.box(s * 0.105, 0.09, 0, 0.18, 0.78, 0.21, o.skirt ? o.skin : o.pants);

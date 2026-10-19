@@ -1,58 +1,107 @@
 import * as THREE from 'three';
-import type { TextureSet } from './textures';
+import type { MatResolver, MatSpec } from './core/kit';
+import type { LayerDef } from './textures';
 
 /** Shared uniform used by foliage/flag vertex animation. */
 export const windUniform = { value: 0 };
 
-export class MaterialLib {
+const LAYER_SIZE = 512;
+
+/**
+ * One MeshStandardMaterial for almost everything: tiling textures live in a texture array and
+ * roughness/metalness come from vertex attributes, so a merged chunk needs a single draw call.
+ */
+function worldMaterial(layers: THREE.DataArrayTexture, decal: boolean): THREE.MeshStandardMaterial {
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1, metalness: 1 });
+  if (decal) {
+    m.polygonOffset = true;
+    m.polygonOffsetFactor = -2;
+    m.polygonOffsetUnits = -4;
+  }
+  m.onBeforeCompile = (s) => {
+    s.uniforms.uLayers = { value: layers };
+    s.vertexShader = s.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float layer;\nattribute vec2 pbr;\nvarying float vLayer;\nvarying vec2 vPbr;\nvarying vec2 vTileUv;')
+      .replace('#include <uv_vertex>', '#include <uv_vertex>\nvLayer = layer;\nvPbr = pbr;\nvTileUv = uv;');
+    s.fragmentShader = s.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform sampler2DArray uLayers;\nvarying float vLayer;\nvarying vec2 vPbr;\nvarying vec2 vTileUv;')
+      .replace('#include <map_fragment>', '#include <map_fragment>\nif (vLayer > -0.5) diffuseColor.rgb *= texture(uLayers, vec3(vTileUv, floor(vLayer + 0.5))).rgb;')
+      .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = vPbr.x;')
+      .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vPbr.y;');
+  };
+  m.customProgramCacheKey = () => 'pinehollow-world';
+  return m;
+}
+
+export class MaterialLib implements MatResolver {
+  private specs = new Map<string, MatSpec>();
   private mats = new Map<string, THREE.Material>();
+  readonly layers: THREE.DataArrayTexture;
 
-  constructor(t: TextureSet) {
-    const std = (p: THREE.MeshStandardMaterialParameters = {}) =>
-      new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.86, metalness: 0, ...p });
+  constructor(layerDefs: LayerDef[]) {
+    const S = LAYER_SIZE;
+    const data = new Uint8Array(S * S * 4 * layerDefs.length);
+    layerDefs.forEach((L, i) => {
+      const img = L.canvas.getContext('2d')!.getImageData(0, 0, S, S).data;
+      // flip rows so v = 0 is the canvas bottom, matching CanvasTexture.flipY
+      for (let y = 0; y < S; y++) data.set(img.subarray((S - 1 - y) * S * 4, (S - y) * S * 4), (i * S * S + y * S) * 4);
+      this.specs.set(L.name, { bucket: 'world', layer: i, tile: L.tile, rough: L.rough, metal: L.metal });
+    });
+    const tex = new THREE.DataArrayTexture(data, S, S, layerDefs.length);
+    tex.format = THREE.RGBAFormat;
+    tex.type = THREE.UnsignedByteType;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.magFilter = THREE.LinearFilter;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.generateMipmaps = true;
+    tex.anisotropy = 8;
+    tex.needsUpdate = true;
+    this.layers = tex;
 
-    this.set('paint', std());
-    this.set('gloss', std({ roughness: 0.3, metalness: 0.12 }));
-    this.set('metal', std({ roughness: 0.3, metalness: 0.85 }));
-    this.set('glass', std({ roughness: 0.08, metalness: 0.4, envMapIntensity: 1.8 }));
-    this.set('rubber', std({ roughness: 0.95 }));
-    this.set('wire', std({ flatShading: false, roughness: 0.6 }));
-    this.set('decal', std({ polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }));
+    const base: [string, string, number, number][] = [
+      ['paint', 'world', 0.86, 0],
+      ['gloss', 'world', 0.3, 0.12],
+      ['metal', 'world', 0.3, 0.85],
+      ['chrome', 'world', 0.15, 1],
+      ['rubber', 'world', 0.95, 0],
+      ['decal', 'decal', 0.86, 0],
+      ['glass', 'glass', 0.08, 0.4],
+      ['light', 'light', 1, 0],
+      ['wire', 'wire', 0.6, 0],
+      ['water', 'water', 0.05, 0.3],
+    ];
+    for (const [key, bucket, rough, metal] of base) this.specs.set(key, { bucket, layer: -1, tile: 1, rough, metal });
+
+    this.set('world', worldMaterial(tex, false));
+    this.set('decal', worldMaterial(tex, true));
+    this.set('glass', new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.08, metalness: 0.4, envMapIntensity: 1.8 }));
     // Unlit, pushed above 1.0 so bloom picks up lamps and neon.
     this.set('light', new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(2.2, 2.2, 2.2) }));
-
-    this.set('brickRed', std({ map: t.brickRed, roughness: 0.92 }));
-    this.set('brickTan', std({ map: t.brickTan, roughness: 0.92 }));
-    this.set('brickPaint', std({ map: t.brickPaint, roughness: 0.9 }));
-    this.set('brickBrown', std({ map: t.brickBrown, roughness: 0.92 }));
-    this.set('siding', std({ map: t.siding }));
-    this.set('boards', std({ map: t.boards, roughness: 0.9 }));
-    this.set('roofMetal', std({ map: t.roofMetal, roughness: 0.5, metalness: 0.3 }));
-    this.set('shingle', std({ map: t.shingle, roughness: 0.95 }));
-    this.set('cinder', std({ map: t.cinder, roughness: 0.92 }));
-    this.set('concrete', std({ map: t.concrete, roughness: 0.95 }));
-    this.set('asphalt', std({ map: t.asphalt, roughness: 0.95 }));
-    this.set('planks', std({ map: t.planks, roughness: 0.9 }));
-    this.set('rollup', std({ map: t.rollup, roughness: 0.55, metalness: 0.3 }));
-    this.set('awningRed', std({ map: t.awningRed, roughness: 0.8 }));
-    this.set('awningGreen', std({ map: t.awningGreen, roughness: 0.8 }));
+    this.set('wire', new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }));
+    this.set('water', new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.05, metalness: 0.3, envMapIntensity: 1.3 }));
   }
 
-  set(key: string, m: THREE.Material) {
+  private set(key: string, m: THREE.Material) {
     m.name = key;
     this.mats.set(key, m);
   }
 
-  get(key: string): THREE.Material {
-    const m = this.mats.get(key);
-    if (!m) throw new Error(`Unknown material ${key}`);
-    return m;
+  spec(key: string): MatSpec {
+    if (key.startsWith('signs')) return { bucket: key, layer: -1, tile: 1, rough: 0.55, metal: 0 };
+    const s = this.specs.get(key);
+    if (!s) throw new Error(`Unknown material ${key}`);
+    return s;
   }
 
-  signKey(tex: THREE.Texture): string {
-    const k = 'sign:' + tex.uuid;
-    if (!this.mats.has(k)) this.set(k, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, alphaTest: 0.5 }));
-    return k;
+  addSignPage(index: number, tex: THREE.Texture) {
+    this.set(`signs${index}`, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, alphaTest: 0.5 }));
+  }
+
+  get(bucket: string): THREE.Material {
+    const m = this.mats.get(bucket);
+    if (!m) throw new Error(`Unknown material bucket ${bucket}`);
+    return m;
   }
 
   all(): THREE.Material[] {

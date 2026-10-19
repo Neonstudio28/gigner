@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { Ctx, windowAt, doorAt, storefront, awning, cornice, flatRoof, rooftop, chimney, downspout, billboardFrame } from './common';
+import { Ctx, windowAt, doorAt, storefront, awning, cornice, flatRoof, rooftop, chimney, downspout, billboardFrame, fireEscape } from './common';
+import { cafeTable, barberPole, planter } from '../props';
 import { P } from '../palette';
 import type { SignId } from '../signs';
 import type { Col } from '../core/kit';
@@ -10,7 +11,7 @@ export interface StoreOpts {
   ry: number;
   w: number;
   d: number;
-  stories?: 1 | 2;
+  stories?: 1 | 2 | 3;
   height?: number;
   wall?: string;
   wallColor?: Col;
@@ -18,7 +19,7 @@ export interface StoreOpts {
   sign?: SignId;
   signW?: number;
   signH?: number;
-  awning?: 'awningRed' | 'awningGreen';
+  awning?: 'awningRed' | 'awningGreen' | 'awningBlue';
   frame?: Col;
   door?: number;
   eyebrow?: boolean;
@@ -27,13 +28,21 @@ export interface StoreOpts {
   chimneys?: number;
   sideWindows?: -1 | 1 | 0;
   produce?: boolean;
+  /** Café / restaurant tables on the sidewalk (umbrella colour or null). */
+  seating?: number | null;
+  barber?: boolean;
+  /** Neon window sign (sign id) glowing in the storefront. */
+  neon?: SignId;
+  fireEscape?: boolean;
+  planters?: boolean;
+  roofSign?: SignId;
 }
 
 /** Classic brick main-street block: storefront, sign band, cornice, flat roof with clutter. */
 export function brickStore(c: Ctx, o: StoreOpts) {
   const { kit: k, rng } = c;
   const st = o.stories ?? 1;
-  const H = o.height ?? (st === 2 ? 8.8 : 5.2);
+  const H = o.height ?? (st === 3 ? 12.4 : st === 2 ? 8.8 : 5.2);
   const wall = o.wall ?? 'brickRed';
   const wc = o.wallColor ?? 0xffffff;
   const trim = o.trim ?? P.trimCream;
@@ -59,20 +68,31 @@ export function brickStore(c: Ctx, o: StoreOpts) {
       k.sign(0, sfH + 1.0, zf + 0.13, Math.min(o.signW ?? o.w * 0.78, o.w - 1.6), sh, c.signs.get(o.sign));
     }
     if (o.awning) awning(k, 0, sfH + 0.32, zf, o.w - 1.5, 1.7, 0.75, o.awning);
-    if (st === 2) {
-      k.box(0, 4.85, zf + 0.06, o.w, 0.22, 0.16, trim);
+    for (let f = 1; f < st; f++) {
+      const fy = 5.55 + (f - 1) * 3.6;
+      k.box(0, fy - 0.7, zf + 0.06, o.w, 0.22, 0.16, trim);
       const n = Math.max(2, Math.floor((o.w - 2) / 2.5));
       const span = o.w - 3;
       for (let i = 0; i < n; i++) {
         const x = -span / 2 + (span * (i + 0.5)) / n;
-        windowAt(k, x, 5.55, zf, 1.2, 1.85, { frame: trim, mx: 1, my: 2, arch: o.eyebrow ? 0xf4f1ea : undefined, ac: rng.chance(0.15) });
+        windowAt(k, x, fy, zf, 1.2, 1.85, { frame: trim, mx: 1, my: 2, arch: o.eyebrow ? 0xf4f1ea : undefined, ac: rng.chance(0.15) });
       }
       if (o.sideWindows) {
         k.at((o.sideWindows * o.w) / 2, 0, (o.sideWindows * Math.PI) / 2, () => {
           const m = Math.floor((o.d - 4) / 3);
-          for (let i = 0; i < m; i++) windowAt(k, -o.d / 2 + 3 + i * 3, 5.55, 0, 1.1, 1.7, { frame: trim });
+          for (let i = 0; i < m; i++) windowAt(k, -o.d / 2 + 3 + i * 3, fy, 0, 1.1, 1.7, { frame: trim });
         });
       }
+    }
+    if (o.fireEscape && st > 1) k.at(0, -zf, Math.PI, () => fireEscape(k, -o.w * 0.2, 0, st, 3.6, 1.95, 3.0));
+    if (o.neon) k.sign(-o.w * 0.25, 2.3, zf + 0.03, 1.6, 0.5, c.signs.get(o.neon), {});
+    if (o.seating !== undefined) for (let i = 0; i < 3; i++) cafeTable(k, -o.w / 2 + 2.5 + i * 2.6, zf + 3.0, o.seating, 2);
+    if (o.barber) barberPole(k, (o.door ?? o.w * 0.25) + 1.0, 1.2, zf + 0.25);
+    if (o.planters) for (const px of [-o.w / 2 + 1.2, o.w / 2 - 1.2]) planter(k, px, zf + 1.0);
+    if (o.roofSign) {
+      for (const s of [-1, 1]) k.box(s * o.w * 0.28, H, -1, 0.15, 3.0, 0.15, 0x6f7377, 'metal');
+      k.box(0, H + 1.2, -1, o.w * 0.66, 0.12, 0.12, 0x6f7377, 'metal');
+      k.sign(0, H + 2.0, -0.92, o.w * 0.62, 2.0, c.signs.get(o.roofSign), {});
     }
     cornice(k, o.w, H, zf, trim);
     flatRoof(k, o.w, o.d, H, 0.7);
@@ -134,8 +154,13 @@ export function donutShop(c: Ctx, x: number, z: number, ry: number) {
 /** 86 Gasoline: canopy, pump islands, store with service bays and pylon sign. */
 export function gasStation(c: Ctx, x: number, z: number, ry: number) {
   const { kit: k, signs } = c;
-  c.occ.add(x, z, 42, 36, ry, 1);
+  // the forecourt stays drivable: only the store, canopy posts, islands and pylon are solid
+  c.occ.add(x, z, 42, 36, ry, 1, false);
   k.at(x, z, ry, () => {
+    k.solid(-6, -11.5, 22, 11);
+    for (const ix of [-4.2, 4.2]) k.solid(-3 + ix, 5.5, 1.5, 7.4);
+    for (const px of [-8.5, 8.5]) for (const pz of [-2.6, 2.6]) k.solid(-3 + px, 5.5 + pz, 0.7, 0.7);
+    k.solid(17.5, 15.5, 3.8, 1.0);
     k.box(0, 0, 1, 42, 0.05, 34, P.concrete, 'concrete', { cast: false });
     const cx = -3;
     const cz = 5.5;

@@ -2,7 +2,22 @@ import * as THREE from 'three';
 import type { Kit, Col } from './core/kit';
 import type { SignBook } from './signs';
 
-export type VehicleType = 'sedan' | 'wagon' | 'coupe' | 'pickup' | 'van' | 'suv' | 'sheriff' | 'sheriffSuv' | 'semi' | 'tow' | 'jeep';
+export type VehicleType =
+  | 'sedan'
+  | 'wagon'
+  | 'coupe'
+  | 'pickup'
+  | 'van'
+  | 'suv'
+  | 'sheriff'
+  | 'sheriffSuv'
+  | 'police'
+  | 'semi'
+  | 'tow'
+  | 'jeep'
+  | 'delivery'
+  | 'firetruck'
+  | 'tractor';
 
 export interface VehicleOpts {
   accent?: Col;
@@ -42,11 +57,29 @@ function poly(pts: Pt[]): THREE.Shape {
   return s;
 }
 
-function wheel(k: Kit, x: number, z: number, r: number, width: number, side: number, dual = false) {
-  k.cylZ(x, r, z, r, width, 12, TIRE, 'rubber');
-  k.cylZ(x, r, z + side * (width / 2 + 0.005), r * 0.58, 0.02, 10, CHROME, 'metal');
-  k.cylZ(x, r, z + side * (width / 2 + 0.015), r * 0.22, 0.02, 8, 0x8a8e92, 'metal');
-  if (dual) k.cylZ(x, r, z - side * (width + 0.02), r, width, 12, TIRE, 'rubber');
+type WheelSink = (x: number, z: number, r: number, width: number, side: number, dual: boolean) => void;
+let wheelSink: WheelSink | null = null;
+
+/** Draws one wheel centred at the origin, axle along Z (used for the drivable car's separate wheels). */
+export function drawWheel(k: Kit, r: number, width: number, side: number, dual: boolean) {
+  wheelSink = null;
+  wheel(k, 0, 0, r, width, side, dual, 0);
+}
+
+function wheel(k: Kit, x: number, z: number, r: number, width: number, side: number, dual = false, y = r) {
+  if (wheelSink) {
+    wheelSink(x, z, r, width, side, dual);
+    return;
+  }
+  k.cylZ(x, y, z, r, width, 12, TIRE, 'rubber');
+  k.cylZ(x, y, z + side * (width / 2 + 0.005), r * 0.58, 0.02, 10, CHROME, 'chrome');
+  k.cylZ(x, y, z + side * (width / 2 + 0.015), r * 0.22, 0.02, 8, 0x8a8e92, 'metal');
+  for (let i = 0; i < (y === 0 ? 5 : 0); i++) {
+    // lug nuts make the spin readable on the drivable car (y === 0 means drawn at the origin)
+    const a = (i / 5) * Math.PI * 2;
+    k.cylZ(x + Math.cos(a) * r * 0.36, y + Math.sin(a) * r * 0.36, z + side * (width / 2 + 0.025), r * 0.05, 0.02, 5, 0x5b5f63, 'metal');
+  }
+  if (dual) k.cylZ(x, y, z - side * (width + 0.02), r, width, 12, TIRE, 'rubber');
 }
 
 function wheels(k: Kit, axles: number[], r: number, W: number, inset = 0.16, duals: boolean[] = []) {
@@ -65,9 +98,9 @@ function paneBetween(k: Kit, a: Pt, b: Pt, width: number) {
 }
 
 function carFront(k: Kit, xf: number, W: number, yLow: number, yHigh: number, grille: Col = 0x2d2f31) {
-  k.box(xf + 0.04, yLow, 0, 0.16, 0.18, W + 0.06, CHROME, 'metal');
+  k.box(xf + 0.04, yLow, 0, 0.16, 0.18, W + 0.06, CHROME, 'chrome');
   k.box(xf + 0.01, yLow + 0.22, 0, 0.05, yHigh - yLow - 0.26, W * 0.5, grille);
-  for (let i = 0; i < 4; i++) k.box(xf + 0.035, yLow + 0.26 + i * ((yHigh - yLow - 0.34) / 3), 0, 0.02, 0.02, W * 0.5, CHROME, 'metal');
+  for (let i = 0; i < 4; i++) k.box(xf + 0.035, yLow + 0.26 + i * ((yHigh - yLow - 0.34) / 3), 0, 0.02, 0.02, W * 0.5, CHROME, 'chrome');
   for (const s of [-1, 1]) {
     k.box(xf + 0.01, yLow + 0.24, s * (W / 2 - 0.28), 0.05, Math.min(0.2, yHigh - yLow - 0.28), 0.36, LAMP, 'gloss');
     k.box(xf + 0.015, yLow + 0.18, s * (W / 2 - 0.12), 0.04, 0.1, 0.14, 0xe0882e, 'gloss');
@@ -75,7 +108,7 @@ function carFront(k: Kit, xf: number, W: number, yLow: number, yHigh: number, gr
 }
 
 function carRear(k: Kit, xr: number, W: number, yLow: number, yHigh: number) {
-  k.box(xr - 0.04, yLow, 0, 0.16, 0.18, W + 0.06, CHROME, 'metal');
+  k.box(xr - 0.04, yLow, 0, 0.16, 0.18, W + 0.06, CHROME, 'chrome');
   for (const s of [-1, 1]) k.box(xr - 0.01, yLow + 0.24, s * (W / 2 - 0.3), 0.05, Math.min(0.22, yHigh - yLow - 0.26), 0.5, TAIL, 'gloss');
   k.box(xr - 0.02, yLow + 0.22, 0, 0.03, 0.17, 0.36, 0xf2efe6);
 }
@@ -83,7 +116,7 @@ function carRear(k: Kit, xr: number, W: number, yLow: number, yHigh: number) {
 function mirrors(k: Kit, x: number, y: number, W: number) {
   for (const s of [-1, 1]) {
     k.box(x, y, s * (W / 2 + 0.08), 0.06, 0.06, 0.16, DARK);
-    k.box(x, y + 0.04, s * (W / 2 + 0.16), 0.08, 0.14, 0.06, CHROME, 'metal');
+    k.box(x, y + 0.04, s * (W / 2 + 0.16), 0.08, 0.14, 0.06, CHROME, 'chrome');
   }
 }
 
@@ -172,7 +205,7 @@ function sedanLike(k: Kit, color: Col, wagon: boolean, roofColor?: Col) {
   carFront(k, xf, W, 0.42, 0.92);
   carRear(k, xr, W, 0.42, 0.92);
   mirrors(k, 0.95, 1.02, W);
-  for (const s of [-1, 1]) k.box(0, 0.62, s * (W / 2 + 0.005), 4.9, 0.035, 0.012, CHROME, 'metal');
+  for (const s of [-1, 1]) k.box(0, 0.62, s * (W / 2 + 0.005), 4.9, 0.035, 0.012, CHROME, 'chrome');
   wheels(k, [-1.5, 1.55], 0.36, W);
 }
 
@@ -217,7 +250,7 @@ function coupe(k: Kit, color: Col, stripes: boolean) {
   carFront(k, xf, W, 0.35, 0.72, 0x1d1d1f);
   carRear(k, xr, W, 0.36, 0.9);
   mirrors(k, 0.5, 0.94, W);
-  for (const s of [-0.45, 0.45]) k.cylX(-2.55, 0.3, s, 0.05, 0.3, 6, CHROME, 'metal');
+  for (const s of [-0.45, 0.45]) k.cylX(-2.55, 0.3, s, 0.05, 0.3, 6, CHROME, 'chrome');
   wheels(k, [-1.45, 1.5], 0.35, W);
 }
 
@@ -260,7 +293,7 @@ function pickupLike(k: Kit, color: Col, mode: 'pickup' | 'suv' | 'tow', accent?:
     k.box(-1.6, 0.86, 0, 2.2, 0.03, W - 0.22, 0x2a2a2a);
     for (const s of [-1, 1]) k.box(-1.58, 0.86, s * (W / 2 - 0.05), 2.26, 0.32, 0.1, color, 'gloss');
     k.box(-2.68, 0.86, 0, 0.08, 0.32, W, color, 'gloss');
-    for (const s of [-1, 1]) k.box(-1.58, 1.18, s * (W / 2 - 0.05), 2.26, 0.04, 0.14, CHROME, 'metal');
+    for (const s of [-1, 1]) k.box(-1.58, 1.18, s * (W / 2 - 0.05), 2.26, 0.04, 0.14, CHROME, 'chrome');
   }
   paneBetween(k, [1.12, 1.2], [0.67, 1.73], Wg - 0.16);
   if (accent !== undefined) for (const s of [-1, 1]) k.box(0.0, 0.72, s * (W / 2 + 0.006), 5.1, 0.16, 0.012, accent, 'gloss', { cast: false });
@@ -365,14 +398,14 @@ function semi(k: Kit, color: Col, trailer: boolean, accent?: Col) {
   for (const s of [-1, 1]) {
     k.box(2.8, 2.3, s * (W / 2 + 0.01), 1.2, 0.95, 0.02, GLASS, 'glass');
     k.box(3.58, 3.35, s * 0.6, 0.1, 0.08, 0.5, 0xffb52e, 'light');
-    k.box(3.0, 2.2, s * (W / 2 + 0.25), 0.06, 0.6, 0.18, CHROME, 'metal');
-    k.cylX(0.4, 0.98, s * 1.1, 0.34, 1.6, 12, CHROME, 'metal');
-    k.cyl(1.25, 1.2, s * 1.05, 0.1, 0.1, 3.6, 8, CHROME, 'metal');
+    k.box(3.0, 2.2, s * (W / 2 + 0.25), 0.06, 0.6, 0.18, CHROME, 'chrome');
+    k.cylX(0.4, 0.98, s * 1.1, 0.34, 1.6, 12, CHROME, 'chrome');
+    k.cyl(1.25, 1.2, s * 1.05, 0.1, 0.1, 3.6, 8, CHROME, 'chrome');
     k.box(-3.3, 0.5, s * 1.05, 0.04, 0.6, 0.5, 0x1a1a1a);
   }
-  k.box(3.58, 1.3, 0, 0.06, 0.9, 1.3, CHROME, 'metal');
+  k.box(3.58, 1.3, 0, 0.06, 0.9, 1.3, CHROME, 'chrome');
   for (let i = 0; i < 6; i++) k.box(3.62, 1.36 + i * 0.13, 0, 0.02, 0.04, 1.2, 0x2a2a2a);
-  k.box(3.65, 0.75, 0, 0.2, 0.3, W + 0.05, CHROME, 'metal');
+  k.box(3.65, 0.75, 0, 0.2, 0.3, W + 0.05, CHROME, 'chrome');
   for (const s of [-1, 1]) k.box(3.6, 1.45, s * 0.95, 0.06, 0.32, 0.4, LAMP, 'gloss');
   k.box(3.4, 3.6, 0, 0.6, 0.06, W - 0.2, 0x2a2a2a);
   k.box(-2.4, 1.0, 0, 1.4, 0.12, 1.4, 0x1d1d1d, 'metal');
@@ -413,6 +446,129 @@ function sheriffCar(k: Kit, signs: SignBook, suv: boolean) {
   k.box(0.6, 1.1, (W / 2 + 0.12) * 1, 0.1, 0.18, 0.14, 0x1a1a1a);
 }
 
+function policeCar(k: Kit, signs: SignBook) {
+  const white = 0xf2f1ec;
+  const navy = 0x1d2f5a;
+  sedanLike(k, white, false, white);
+  const W = 1.95;
+  for (const s of [-1, 1]) {
+    k.box(0.02, 0.5, s * (W / 2 + 0.007), 2.0, 0.48, 0.014, navy, 'gloss', { cast: false });
+    k.box(-1.95, 0.5, s * (W / 2 + 0.007), 1.0, 0.48, 0.014, navy, 'gloss', { cast: false });
+  }
+  const tex = signs.get('policeDoor');
+  k.sign(0.12, 0.74, W / 2 + 0.02, 1.25, 0.62, tex, { thick: 0.004 });
+  k.sign(0.12, 0.74, -W / 2 - 0.02, 1.25, 0.62, tex, { thick: 0.004, ry: Math.PI });
+  k.box(-0.35, 1.44, 0, 0.32, 0.06, 1.35, 0x2a2a2a, 'metal');
+  k.box(-0.35, 1.5, -0.38, 0.28, 0.14, 0.58, 0x2b6bff, 'light');
+  k.box(-0.35, 1.5, 0.38, 0.28, 0.14, 0.58, 0xff2b2b, 'light');
+  k.box(2.75, 0.42, 0, 0.1, 0.55, 1.2, 0x1a1a1a, 'metal');
+  k.box(0.6, 1.1, W / 2 + 0.12, 0.1, 0.18, 0.14, 0x1a1a1a);
+}
+
+/** FDS step van (from the Tex Outpost reference). */
+function delivery(k: Kit, signs: SignBook) {
+  const W = 2.3;
+  const brown = 0x4a3426;
+  const body = profile(
+    [
+      [3.15, 0.95],
+      [3.1, 1.35],
+      [2.62, 1.45],
+      [2.28, 2.68],
+      [2.05, 2.95],
+      [-3.05, 3.0],
+      [-3.12, 2.9],
+      [-3.12, 0.5],
+    ],
+    0.5,
+    [
+      { x: -1.85, r: 0.52 },
+      { x: 2.15, r: 0.52 },
+    ],
+    -3.12,
+    3.12,
+  );
+  k.extrude(body, W, brown, 'gloss');
+  k.box(0, 0.25, 0, 5.6, 0.3, W - 0.4, DARK);
+  paneBetween(k, [2.6, 1.5], [2.26, 2.62], W - 0.3);
+  for (const s of [-1, 1]) {
+    k.box(1.95, 1.0, s * (W / 2 + 0.005), 0.75, 1.7, 0.02, 0x1d1712, 'paint', { cast: false });
+    k.box(1.95, 1.75, s * (W / 2 + 0.01), 0.6, 0.75, 0.02, GLASS, 'glass', { cast: false });
+    k.box(-0.4, 1.12, s * (W / 2 + 0.006), 5.2, 0.07, 0.012, 0xe3b54a, 'gloss', { cast: false });
+    k.sign(-0.9, 2.05, s * (W / 2 + 0.014), 2.6, 0.7, signs.get('fds'), { thick: 0.002, ry: s > 0 ? 0 : Math.PI });
+    k.box(2.75, 2.15, s * (W / 2 + 0.22), 0.06, 0.55, 0.16, CHROME, 'chrome');
+    k.box(2.7, 2.42, s * (W / 2 + 0.12), 0.05, 0.05, 0.25, CHROME, 'chrome');
+  }
+  k.box(-3.13, 0.6, 0, 0.02, 2.25, W - 0.3, 0x3a2a1f, 'rollup');
+  carFront(k, 3.12, W, 0.55, 1.3, 0x3a3a3a);
+  carRear(k, -3.12, W, 0.55, 0.95);
+  wheels(k, [-1.85, 2.15], 0.45, W, 0.2, [true, false]);
+}
+
+function firetruck(k: Kit) {
+  const W = 2.5;
+  const red = 0xb5241e;
+  k.box(-0.6, 0.65, 0, 9.0, 0.35, 1.1, 0x262628, 'metal');
+  // cab
+  k.box(3.2, 0.95, 0, 2.3, 2.15, W, red, 'gloss');
+  k.box(3.2, 3.1, 0, 2.2, 0.12, W - 0.1, 0xf2f1ec, 'gloss');
+  k.box(4.36, 1.95, 0, 0.04, 0.95, W - 0.3, GLASS, 'glass');
+  for (const s of [-1, 1]) {
+    k.box(3.6, 1.95, s * (W / 2 + 0.01), 1.0, 0.9, 0.02, GLASS, 'glass');
+    k.box(2.6, 1.95, s * (W / 2 + 0.01), 0.8, 0.9, 0.02, GLASS, 'glass');
+    k.box(3.2, 1.35, s * (W / 2 + 0.006), 2.3, 0.14, 0.012, 0xf2f1ec, 'gloss', { cast: false });
+    k.box(4.2, 2.2, s * (W / 2 + 0.25), 0.06, 0.55, 0.16, CHROME, 'chrome');
+  }
+  k.box(4.42, 0.8, 0, 0.25, 0.32, W + 0.1, CHROME, 'chrome');
+  k.box(4.38, 1.2, 0, 0.05, 0.6, 1.3, CHROME, 'chrome');
+  for (const s of [-1, 1]) k.box(4.4, 1.45, s * 0.95, 0.05, 0.25, 0.35, LAMP, 'gloss');
+  k.box(3.3, 3.22, 0, 0.35, 0.16, 1.8, 0x2a2a2a, 'metal');
+  k.box(3.3, 3.32, -0.5, 0.3, 0.14, 0.7, 0xff2b2b, 'light');
+  k.box(3.3, 3.32, 0.5, 0.3, 0.14, 0.7, 0xff2b2b, 'light');
+  // body with compartments
+  k.box(-1.3, 0.95, 0, 6.6, 1.95, W, red, 'gloss');
+  for (const s of [-1, 1]) {
+    for (let i = 0; i < 4; i++) k.box(-4.0 + i * 1.6, 1.15, s * (W / 2 + 0.01), 1.4, 1.45, 0.02, 0xc9ccd0, 'rollup', { cast: false });
+    k.box(-1.3, 2.75, s * (W / 2 + 0.006), 6.6, 0.14, 0.012, 0xf2f1ec, 'gloss', { cast: false });
+  }
+  k.box(-1.3, 2.9, 0, 6.6, 0.1, W, 0xd9d9d6, 'metal');
+  // ladder
+  for (const s of [-0.5, 0.5]) k.box(-0.5, 3.15, s, 8.2, 0.1, 0.08, 0xd9d9d6, 'metal');
+  for (let i = 0; i < 20; i++) k.box(-4.4 + i * 0.41, 3.15, 0, 0.05, 0.06, 1.0, 0xd9d9d6, 'metal');
+  for (const s of [-0.5, 0.5]) k.box(-4.2, 2.9, s, 0.15, 0.3, 0.1, 0x8a8e92, 'metal');
+  k.cylX(-1.0, 2.6, -W / 2 - 0.15, 0.25, 0.6, 10, 0xc0392b, 'gloss');
+  k.box(-4.65, 0.5, 0, 0.12, 0.25, W, CHROME, 'chrome');
+  for (const s of [-1, 1]) k.box(-4.62, 1.3, s * 0.95, 0.05, 0.3, 0.3, TAIL, 'gloss');
+  [3.2, -2.3, -3.5].forEach((x, i) => {
+    for (const s of [-1, 1]) wheel(k, x, s * (W / 2 - 0.22), 0.55, 0.32, s, i > 0);
+  });
+}
+
+function tractor(k: Kit, color: Col) {
+  const green = color;
+  const yellow = 0xe6c229;
+  k.box(0.9, 0.75, 0, 2.2, 0.9, 0.95, green, 'gloss');
+  k.box(1.98, 0.8, 0, 0.06, 0.75, 0.85, 0x1d1d1d);
+  for (let i = 0; i < 5; i++) k.box(2.02, 0.86 + i * 0.13, 0, 0.02, 0.04, 0.8, 0xbfc3c6, 'chrome');
+  k.box(0.9, 1.62, 0, 2.0, 0.14, 0.85, green, 'gloss');
+  k.box(-0.35, 0.55, 0, 1.0, 0.8, 1.0, green, 'gloss');
+  k.box(-0.35, 1.35, 0, 0.6, 0.12, 0.6, 0x1d1d1d);
+  k.box(-0.62, 1.47, 0, 0.12, 0.55, 0.55, 0x1d1d1d);
+  k.cyl(0.25, 1.35, 0, 0.03, 0.03, 0.45, 6, 0x1d1d1d);
+  k.torus(0.18, 1.82, 0, 0.18, 0.025, 4, 12, 0x1d1d1d, 'paint', { rx: Math.PI / 2 - 0.5 });
+  k.cyl(1.4, 1.75, -0.32, 0.06, 0.06, 1.1, 8, 0x2a2a2a, 'metal');
+  for (const s of [-1, 1]) {
+    k.box(-0.65, 1.62, s * 0.95, 1.5, 0.08, 0.55, green, 'gloss');
+    k.box(-0.65, 0.95, s * 1.2, 1.5, 0.08, 0.08, green, 'gloss');
+    k.beam({ x: -0.9, y: 1.55, z: s * 0.55 }, { x: -0.9, y: 2.75, z: s * 0.55 }, 0.07, 0.07, 0x1d1d1d, 'metal');
+  }
+  k.box(-0.9, 2.75, 0, 0.12, 0.08, 1.2, 0x1d1d1d, 'metal');
+  k.box(-0.7, 2.8, 0, 1.2, 0.06, 1.3, yellow, 'gloss');
+  for (const s of [-1, 1]) wheel(k, -0.65, s * 0.95, 0.85, 0.45, s);
+  for (const s of [-1, 1]) wheel(k, 1.55, s * 0.7, 0.45, 0.24, s);
+  k.box(2.1, 0.45, 0, 0.3, 0.5, 0.6, 0x5a5d60, 'metal');
+}
+
 /** Places a vehicle; local +X is the front. */
 export function vehicle(k: Kit, signs: SignBook, type: VehicleType, x: number, z: number, ry: number, color: Col, o: VehicleOpts = {}) {
   k.at(x, z, ry, () => {
@@ -451,6 +607,18 @@ export function vehicle(k: Kit, signs: SignBook, type: VehicleType, x: number, z
       case 'sheriffSuv':
         sheriffCar(k, signs, true);
         break;
+      case 'police':
+        policeCar(k, signs);
+        break;
+      case 'delivery':
+        delivery(k, signs);
+        break;
+      case 'firetruck':
+        firetruck(k);
+        break;
+      case 'tractor':
+        tractor(k, color);
+        break;
     }
   });
 }
@@ -467,4 +635,29 @@ export const VEHICLE_LENGTH: Record<VehicleType, number> = {
   semi: 7.5,
   tow: 6.4,
   jeep: 3.9,
+  police: 5.4,
+  delivery: 6.4,
+  firetruck: 9.4,
+  tractor: 4.0,
 };
+
+export interface WheelInfo {
+  x: number;
+  z: number;
+  r: number;
+  width: number;
+  side: number;
+  dual: boolean;
+}
+
+/** Builds a vehicle body without its wheels and reports where the wheels go (for the drivable car). */
+export function vehicleBody(k: Kit, signs: SignBook, type: VehicleType, color: Col, o: VehicleOpts = {}): WheelInfo[] {
+  const out: WheelInfo[] = [];
+  wheelSink = (x, z, r, width, side, dual) => out.push({ x, z, r, width, side, dual });
+  try {
+    vehicle(k, signs, type, 0, 0, 0, color, o);
+  } finally {
+    wheelSink = null;
+  }
+  return out;
+}
