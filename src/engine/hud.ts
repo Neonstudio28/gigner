@@ -15,25 +15,33 @@ const inRect = (x: number, z: number, x0: number, x1: number, z0: number, z1: nu
 const nearFarm = (x: number, z: number, f: { x: number; z: number; w: number; d: number }) => inRect(x, z, f.x - f.w / 2 - 15, f.x + f.w / 2 + 15, f.z - f.d / 2 - 15, f.z + f.d / 2 + 15);
 
 const ZONES: Zone[] = [
-  { name: 'Courthouse Square', test: (x, z) => inRect(x, z, -50, 50, -158, -82) },
-  { name: 'Court Street', test: (x, z) => inRect(x, z, -120, 120, -88, -40) },
-  { name: 'Civic Center · Cedar Ln', test: (x, z) => inRect(x, z, -120, 120, -200, -158) },
-  { name: 'Main Street', test: (x, z) => inRect(x, z, -130, 130, -40, 22) },
-  { name: 'Cascade Lumber Yard', test: (x, z) => inRect(x, z, -210, -130, 5, 75) },
-  { name: "Bob's Used Cars", test: (x, z) => inRect(x, z, 130, 200, -66, -6) },
-  { name: 'Tex Outpost', test: (x, z) => inRect(x, z, 200, 256, -52, -4) },
-  { name: 'Substation 4', test: (x, z) => inRect(x, z, -360, -300, -285, -240) },
+  { name: 'I-90', test: (x, z) => z < -160 && z > -340 && Math.abs(x) < 1850 && near90(x, z) },
+  { name: 'Bank Street · Downtown', test: (x, z) => inRect(x, z, -300, 300, -75, -25) },
+  { name: 'Cedar Street · Downtown', test: (x, z) => inRect(x, z, -300, 300, -25, 40) },
+  { name: 'Historic Downtown', test: (x, z) => inRect(x, z, -310, 310, -120, 90) },
+  { name: 'Old Town', test: (x, z) => inRect(x, z, -320, 140, 90, 340) },
+  { name: 'Placer Creek Canyon', test: (x, z) => inRect(x, z, 60, 260, 200, 480) },
+  { name: 'Silver Heights', test: (x, z) => inRect(x, z, -1040, -430, -60, 260) },
+  { name: 'Front Street Strip', test: (x, z) => inRect(x, z, 300, 1000, -110, 40) },
+  { name: 'Riverside Mobile Home Park', test: (x, z) => inRect(x, z, 540, 690, -30, 130) },
+  { name: 'Silver Valley Medical Center', test: (x, z) => inRect(x, z, 740, 860, 30, 200) },
+  { name: 'Elm Crescent', test: (x, z) => inRect(x, z, 860, 1010, 60, 260) },
+  { name: 'Cascade Lumber Mill', test: (x, z) => inRect(x, z, -1110, -900, -510, -400) },
+  { name: 'Sierra Silver Mine', test: (x, z) => inRect(x, z, -900, -780, -540, -440) },
+  { name: 'Substation 4', test: (x, z) => inRect(x, z, -1220, -1140, -510, -450) },
   { name: 'Miller Dairy', test: (x, z) => nearFarm(x, z, FARMS.dairy) },
   { name: 'Ridgeview Farm', test: (x, z) => nearFarm(x, z, FARMS.hay) },
   { name: 'Sunny Acres Orchard', test: (x, z) => nearFarm(x, z, FARMS.orchard) },
-  { name: 'Hansen Farm', test: (x, z) => inRect(x, z, 255, 445, -160, 125) },
+  { name: 'Hansen Farm', test: (x, z) => inRect(x, z, 1240, 1420, -170, -40) },
   { name: 'Spirit Lake', test: (x, z) => Math.hypot((x - 700) / 360, (z - 420) / 220) < 1 },
-  { name: 'US-20 West', test: (x, z) => x < -130 && Math.abs(z) < 40 },
-  { name: 'US-20 East', test: (x, z) => x > 130 && Math.abs(z) < 40 },
-  { name: 'SR-9 North', test: (x, z) => z < -340 && Math.abs(x) < 40 },
-  { name: 'SR-9 South', test: (x, z) => z > 340 && Math.abs(x) < 40 },
-  { name: 'Pine Hollow', test: (x, z) => Math.hypot(x / 400, z / 340) < 1 },
+  { name: 'Old US-10 West', test: (x, z) => x < -300 && z > -140 && z < -40 },
+  { name: 'Old US-10 East', test: (x, z) => x > 1000 && z > -80 && z < 40 },
+  { name: 'Pine Hollow', test: (x, z) => Math.abs(x) < 1100 && z > -260 && z < 450 },
 ];
+const near90 = (x: number, z: number) => {
+  const zi = x < -700 ? -200 + (x + 1000) * -0.2 : x < -400 ? -300 : -210 + Math.max(0, -x - 200) * 0.25;
+  return Math.abs(z - zi) < 40;
+};
 
 export function locationName(x: number, z: number): string {
   for (const zn of ZONES) if (zn.test(x, z)) return zn.name;
@@ -101,10 +109,17 @@ export class DriveHUD {
     g.drawImage(this.raster, -EXTENT, -EXTENT, EXTENT * 2, EXTENT * 2);
     g.fillStyle = 'rgba(220,196,110,0.75)';
     for (const f of this.world.map.fields) g.fillRect(f.x - f.w / 2, f.z - f.d / 2, f.w, f.d);
-    for (const r of this.world.map.roads) {
-      if (r.x1 < px - range || r.x0 > px + range || r.z1 < pz - range || r.z0 > pz + range) continue;
-      g.fillStyle = r.kind === 'dirt' ? '#b49a74' : r.kind === 'alley' ? '#8d9097' : '#d9dbdf';
-      g.fillRect(r.x0, r.z0, r.x1 - r.x0, r.z1 - r.z0);
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    const roads = [...this.world.map.roads].sort((a, b) => a.rank - b.rank);
+    for (const r of roads) {
+      const [x0, z0] = r.pts[0];
+      if (r.pts.every(([x, z]) => Math.abs(x - px) > range || Math.abs(z - pz) > range) && Math.abs(x0 - px) > range * 3) continue;
+      g.strokeStyle = r.kind === 'dirt' ? '#b49a74' : r.kind === 'alley' ? '#9a9da3' : r.kind === 'highway' ? '#f2d17a' : '#e4e6ea';
+      g.lineWidth = Math.max(r.w, 3);
+      g.beginPath();
+      r.pts.forEach(([x, z], i) => (i ? g.lineTo(x, z) : g.moveTo(x, z)));
+      g.stroke();
     }
     g.fillStyle = '#6b5a4c';
     for (const s of this.world.map.solids) {
