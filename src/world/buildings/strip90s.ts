@@ -978,6 +978,448 @@ function rewindVideo(c: Ctx, x: number, z: number, ry: number, seed: number) {
   });
 }
 
+/* ================================================================================================
+ * Shared extras for the second batch (strip mall, bowling, grocery, car wash, truck stop, ...)
+ * ============================================================================================== */
+
+/** Sub-rectangle of a sign-atlas ref, split into cols×rows (row 0 at the top). */
+function subRef(r: SignRef, cols: number, rows: number, i: number, j: number): SignRef {
+  const du = (r.u1 - r.u0) / cols;
+  const dv = (r.v1 - r.v0) / rows;
+  return { page: r.page, u0: r.u0 + du * i, u1: r.u0 + du * (i + 1), v1: r.v1 - dv * j, v0: r.v1 - dv * (j + 1) };
+}
+/** Unlit emissive tube / light strip. */
+function neon(k: Kit, x: number, y: number, z: number, w: number, h: number, d: number, col: Col) {
+  k.box(x, y, z, w, h, d, col, 'light', { cast: false });
+}
+/** Fuel pump; faces ±Z, stands on an island top at `y`. */
+function pump(k: Kit, x: number, z: number, ry: number, body: Col, accent: Col, y = 0.17) {
+  k.at(x, z, ry, () => {
+    k.solid(0, 0, 0.95, 0.7);
+    k.box(0, 0, 0, 0.8, 1.45, 0.5, body, 'gloss');
+    k.box(0, 1.45, 0, 0.86, 0.3, 0.56, accent, 'gloss');
+    for (const s of [-1, 1]) {
+      k.box(0, 1.08, s * 0.26, 0.5, 0.24, 0.02, 0x2b9a4a, 'light', { cast: false });
+      k.box(0, 0.7, s * 0.26, 0.5, 0.2, 0.02, 0x15171a, 'paint');
+      k.box(0.5, 0.55, s * 0.12, 0.1, 0.4, 0.16, 0x1b1b1d, 'metal');
+    }
+  }, y);
+}
+/** Flat fuel canopy over [x±w/2, z±d/2] with columns, fascia band and lit underside. */
+function canopy(k: Kit, x: number, z: number, w: number, d: number, h: number, fascia: Col, trim: Col, cols: [number, number][], lit = 0xfff1d0) {
+  const t = 0.35;
+  k.box(x, h - t, z, w, t, d, 0xe9e9e4);
+  for (const s of [-1, 1]) {
+    k.box(x, h - 0.75, z + (s * d) / 2 + s * 0.05, w + 0.2, 1.05, 0.1, fascia, 'gloss');
+    k.box(x + (s * w) / 2 + s * 0.05, h - 0.75, z, 0.1, 1.05, d, fascia, 'gloss');
+  }
+  k.box(x, h - 0.5, z + d / 2 + 0.1, w + 0.2, 0.1, 0.04, trim, 'gloss');
+  const n = Math.max(2, Math.round(w / 4));
+  for (let i = 0; i < n; i++) neon(k, x - w / 2 + (w * (i + 0.5)) / n, h - t - 0.03, z, 0.6, 0.03, d - 1.2, lit);
+  for (const [cx, cz] of cols) {
+    k.solid(cx, cz, 0.6, 0.6);
+    k.box(cx, 0, cz, 0.8, 0.45, 0.8, CURB, 'concrete');
+    k.box(cx, 0.45, cz, 0.5, h - t - 0.45, 0.5, 0xe9e9e4);
+  }
+}
+/** Arcade-style cabinet, screen toward +Z. */
+function cabinet(k: Kit, x: number, z: number, ry: number, screen: Col, body: Col = 0x23202c) {
+  k.at(x, z, ry, () => {
+    k.solid(0, 0, 0.9, 0.8);
+    k.box(0, 0, 0, 0.8, 1.75, 0.7, body);
+    k.box(0, 1.5, 0.2, 0.74, 0.25, 0.3, screen, 'light', { cast: false });
+    k.box(0, 0.95, 0.355, 0.6, 0.5, 0.02, screen, 'light', { cast: false });
+    k.box(0, 0.8, 0.45, 0.7, 0.1, 0.3, 0x15131c);
+    k.box(-0.15, 0.9, 0.5, 0.06, 0.08, 0.06, 0xe23a3a);
+    k.box(0.15, 0.9, 0.5, 0.06, 0.08, 0.06, 0xf2c230);
+  });
+}
+function payphone(k: Kit, x: number, z: number, ry: number) {
+  k.at(x, z, ry, () => {
+    k.solid(0, 0, 0.8, 0.6);
+    k.box(0, 0, -0.2, 0.7, 2.0, 0.1, 0x30343a, 'metal');
+    for (const s of [-1, 1]) k.box(s * 0.31, 0, 0, 0.08, 2.0, 0.5, 0x30343a, 'metal');
+    k.box(0, 1.9, 0, 0.7, 0.1, 0.5, 0x30343a, 'metal');
+    k.box(0, 1.35, -0.12, 0.4, 0.4, 0.14, 0x9aa0a6, 'metal');
+    k.box(0, 1.75, 0.0, 0.5, 0.25, 0.04, 0x2a62b8, 'gloss');
+  });
+}
+function barberPole(k: Kit, x: number, z: number) {
+  k.solid(x, z, 0.5, 0.5);
+  k.cyl(x, 0, z, 0.2, 0.22, 0.2, 8, 0x222222, 'metal');
+  const cols = [0xc8262c, 0xf4f1ea, 0x1d4aa3];
+  for (let i = 0; i < 6; i++) k.cyl(x, 0.2 + i * 0.28, z, 0.16, 0.16, 0.28, 8, cols[i % 3], 'gloss');
+  k.ico(x, 2.0, z, 0.2, 0, 0xf4f1ea, 'gloss');
+}
+/** String of triangular pennants between two points with a catenary sag. */
+function pennants(k: Kit, a: [number, number, number], b: [number, number, number], sag: number, cols: Col[], n: number) {
+  const shape = new THREE.Shape();
+  shape.moveTo(-0.17, 0);
+  shape.lineTo(0.17, 0);
+  shape.lineTo(0, -0.5);
+  shape.closePath();
+  const pt = (t: number) => ({ x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t - sag * 4 * t * (1 - t), z: a[2] + (b[2] - a[2]) * t });
+  const segs = Math.max(4, Math.round(n / 2));
+  for (let i = 0; i < segs; i++) k.cylBetween(pt(i / segs), pt((i + 1) / segs), 0.018, 3, 0x2a2a2a, 'metal', false);
+  const dx = b[0] - a[0];
+  const dz = b[2] - a[2];
+  const yaw = Math.atan2(-dz, dx);
+  for (let i = 0; i < n; i++) {
+    const p = pt((i + 0.5) / n);
+    k.extrude(shape, 0.015, cols[i % cols.length], 'paint', p.x, p.y, p.z, { ry: yaw, cast: false });
+  }
+}
+function cart(k: Kit, x: number, z: number, ry: number, y = 0) {
+  k.at(x, z, ry, () => {
+    k.box(0, 0.35, 0, 0.58, 0.45, 0.95, 0xb8bcc0, 'metal');
+    k.box(0, 0.12, 0, 0.5, 0.05, 0.9, 0x55585c, 'metal');
+    k.box(0, 0.8, -0.5, 0.6, 0.04, 0.05, 0xc8262c, 'paint');
+    for (const sx of [-1, 1]) for (const sz of [-0.4, 0.4]) k.box(sx * 0.24, 0, sz, 0.05, 0.12, 0.05, 0x222222);
+  }, y);
+}
+/** Open-sided pen of shopping carts opening toward +Z. */
+function cartCorral(k: Kit, x: number, z: number, n = 5) {
+  k.at(x, z, 0, () => {
+    k.solid(0, 0, 1.9, 4.6);
+    for (const s of [-1, 1]) {
+      k.box(s * 0.85, 0, 0, 0.06, 1.0, 4.5, 0x9a9ea3, 'metal');
+      k.box(s * 0.85, 0.5, 0, 0.06, 0.05, 4.5, 0x9a9ea3, 'metal');
+    }
+    k.box(0, 0, -2.2, 1.7, 1.0, 0.06, 0x9a9ea3, 'metal');
+    for (let i = 0; i < n; i++) cart(k, 0, -1.7 + i * 0.7, 0);
+  });
+}
+/** 0..n-1 in a deterministic random order. */
+function shuffled(rng: Rng, n: number): number[] {
+  const a = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    const j = rng.int(0, i);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function tree(k: Kit, x: number, z: number, h: number, col: Col = 0x4d7a34) {
+  k.cyl(x, 0, z, 0.14, 0.2, h * 0.5, 5, P.trunk);
+  k.ico(x, h * 0.72, z, h * 0.34, 0, col, 'paint', 1, 1.1, 1);
+}
+/** Canvas "seen through the shop window" interior, 512×168. */
+function interiorTex(kind: 'arcade' | 'laundry' | 'radio' | 'wok' | 'salon' | 'showroom'): HTMLCanvasElement {
+  const W = 512;
+  const H = 168;
+  const [c, g] = makeCanvas(W, H);
+  const glow = (txt: string, x: number, y: number, col: string, size: number) => {
+    g.save();
+    g.shadowColor = col;
+    g.shadowBlur = 10;
+    g.fillStyle = col;
+    g.font = `${size}px "Bebas Neue", sans-serif`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(txt, x, y);
+    g.restore();
+  };
+  if (kind === 'arcade') {
+    g.fillStyle = '#150d26';
+    g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 120; i++) {
+      g.fillStyle = ['#ff4fd8', '#3fe0ff', '#ffe14a', '#6bff6b'][i % 4];
+      g.fillRect((i * 97) % W, 128 + ((i * 53) % 40), 3, 3);
+    }
+    for (let r = 0; r < 2; r++) {
+      for (let i = 0; i < 11; i++) {
+        const x = 8 + i * 46 + (r ? 20 : 0);
+        const y = r ? 40 : 30;
+        const s = ['#3fe0ff', '#ff4fd8', '#ffe14a', '#6bff6b', '#ff8a3a'][(i + r * 2) % 5];
+        g.fillStyle = r ? '#1c1a2a' : '#2a2640';
+        g.fillRect(x, y, 38, 112);
+        g.fillStyle = s;
+        g.fillRect(x + 4, y + 4, 30, 12);
+        g.fillRect(x + 5, y + 24, 28, 34);
+        g.fillStyle = '#0c0a14';
+        g.fillRect(x - 1, y + 62, 40, 10);
+      }
+    }
+    glow('OPEN', 458, 22, '#ff4fd8', 30);
+    glow('FREE PLAY', 70, 16, '#3fe0ff', 22);
+  } else if (kind === 'laundry') {
+    g.fillStyle = '#dbe7ee';
+    g.fillRect(0, 0, W, H);
+    g.fillStyle = '#8c98a3';
+    g.fillRect(0, 128, W, 40);
+    g.fillStyle = '#f7fbfd';
+    g.fillRect(0, 0, W, 14);
+    for (let i = 0; i < 7; i++) {
+      const x = 14 + i * 50;
+      g.fillStyle = '#f2f4f5';
+      g.fillRect(x, 58, 44, 74);
+      g.fillStyle = '#2a62b8';
+      g.fillRect(x + 4, 62, 36, 8);
+      g.fillStyle = '#3c4650';
+      g.beginPath();
+      g.arc(x + 22, 100, 17, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = ['#7fc4e6', '#9ad7f0', '#6bb1d8'][i % 3];
+      g.beginPath();
+      g.arc(x + 22, 100, 12, 0, Math.PI * 2);
+      g.fill();
+    }
+    for (let i = 0; i < 3; i++) {
+      const x = 372 + i * 46;
+      for (let j = 0; j < 2; j++) {
+        g.fillStyle = '#e9ecee';
+        g.fillRect(x, 22 + j * 54, 42, 52);
+        g.fillStyle = '#3c4650';
+        g.beginPath();
+        g.arc(x + 21, 52 + j * 54, 14, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = '#c9d3da';
+        g.beginPath();
+        g.arc(x + 21, 52 + j * 54, 9, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+    glow('OPEN 24 HRS', 190, 36, '#2a7bff', 26);
+  } else if (kind === 'radio') {
+    g.fillStyle = '#272a33';
+    g.fillRect(0, 0, W, H);
+    for (let r = 0; r < 3; r++) {
+      for (let i = 0; i < 6; i++) {
+        const x = 20 + i * 62;
+        const y = 12 + r * 48;
+        g.fillStyle = '#12141a';
+        g.fillRect(x, y, 54, 40);
+        g.fillStyle = ['#3a6fb0', '#2f8a7a', '#8a3ab0'][(i + r) % 3];
+        g.fillRect(x + 4, y + 4, 46, 32);
+      }
+    }
+    g.fillStyle = '#c8262c';
+    g.fillRect(396, 14, 100, 34);
+    g.fillStyle = '#ffffff';
+    g.font = '28px "Bebas Neue", sans-serif';
+    g.textAlign = 'center';
+    g.fillText('SALE', 446, 38);
+    g.fillStyle = '#3a3d48';
+    g.fillRect(0, 132, W, 36);
+    for (let i = 0; i < 8; i++) {
+      g.fillStyle = '#0d0e12';
+      g.fillRect(14 + i * 62, 118, 48, 24);
+      g.fillStyle = '#9aa0a8';
+      g.fillRect(20 + i * 62, 122, 12, 12);
+      g.fillRect(36 + i * 62, 122, 12, 12);
+    }
+  } else if (kind === 'wok') {
+    g.fillStyle = '#7a1a12';
+    g.fillRect(0, 0, W, H);
+    g.fillStyle = '#c99a2e';
+    g.fillRect(0, 0, W, 8);
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle = '#d6301f';
+      g.beginPath();
+      g.ellipse(50 + i * 82, 38, 17, 22, 0, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#e8c46a';
+      g.fillRect(44 + i * 82, 12, 12, 6);
+      g.fillRect(44 + i * 82, 58, 12, 6);
+    }
+    g.fillStyle = '#f6ecd0';
+    g.fillRect(30, 84, 300, 56);
+    g.fillStyle = '#3a2a20';
+    for (let i = 0; i < 6; i++) g.fillRect(40, 92 + i * 8, 120 + (i % 3) * 40, 3);
+    g.fillStyle = '#2e1410';
+    g.fillRect(0, 132, W, 36);
+    g.fillStyle = '#8b5a2b';
+    g.fillRect(360, 100, 130, 36);
+    glow('OPEN', 440, 80, '#ffd24a', 28);
+  } else if (kind === 'salon') {
+    g.fillStyle = '#f2d6e4';
+    g.fillRect(0, 0, W, H);
+    g.fillStyle = '#c9d6dc';
+    g.fillRect(0, 128, W, 40);
+    for (let i = 0; i < 5; i++) {
+      const x = 14 + i * 96;
+      g.fillStyle = '#8fb8c9';
+      g.fillRect(x, 16, 74, 82);
+      g.fillStyle = '#e9f6fb';
+      g.fillRect(x + 6, 22, 62, 70);
+      g.fillStyle = '#1e1b22';
+      g.fillRect(x + 22, 100, 30, 30);
+      g.fillRect(x + 28, 130, 18, 8);
+      g.fillStyle = '#cc3a7a';
+      g.fillRect(x + 14, 98, 46, 6);
+    }
+    glow('OPEN', 470, 142, '#ff4fa8', 26);
+  } else {
+    const grad = g.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#e9f0f4');
+    grad.addColorStop(1, '#b7c4cc');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, W, H);
+    g.fillStyle = '#9aa7b0';
+    g.fillRect(0, 120, W, 48);
+    for (let i = 0; i < 3; i++) {
+      const x = 40 + i * 160;
+      g.fillStyle = ['#c8262c', '#1d4aa3', '#e8e2d0'][i];
+      g.beginPath();
+      g.moveTo(x, 118);
+      g.lineTo(x + 20, 82);
+      g.lineTo(x + 110, 80);
+      g.lineTo(x + 126, 118);
+      g.closePath();
+      g.fill();
+      g.fillStyle = '#10151a';
+      g.beginPath();
+      g.arc(x + 26, 120, 12, 0, Math.PI * 2);
+      g.arc(x + 100, 120, 12, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.fillStyle = '#ffd23a';
+    g.fillRect(0, 10, W, 14);
+  }
+  return c;
+}
+
+/* ================================================================================================
+ * 7. VALLEY PLAZA STRIP MALL — five units under a covered walkway
+ * ============================================================================================== */
+
+function stripMall(c: Ctx, x: number, z: number, ry: number, seed: number) {
+  const k = c.kit;
+  const rng = new Rng(seed);
+  const W = 58;
+  const D = 34;
+  c.occ.add(x, z, W, D, ry, 1, false);
+  const units = [
+    { id: 'px', cx: -20, col: 0x3a2a55, mat: 'stucco', frame: 0x15101f, kind: 'arcade' as const },
+    { id: 'sd', cx: -10, col: 0x8fb7cf, mat: 'stucco', frame: 0xf2f4f5, kind: 'laundry' as const },
+    { id: 'rh', cx: 0, col: 0xffffff, mat: 'brickRed', frame: 0x1b1b1d, kind: 'radio' as const },
+    { id: 'gw', cx: 10, col: 0xb8332a, mat: 'stucco', frame: 0x2a0e0a, kind: 'wok' as const },
+    { id: 'sm', cx: 20, col: 0xe3a8c0, mat: 'stucco', frame: 0xf6f1f2, kind: 'salon' as const },
+  ];
+  const sPx = sgn(c, 'sm.px', () =>
+    panelSign(768, 100, '#0d0818', [
+      { text: 'PIXEL PALACE', font: F_SLAB, color: '#ff4fd8', y: 0.4, size: 0.5, maxW: 0.88, stroke: '#3a0d4a', strokeW: 6 },
+      { text: 'VIDEO ARCADE · OPEN LATE', font: F_OS, weight: '700', color: '#3fe0ff', y: 0.82, size: 0.2, maxW: 0.7, letter: 3 },
+    ], { border: '#3fe0ff', borderW: 6 }));
+  const sSd = sgn(c, 'sm.sd', () => {
+    return panelSign(768, 100, '#1b5cc4', [
+      { text: 'SUDS', font: F_SLAB, color: '#ffffff', y: 0.42, size: 0.6, maxW: 0.4, stroke: '#0c2a66', strokeW: 6 },
+      { text: 'COIN LAUNDRY · WASH · DRY · FOLD', font: F_OS, weight: '700', color: '#bfe6ff', y: 0.84, size: 0.2, maxW: 0.8, letter: 2 },
+    ], {
+      border: '#ffffff',
+      borderW: 6,
+      draw: (g, w, h) => {
+        g.fillStyle = 'rgba(255,255,255,0.8)';
+        for (const [bx, by, br] of [[0.12, 0.4, 0.2], [0.2, 0.7, 0.12], [0.8, 0.35, 0.18], [0.89, 0.62, 0.12], [0.72, 0.7, 0.08]]) {
+          g.beginPath();
+          g.arc(bx * w, by * h, br * h, 0, Math.PI * 2);
+          g.fill();
+        }
+      },
+    });
+  });
+  const sRh = sgn(c, 'sm.rh', () =>
+    panelSign(768, 100, '#c8262c', [
+      { text: 'RADIO HUT', font: F_SLAB, color: '#ffffff', y: 0.4, size: 0.54, maxW: 0.7, stroke: '#4a0d0d', strokeW: 5 },
+      { text: 'STEREOS · TVs · PHONES · BATTERIES', font: F_OS, weight: '700', color: '#ffd24a', y: 0.83, size: 0.2, maxW: 0.84, letter: 2 },
+    ], { border: '#ffffff', borderW: 6 }));
+  const sGw = sgn(c, 'sm.gw', () =>
+    panelSign(768, 100, '#7a1a12', [
+      { text: 'GOLDEN WOK', font: F_SLAB, color: '#ffd24a', y: 0.4, size: 0.5, maxW: 0.7, stroke: '#2a0e0a', strokeW: 5 },
+      { text: 'CHINESE FOOD · TAKEOUT · LUNCH SPECIALS', font: F_OS, weight: '700', color: '#ffffff', y: 0.83, size: 0.19, maxW: 0.86, letter: 2 },
+    ], { border: '#ffd24a', borderW: 6 }));
+  const sSm = sgn(c, 'sm.sm', () =>
+    panelSign(768, 100, '#f6e3ec', [
+      { text: 'Shear Magic', font: 'Lobster', color: '#cc2a72', y: 0.4, size: 0.62, maxW: 0.62, stroke: '#ffffff', strokeW: 4 },
+      { text: 'HAIR · NAILS · TANNING', font: F_OS, weight: '700', color: '#1d6b72', y: 0.84, size: 0.2, maxW: 0.7, letter: 3 },
+    ], { border: '#1d6b72', borderW: 6 }));
+  const fasciaRefs = [sPx, sSd, sRh, sGw, sSm];
+  const pole = sgn(c, 'sm.pole', () =>
+    panelSign(512, 700, '#1c4a3a', [
+      { text: 'VALLEY PLAZA', font: F_SLAB, color: '#ffd24a', y: 0.08, size: 0.1, maxW: 0.88 },
+      { text: 'PIXEL PALACE', font: F_SLAB, color: '#ff8adf', y: 0.24, size: 0.085, maxW: 0.84 },
+      { text: 'SUDS LAUNDRY', font: F_SLAB, color: '#bfe6ff', y: 0.38, size: 0.085, maxW: 0.84 },
+      { text: 'RADIO HUT', font: F_SLAB, color: '#ff7a6a', y: 0.52, size: 0.085, maxW: 0.84 },
+      { text: 'GOLDEN WOK', font: F_SLAB, color: '#ffd24a', y: 0.66, size: 0.085, maxW: 0.84 },
+      { text: 'SHEAR MAGIC', font: F_SLAB, color: '#ffc0dc', y: 0.8, size: 0.085, maxW: 0.84 },
+      { text: 'SPACES FOR LEASE', font: F_OS, weight: '700', color: '#ffffff', y: 0.93, size: 0.045, maxW: 0.7 },
+    ], { border: '#ffd24a', borderW: 12 }));
+  const interior = new Map(units.map((u) => [u.kind, sgn(c, `sm.in.${u.kind}`, () => interiorTex(u.kind))]));
+
+  k.at(x, z, ry, () => {
+    pave(k, 0, 0, W, D);
+    const zf = -3.5;
+    const H = 5.6;
+    const bz = -9;
+    // parking in front of the walk, aisle, planted edge
+    stalls(k, -25.2, 2.8, 18, 0.4, 5.9);
+    mark(k, 0, 9.2, 52, 0.12, 0xe7b93a);
+    frontage(k, rng, W, 14.2, 2.2, [[16, 25]]);
+    for (const lx of [-26, 0, 26]) lamp(k, lx, 11.6, 0, 8, true);
+    conifer(k, -27.2, 14.6, 7);
+    conifer(k, 27.4, 11, 6.5);
+    // rear service lane
+    k.box(0, 0, -15.8, 52, 0.06, 2.4, 0x5b5f66, 'asphalt', { cast: false });
+    k.solid(0, bz, 50, 11);
+
+    // building
+    k.box(0, 0, bz, 50.2, 0.4, 11.2, 0x8f8c87, 'concrete');
+    for (const u of units) {
+      k.box(u.cx, 0, bz, 10, H, 11, u.col, u.mat);
+      k.box(u.cx, H, bz, 10.02, 0.5, 11.02, 0xb9b4ab, 'concrete');
+    }
+    flatTop(k, rng, 0, bz, 50, 11, H + 0.5, 0xb9b4ab, 3);
+    // covered walkway
+    slab(k, 0, zf + 1.6, 50.4, 3.2, 0.15);
+    k.box(0, 3.25, zf + 1.6, 50.6, 0.25, 3.2, 0xdad6cc);
+    k.box(0, 3.1, zf + 3.15, 50.6, 1.5, 0.2, 0x2f4f46, 'gloss');
+    k.box(0, 4.5, zf + 3.15, 50.8, 0.12, 0.28, 0xe9e5d8);
+    for (let i = 0; i <= 10; i++) {
+      const px = -25 + i * 5;
+      k.solid(px, zf + 3.0, 0.35, 0.35);
+      k.box(px, 0.15, zf + 3.0, 0.25, 3.1, 0.25, 0xe9e5d8);
+    }
+    units.forEach((u, i) => {
+      const x0 = u.cx - 4.5;
+      const x1 = u.cx + 4.5;
+      storefront(k, x0, x1, 0.4, zf, 2.9, { frame: u.frame, doorX: u.cx + 2.9, doorW: 1.3, kick: u.frame });
+      k.signPlane(u.cx, 0.4 + 1.45, zf + 0.02, 9, 2.9, interior.get(u.kind)!);
+      k.sign(u.cx, 3.85, zf + 3.35, 9.2, 1.2, fasciaRefs[i], { thick: 0.12 });
+      // rear door
+      k.at(u.cx + 3.2, bz - 5.5, Math.PI, () => doorAt(k, 0, 0.15, 0, 1.1, 2.1, 0x6b6f73));
+    });
+    // neon trim on the arcade fascia
+    neon(k, -20, 3.1, zf + 3.27, 9.0, 0.06, 0.05, 0xff4fd8);
+    neon(k, -20, 4.5, zf + 3.27, 9.0, 0.06, 0.05, 0x3fe0ff);
+    // walkway props
+    for (const [cx, col] of [[-23.6, 0x3fe0ff], [-22.4, 0xff4fd8], [-21.2, 0xffe14a]] as [number, number][]) cabinet(k, cx, zf + 0.6, 0, col);
+    bench(k, -10.4, zf + 0.7, Math.PI);
+    cart(k, -7.6, zf + 1.1, 0.4);
+    payphone(k, -6.2, zf + 0.35, 0);
+    k.at(2.4, zf + 1.4, 0.2, () => {
+      k.solid(0, 0, 0.9, 0.5);
+      k.box(0, 0, 0, 0.8, 1.0, 0.04, 0xffd23a, 'paint', { ry: 0.5 });
+      k.box(0, 0, 0, 0.8, 1.0, 0.04, 0xffd23a, 'paint', { ry: -0.5 });
+    });
+    for (const lx of [7.2, 13.4]) {
+      k.cyl(lx, 2.7, zf + 1.4, 0.03, 0.03, 0.5, 4, 0x222222);
+      k.ico(lx, 2.45, zf + 1.4, 0.3, 0, 0xd6301f, 'gloss', 1, 1.2, 1);
+    }
+    barberPole(k, 15.8, zf + 0.7);
+    trashCan(k, 24.2, zf + 0.7);
+    // rooftop mast on the electronics store
+    k.box(0, H + 0.5, bz + 1, 0.12, 4.2, 0.12, 0x6f7377, 'metal');
+    for (let i = 0; i < 3; i++) k.box(0, H + 1.6 + i * 1.0, bz + 1, 1.6 - i * 0.4, 0.05, 0.05, 0x9aa0a6, 'metal');
+    // rear dumpsters
+    dumpster(k, -14, -15.9, 0, P.dumpster, rng);
+    dumpster(k, 8, -15.9, 0, P.dumpster, rng);
+    poleSign(k, 22.5, 14.2, { h: 9.4, w: 4.4, sh: 6.0, ref: pole, back: 0x1c4a3a, twin: 3.0 });
+    // lot cars
+    const spots = shuffled(rng, 18).slice(0, 10);
+    const types: VehicleType[] = ['sedan', 'wagon', 'coupe', 'pickup', 'van', 'suv', 'sedan', 'pickup', 'sedan', 'coupe'];
+    spots.forEach((s, i) => park(c, types[i], -23.8 + s * 2.8, 3.1, rng.chance(0.5) ? HALF : -HALF, rng.pick(CAR_COLORS)));
+  });
+}
+
 /* @@END */
 
 export const STRIP: BuildingDef[] = [
@@ -987,4 +1429,5 @@ export const STRIP: BuildingDef[] = [
   { id: 'cluckers', name: "Clucker's Fried Chicken", w: 38, d: 36, front: -1, tags: ['fastfood', 'highway'], build: cluckers },
   { id: 'dairyDream', name: 'Dairy Dream', w: 36, d: 28, front: -1, tags: ['fastfood', 'dessert', 'highway', 'downtown'], build: dairyDream },
   { id: 'rewindVideo', name: 'Rewind Video', w: 44, d: 30, front: -1, tags: ['video', 'highway', 'downtown'], build: rewindVideo },
+  { id: 'stripMall', name: 'Valley Plaza', w: 58, d: 34, front: -3.5, tags: ['retail', 'arcade', 'laundromat', 'highway'], build: stripMall },
 ];
