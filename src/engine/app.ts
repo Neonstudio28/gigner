@@ -6,6 +6,7 @@ import { createUI } from './ui';
 import { DriveMode, DRIVABLE } from './drive';
 import { DriveHUD } from './hud';
 import { createTownWorld } from '../world';
+import { applyAtmosphereTo, Mist, PRESETS } from './atmosphere';
 
 export interface AppHandle {
   ready: boolean;
@@ -96,10 +97,26 @@ export async function startApp(container: HTMLElement) {
   const post = new PostFX(renderer, scene, camera, quality);
   if (params.get('ao') === '0') post.ao.enabled = false;
 
+  // Pacific Northwest atmosphere (height fog, mist banks, wet roads, grade) — the HDRI sky is kept
+  const mist = new Mist(quality === 'low' ? 380 : 760);
+  scene.add(mist.mesh);
+  applyAtmosphereTo(scene);
+  const preset = { name: PRESETS.find((p) => p.name.toLowerCase().replace(/\s+/g, '') === (params.get('atmo') ?? '').toLowerCase())?.name ?? PRESETS[0].name };
+  const setPreset = (name: string) => {
+    const p = PRESETS.find((q) => q.name === name) ?? PRESETS[0];
+    preset.name = p.name;
+    sky.applyPreset(p);
+    post.applyGrade(p.grade, p.bloom, p.grain);
+    mist.uniforms.uOpacity.value = p.mist.opacity;
+    mist.uniforms.uColor.value.setHex(p.mist.color);
+    mist.mesh.visible = p.mist.opacity > 0.01;
+  };
+  setPreset(preset.name);
+
   setProgress(0.94, 'Compiling shaders');
   await renderer.compileAsync(scene, camera);
 
-  if (showUI) createUI({ sky, post, director, world, renderer, drive, driveState, enterDrive, exitDrive });
+  if (showUI) createUI({ sky, post, director, world, renderer, drive, driveState, enterDrive, exitDrive, mist, setPreset, preset });
   else document.body.classList.add('no-ui');
 
   const hudShot = document.getElementById('hud-shot');
@@ -183,6 +200,7 @@ export async function startApp(container: HTMLElement) {
       sky.updateShadows(focus, THREE.MathUtils.clamp(director.viewDistance() * 1.1, 45, 280));
     }
     world.update(dt, elapsed, camera.position, drive.active ? drive.pos : null);
+    mist.update(elapsed);
     renderer.info.reset();
     post.render(dt);
     calls = renderer.info.render.calls;

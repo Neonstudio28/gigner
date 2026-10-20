@@ -110,7 +110,7 @@ export class DriveMode {
   private dragging = false;
   private shake = 0;
   private snapCam = true;
-  private obstacles: { x: number; z: number; hl: number }[] = [];
+  private obstacles: { x: number; z: number; c: number; s: number; hl: number }[] = [];
   private time = 0;
   private slip = 0;
 
@@ -259,8 +259,12 @@ export class DriveMode {
     for (const [lx, lz] of pts) {
       const wx = x + lx * c + lz * s;
       const wz = z - lx * s + lz * c;
-      if (this.world.solidAt(wx, wz)) return true;
-      for (const o of this.obstacles) if (Math.abs(wx - o.x) < o.hl && Math.abs(wz - o.z) < 1.05) return true;
+      if (this.world.solidAt(wx, wz, this.y + 0.6)) return true;
+      for (const o of this.obstacles) {
+        const dx = wx - o.x;
+        const dz = wz - o.z;
+        if (Math.abs(dx * o.c - dz * o.s) < o.hl && Math.abs(dx * o.s + dz * o.c) < 1.05) return true;
+      }
     }
     return false;
   }
@@ -273,7 +277,7 @@ export class DriveMode {
     const hb = k.has('Space');
     const boost = k.has('ShiftLeft') || k.has('ShiftRight');
     const sp = this.spec;
-    const road = this.world.roadAt(this.pos.x, this.pos.z);
+    const road = this.world.roadAt(this.pos.x, this.pos.z, this.y);
     this.onRoad = !!road && road.kind !== 'dirt';
     const surfTop = road ? (road.kind === 'dirt' ? 0.8 : 1) : 0.45 + 0.5 * sp.offroad;
     const surfGrip = road ? (road.kind === 'dirt' ? 0.8 : 1) : 0.55 + 0.45 * sp.offroad;
@@ -347,7 +351,7 @@ export class DriveMode {
     for (const w of this.wheels) {
       const gx = this.pos.x + w.info.x * c + w.info.z * s;
       const gz = this.pos.z - w.info.x * s + w.info.z * c;
-      const g = this.world.groundAt(gx, gz);
+      const g = this.world.groundAt(gx, gz, this.y + 0.3);
       if (w.front) {
         hf += g;
         nf++;

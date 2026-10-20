@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import type { Ctx } from './buildings/common';
 import type { Kit, Col } from './core/kit';
-import { heightAt, farHeight, gridRowsBetween } from './terrain';
-import { securityFence, postSign, acornLamp } from './props';
+import { farHeight } from './terrain';
+import { securityFence, acornLamp } from './props';
 import { windowAt, doorAt } from './buildings/common';
 import { P } from './palette';
 import { lerp } from './core/rng';
@@ -200,117 +200,4 @@ export function substation(c: Ctx, x: number, z: number, y: number) {
     y,
   );
   return { west, east };
-}
-
-/** A strip following the near-grid rows (exactly matches the terrain mesh along SR-9's corridor). */
-export function corridorRibbon(k: Kit, z0: number, z1: number, xa: number, xb: number, dy: number, color: Col, mat: string, cast = false) {
-  const rows = gridRowsBetween(Math.min(z0, z1), Math.max(z0, z1));
-  const CH = 10;
-  for (let s = 0; s < rows.length - 1; s += CH) {
-    const seg = rows.slice(s, Math.min(rows.length, s + CH + 1));
-    const pos: number[] = [];
-    const uv: number[] = [];
-    for (let i = 0; i < seg.length - 1; i++) {
-      const za = seg[i];
-      const zb = seg[i + 1];
-      const ha = heightAt(0, za) + dy;
-      const hb = heightAt(0, zb) + dy;
-      // (xa,za) (xa,zb) (xb,za) | (xb,za) (xa,zb) (xb,zb) — wound to face +Y
-      pos.push(xa, ha, za, xa, hb, zb, xb, ha, za, xb, ha, za, xa, hb, zb, xb, hb, zb);
-      uv.push(xa, za, xa, zb, xb, za, xb, za, xa, zb, xb, zb);
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-    g.computeVertexNormals();
-    k.add(g, color, mat, undefined, cast);
-  }
-}
-
-/** Strip draped over the terrain along a polyline (farm driveways off the highway). */
-export function drapedStrip(k: Kit, pts: [number, number][], width: number, color: Col, mat: string, dy = 0.22) {
-  const samples: { x: number; z: number; nx: number; nz: number }[] = [];
-  for (let i = 0; i < pts.length - 1; i++) {
-    const [ax, az] = pts[i];
-    const [bx, bz] = pts[i + 1];
-    const len = Math.hypot(bx - ax, bz - az);
-    const n = Math.max(1, Math.ceil(len / 4));
-    const nx = -(bz - az) / len;
-    const nz = (bx - ax) / len;
-    for (let j = 0; j < n; j++) samples.push({ x: ax + ((bx - ax) * j) / n, z: az + ((bz - az) * j) / n, nx, nz });
-  }
-  const last = pts[pts.length - 1];
-  samples.push({ ...samples[samples.length - 1], x: last[0], z: last[1] });
-  const pos: number[] = [];
-  const uv: number[] = [];
-  const hw = width / 2;
-  let dist = 0;
-  for (let i = 0; i < samples.length - 1; i++) {
-    const a = samples[i];
-    const b = samples[i + 1];
-    const seg = Math.hypot(b.x - a.x, b.z - a.z);
-    const L = (s: typeof a, side: number) => [s.x + s.nx * hw * side, s.z + s.nz * hw * side];
-    const [alx, alz] = L(a, 1);
-    const [arx, arz] = L(a, -1);
-    const [blx, blz] = L(b, 1);
-    const [brx, brz] = L(b, -1);
-    const h = (x: number, z: number) => heightAt(x, z) + dy;
-    const v = [
-      [alx, h(alx, alz), alz, 0, dist],
-      [arx, h(arx, arz), arz, width, dist],
-      [blx, h(blx, blz), blz, 0, dist + seg],
-      [brx, h(brx, brz), brz, width, dist + seg],
-    ];
-    for (const idx of [0, 2, 1, 1, 2, 3]) {
-      pos.push(v[idx][0], v[idx][1], v[idx][2]);
-      uv.push(v[idx][3], v[idx][4]);
-    }
-    dist += seg;
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-  g.computeVertexNormals();
-  // ensure upward winding regardless of path direction
-  const nrm = g.attributes.normal as THREE.BufferAttribute;
-  if (nrm.getY(0) < 0) {
-    const p = g.attributes.position as THREE.BufferAttribute;
-    const u = g.attributes.uv as THREE.BufferAttribute;
-    for (let i = 0; i < p.count; i += 3) {
-      const swap = (attr: THREE.BufferAttribute, size: number) => {
-        for (let c = 0; c < size; c++) {
-          const t = attr.array[(i + 1) * size + c];
-          (attr.array as Float32Array)[(i + 1) * size + c] = attr.array[(i + 2) * size + c];
-          (attr.array as Float32Array)[(i + 2) * size + c] = t;
-        }
-      };
-      swap(p, 3);
-      swap(u, 2);
-    }
-    g.computeVertexNormals();
-  }
-  k.add(g, color, mat, undefined, false);
-}
-
-/** SR-9: two-lane state highway north and south out of town, following the terrain. */
-export function sr9(c: Ctx, segments: [number, number][]) {
-  const { kit: k, signs } = c;
-  for (const [a, b] of segments) {
-    const z0 = Math.min(a, b);
-    const z1 = Math.max(a, b);
-    corridorRibbon(k, z0, z1, -4.6, 4.6, 0.06, P.asphalt, 'asphalt');
-    corridorRibbon(k, z0, z1, -6.4, -4.6, 0.045, 0xb9ab8e, 'gravel');
-    corridorRibbon(k, z0, z1, 4.6, 6.4, 0.045, 0xb9ab8e, 'gravel');
-    corridorRibbon(k, z0, z1, -0.2, -0.08, 0.075, P.lineYellow, 'decal');
-    corridorRibbon(k, z0, z1, 0.08, 0.2, 0.075, P.lineYellow, 'decal');
-    corridorRibbon(k, z0, z1, -4.3, -4.18, 0.075, P.lineWhite, 'decal');
-    corridorRibbon(k, z0, z1, 4.18, 4.3, 0.075, P.lineWhite, 'decal');
-    c.roads.push({ x0: -4.6, x1: 4.6, z0, z1, kind: 'highway' });
-    c.occ.add(0, (z0 + z1) / 2, 15, z1 - z0, 0, 1.5, false);
-    const dir = a < b ? 1 : -1;
-    for (let z = a + dir * 160; dir > 0 ? z < b - 40 : z > b + 40; z += dir * 160) {
-      const side = dir > 0 ? -7.4 : 7.4;
-      k.at(0, 0, 0, () => postSign(k, signs, 'sr9', side, z, dir > 0 ? Math.PI : 0, { w: 0.8, h: 0.8 }), heightAt(side, z));
-    }
-  }
 }
