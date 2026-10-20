@@ -1420,6 +1420,368 @@ function stripMall(c: Ctx, x: number, z: number, ry: number, seed: number) {
   });
 }
 
+/* ================================================================================================
+ * 8. BOWL-O-RAMA — windowless lane hall, glass entry block, Googie tower sign, giant roof pin
+ * ============================================================================================== */
+
+/** Window run on a +Z wall: glass, kick plate, mullions and a header (no door). */
+function glassWall(k: Kit, x0: number, x1: number, y: number, zf: number, h: number, frame: Col, kick = 0.5) {
+  const w = x1 - x0;
+  const cx = (x0 + x1) / 2;
+  k.box(cx, y, zf - 0.04, w, h, 0.1, P.glass, 'glass');
+  k.box(cx, y, zf + 0.03, w, kick, 0.1, frame);
+  k.box(cx, y + h - 0.14, zf + 0.03, w, 0.16, 0.12, frame);
+  const n = Math.max(2, Math.round(w / 2.2));
+  for (let i = 0; i <= n; i++) k.box(x0 + (w * i) / n, y, zf + 0.03, 0.1, h, 0.1, frame);
+}
+/** Double glass doors on a +Z wall, centred at x. */
+function doubleDoor(k: Kit, x: number, y: number, zf: number, frame: Col) {
+  k.box(x, y, zf + 0.02, 2.6, 2.4, 0.1, frame);
+  for (const s of [-1, 1]) {
+    k.box(x + s * 0.6, y + 0.05, zf + 0.07, 1.05, 2.25, 0.04, P.glassLit, 'glass');
+    k.box(x + s * 0.12, y + 1.0, zf + 0.12, 0.05, 0.3, 0.05, 0xc0c3c6, 'metal');
+  }
+}
+function bowlInterior(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(512, 168);
+  g.fillStyle = '#1a1233';
+  g.fillRect(0, 0, 512, 168);
+  g.fillStyle = '#ff3ea5';
+  g.fillRect(0, 6, 512, 4);
+  g.fillStyle = '#3fe0ff';
+  g.fillRect(0, 14, 512, 4);
+  for (let i = 0; i < 7; i++) {
+    const tx = 48 + i * 62;
+    const bx = 10 + i * 72;
+    g.fillStyle = '#d9a85a';
+    g.beginPath();
+    g.moveTo(tx, 40);
+    g.lineTo(tx + 40, 40);
+    g.lineTo(bx + 62, 168);
+    g.lineTo(bx, 168);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = '#3a2a1a';
+    g.lineWidth = 3;
+    g.stroke();
+    g.fillStyle = '#ffffff';
+    for (const [px, py] of [[20, 32], [14, 36], [26, 36], [8, 40], [20, 40], [32, 40]]) {
+      g.beginPath();
+      g.arc(tx + px, py - 6, 2.4, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.fillStyle = ['#3fe0ff', '#ffe14a', '#ff4fd8'][i % 3];
+    g.fillRect(tx + 6, 22, 28, 8);
+  }
+  g.save();
+  g.shadowColor = '#ff3ea5';
+  g.shadowBlur = 10;
+  g.fillStyle = '#ff7ac8';
+  g.font = '26px "Bebas Neue", sans-serif';
+  g.textAlign = 'center';
+  g.fillText('OPEN BOWLING', 256, 108);
+  g.restore();
+  return c;
+}
+function lathe(k: Kit, pts: [number, number][], x: number, y: number, z: number, s: number, color: Col, mat = 'gloss', seg = 10) {
+  const g = new THREE.LatheGeometry(pts.map(([r, h]) => new THREE.Vector2(r * s, h * s)), seg);
+  k.add(g, color, mat, k.local(x, y, z));
+}
+const PIN: [number, number][] = [[0.01, 0], [1.15, 0], [1.5, 1.2], [2.1, 2.8], [2.38, 4.5], [2.2, 6.2], [1.55, 8.2], [0.95, 10], [0.9, 11], [1.2, 12.3], [1.27, 13.6], [0.9, 14.6], [0.01, 15]];
+function giantPin(k: Kit, x: number, y: number, z: number, h: number) {
+  const s = h / 15;
+  lathe(k, PIN, x, y, z, s, 0xf4f1ea);
+  for (const [y0, rr] of [[9.4, 0.97], [10.2, 0.95]] as [number, number][]) k.cyl(x, y + y0 * s, z, rr * s, rr * s, 0.6 * s, 10, 0xc8262c, 'gloss');
+}
+function starburst(k: Kit, x: number, y: number, z: number, r: number, col: Col, spokes = 8) {
+  for (let i = 0; i < spokes; i++) {
+    const a = (i / spokes) * Math.PI;
+    const long = i % 2 === 0;
+    k.boxC(x, y, z, r * (long ? 2 : 1.3), 0.1, 0.1, col, 'light', { rz: a, cast: false });
+  }
+  for (let i = 0; i < spokes * 2; i += 2) {
+    const a = (i / (spokes * 2)) * Math.PI * 2;
+    k.sphere(x + Math.cos(a) * r, y + Math.sin(a) * r, z, 0.17, 0xffe58a, 'light', 6, 4);
+  }
+}
+
+function bowlORama(c: Ctx, x: number, z: number, ry: number, seed: number) {
+  const k = c.kit;
+  const rng = new Rng(seed);
+  const W = 56;
+  const D = 46;
+  c.occ.add(x, z, W, D, ry, 1, false);
+  const TEAL = 0x1f8f9a;
+  const ORANGE = 0xf0742a;
+  const wall = sgn(c, 'bw.wall', () =>
+    panelSign(1024, 170, '#1b3a52', [
+      { text: 'BOWL-O-RAMA', font: F_SLAB, color: '#ffb23a', y: 0.45, size: 0.62, maxW: 0.7, stroke: '#7a2a0a', strokeW: 8 },
+      { text: '40 LANES · COSMIC BOWL · SNACK BAR · LOUNGE', font: F_OS, weight: '700', color: '#7fe6f0', y: 0.88, size: 0.14, maxW: 0.8, letter: 4 },
+    ], { border: '#ffb23a', borderW: 8 }));
+  const tower = sgn(c, 'bw.tower', () =>
+    panelSign(640, 240, '#f4f1ea', [
+      { text: 'BOWL-O-RAMA', font: F_SLAB, color: '#d9421f', y: 0.38, size: 0.34, maxW: 0.9, stroke: '#1b3a52', strokeW: 6 },
+      { text: 'LANES · LEAGUES · LOUNGE', font: F_OS, weight: '700', color: '#1b3a52', y: 0.72, size: 0.14, maxW: 0.86, letter: 3 },
+      { text: 'OPEN 10AM – 2AM', font: F_OS, weight: '700', color: '#1f8f9a', y: 0.9, size: 0.1 },
+    ], { border: '#1f8f9a', borderW: 14 }));
+  const reader = sgn(c, 'bw.reader', () =>
+    panelSign(576, 160, '#16181c', [
+      { text: 'COSMIC BOWL FRI & SAT', font: F_OS, weight: '700', color: '#ffe14a', y: 0.24, size: 0.2, maxW: 0.92 },
+      { text: 'MEN’S LEAGUE TUES 7PM', font: F_OS, weight: '700', color: '#ffffff', y: 0.5, size: 0.2, maxW: 0.92 },
+      { text: 'KIDS BOWL FREE SUMMER', font: F_OS, weight: '700', color: '#7fe6f0', y: 0.76, size: 0.2, maxW: 0.92 },
+    ], { border: '#ffe14a', borderW: 8 }));
+  const lobby = sgn(c, 'bw.lobby', bowlInterior);
+
+  k.at(x, z, ry, () => {
+    pave(k, 0, 0, W, D);
+    const HX = 4;
+    const H = 8.2;
+    const hz = -11.75;
+    const zf = 4;
+    k.solid(HX, hz, 40, 21.5);
+    k.solid(HX, 1.5, 24, 5);
+    // lot
+    slab(k, HX, 4.6, 24, 1.2, 0.12);
+    stalls(k, -12.2, 2.8, 14, 5.4, 10.9);
+    stalls(k, -12.2, 2.8, 14, 17.5, 22.9);
+    mark(k, 7, 14.2, 40, 0.12, 0xe7b93a);
+    for (const lx of [-8, 8, 24]) lamp(k, lx, 14.2, 0, 9, true);
+    island(k, -22, 23 - 1.0, 12, 2.0);
+    for (let i = 0; i < 4; i++) shrub(k, -26 + i * 2.8, 22.2, 0.6);
+    conifer(k, -26.5, 8, 7);
+    conifer(k, 26.5, 20.5, 6.5);
+    // hall
+    k.box(HX, 0, hz, 40, H, 21.5, 0xffffff, 'cinder');
+    k.box(HX, 0, hz, 40.14, 0.5, 21.64, 0x8f8c87, 'concrete');
+    k.box(HX, 5.4, hz + 10.77, 40.1, 0.5, 0.06, TEAL);
+    k.box(HX, 5.95, hz + 10.77, 40.1, 0.4, 0.06, ORANGE);
+    for (const s of [-1, 1]) {
+      k.box(HX + (s * 40) / 2, 5.4, hz, 0.06, 0.5, 21.6, TEAL);
+      k.box(HX + (s * 40) / 2, 5.95, hz, 0.06, 0.4, 21.6, ORANGE);
+    }
+    flatTop(k, rng, HX, hz, 40, 21.5, H, 0xb9b4ab, 5);
+    k.sign(HX - 1.5, 6.9, -1 + 0.14, 20, 3.0, wall, { thick: 0.2, back: 0x1b3a52 });
+    neon(k, HX - 1.5, 5.3, -1 + 0.26, 20.4, 0.07, 0.05, 0xff3ea5);
+    neon(k, HX - 1.5, 8.5, -1 + 0.26, 20.4, 0.07, 0.05, 0x3fe0ff);
+    // entry block
+    const ex = 4;
+    k.box(ex, 0, 1.5, 24, 4.8, 5, 0xffffff, 'brickTan');
+    k.box(ex, 0, 1.5, 24.14, 0.4, 5.14, 0x8f8c87, 'concrete');
+    k.box(ex, 4.8, 1.5, 24.6, 0.3, 5.6, 0xb9b4ab, 'concrete');
+    k.box(ex, 4.1, zf + 0.04, 24.2, 0.7, 0.1, TEAL, 'gloss');
+    neon(k, ex, 4.0, zf + 0.12, 24.2, 0.07, 0.05, 0x3fe0ff);
+    neon(k, ex, 4.5, zf + 0.12, 24.2, 0.07, 0.05, 0xff3ea5);
+    glassWall(k, ex - 9, ex + 9, 0.4, zf, 3.4, 0x20262c, 0.55);
+    k.signPlane(ex, 0.4 + 1.7, zf + 0.02, 18, 3.4, lobby);
+    doubleDoor(k, ex, 0.4, zf, 0x20262c);
+    for (const sx of [-1, 1]) {
+      k.box(ex + sx * 10.7, 0, zf - 0.05, 3.2, 4.8, 0.14, 0xffffff, 'brickRed');
+    }
+    // roof pin + bolt-on cradle
+    k.box(21, H, -6, 2.4, 0.3, 2.4, 0x8a8f94, 'metal');
+    giantPin(k, 21, H + 0.3, -6, 7.2);
+    // Googie tower sign
+    k.at(-21, 15.5, 0, () => {
+      k.solid(0, 0, 3.4, 1.8);
+      k.box(0, 0, 0, 4.6, 0.6, 1.8, CURB, 'concrete');
+      for (const s of [-1, 1]) k.beam({ x: s * 1.9, y: 0.6, z: 0 }, { x: s * 1.2, y: 11.4, z: 0 }, 0.5, 0.5, 0x6f7377, 'metal');
+      k.box(0, 7.2, 0, 4.2, 0.35, 0.5, 0x6f7377, 'metal');
+      k.sign(0, 8.8, 0, 7.6, 2.9, tower, { thick: 0.5, back: 0x1b3a52, twoSided: true, frame: 0.22 });
+      k.sign(0, 5.2, 0, 4.6, 1.3, reader, { thick: 0.35, back: 0x16181c, twoSided: true, frame: 0.15 });
+      neon(k, 0, 10.45, 0.3, 8.0, 0.08, 0.05, 0xff3ea5);
+      neon(k, 0, 7.15, 0.3, 8.0, 0.08, 0.05, 0x3fe0ff);
+      neon(k, 0, 10.45, -0.3, 8.0, 0.08, 0.05, 0xff3ea5);
+      neon(k, 0, 7.15, -0.3, 8.0, 0.08, 0.05, 0x3fe0ff);
+      starburst(k, 0, 12.6, 0, 1.4, 0xff9a3a);
+      starburst(k, -3.9, 11.4, 0, 0.95, 0x3fe0ff, 6);
+      starburst(k, 3.9, 11.4, 0, 0.95, 0xff3ea5, 6);
+      k.sphere(0, 12.6, 0, 0.5, 0xffe14a, 'light', 8, 6);
+    });
+    // side / rear details
+    for (const s of [-1, 1]) {
+      k.at(HX + s * 20, hz + 4, s * HALF, () => {
+        doorAt(k, 0, 0.15, 0, 1.2, 2.2, 0x6b6f73);
+        k.box(0, 3.2, 0.1, 0.5, 0.25, 0.25, 0xe8e4d8);
+        neon(k, 0, 3.6, 0.3, 0.5, 0.1, 0.05, 0xffb23a);
+      });
+    }
+    for (let i = 0; i < 3; i++) k.box(HX - 12 + i * 12, 0.15, -hz - 8.4 - 0.1 - 10.7 + 0.0, 4.0, 3.3, 0.14, 0xe4e1d6, 'rollup');
+    dumpster(k, -18, -21.3, 0, P.dumpster, rng);
+    dumpster(k, -14.8, -21.3, 0, P.dumpster, rng);
+    // cars
+    const types: VehicleType[] = ['pickup', 'sedan', 'van', 'coupe', 'suv', 'sedan', 'wagon', 'pickup', 'sedan', 'coupe', 'suv', 'sedan'];
+    const row1 = shuffled(rng, 14).slice(0, 7);
+    const row2 = shuffled(rng, 14).slice(0, 5);
+    row1.forEach((s, i) => park(c, types[i], -10.8 + s * 2.8, 8.1, rng.chance(0.5) ? HALF : -HALF, rng.pick(CAR_COLORS)));
+    row2.forEach((s, i) => park(c, types[i + 7], -10.8 + s * 2.8, 20.2, rng.chance(0.5) ? HALF : -HALF, rng.pick(CAR_COLORS)));
+  });
+}
+
+/* ================================================================================================
+ * 9. THRIFTY MART — neighbourhood supermarket: entry tower, long canopy, cart corrals, big lot
+ * ============================================================================================== */
+
+function groceryInterior(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(512, 168);
+  g.fillStyle = '#efe6cf';
+  g.fillRect(0, 0, 512, 168);
+  g.fillStyle = '#bfb59a';
+  g.fillRect(0, 130, 512, 38);
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, 512, 10);
+  const prod = ['#d6301f', '#f2c230', '#4f9a3a', '#e8782a', '#2a62b8', '#8a3ab0'];
+  for (let a = 0; a < 5; a++) {
+    const x = 20 + a * 96;
+    g.fillStyle = '#8a8f94';
+    g.fillRect(x, 40, 70, 92);
+    for (let r = 0; r < 4; r++) {
+      for (let i = 0; i < 7; i++) {
+        g.fillStyle = prod[(a + r + i) % prod.length];
+        g.fillRect(x + 3 + i * 9.4, 44 + r * 22, 7, 16);
+      }
+    }
+    g.fillStyle = '#1b6b3a';
+    g.fillRect(x + 20, 18, 30, 12);
+  }
+  g.fillStyle = '#2a7a3a';
+  g.fillRect(0, 108, 512, 8);
+  return c;
+}
+
+function thriftyMart(c: Ctx, x: number, z: number, ry: number, seed: number) {
+  const k = c.kit;
+  const rng = new Rng(seed);
+  const W = 60;
+  const D = 52;
+  c.occ.add(x, z, W, D, ry, 1, false);
+  const GREEN = 0x1f6b3a;
+  const YEL = 0xffd23a;
+  const tower = sgn(c, 'tm.tower', () =>
+    panelSign(768, 240, '#1f6b3a', [
+      { text: 'THRIFTY MART', font: F_SLAB, color: '#ffd23a', y: 0.4, size: 0.4, maxW: 0.9, stroke: '#0d3a1d', strokeW: 8 },
+      { text: 'LOW PRICES EVERY DAY', font: F_OS, weight: '700', color: '#ffffff', y: 0.78, size: 0.16, maxW: 0.8, letter: 4 },
+    ], { border: '#ffd23a', borderW: 12 }));
+  const fasciaL = sgn(c, 'tm.fl', () =>
+    panelSign(640, 96, '#ffd23a', [{ text: 'FRESH PRODUCE · MEATS · DELI · BAKERY', font: F_SLAB, color: '#1f6b3a', y: 0.52, size: 0.4, maxW: 0.94 }], { border: '#1f6b3a', borderW: 6 }));
+  const fasciaR = sgn(c, 'tm.fr', () =>
+    panelSign(640, 96, '#c8262c', [{ text: 'PHARMACY · FILM DEVELOPING · MONEY ORDERS', font: F_SLAB, color: '#ffffff', y: 0.52, size: 0.34, maxW: 0.95 }], { border: '#ffd23a', borderW: 6 }));
+  const pole = sgn(c, 'tm.pole', () =>
+    panelSign(512, 600, '#1f6b3a', [
+      { text: 'THRIFTY', font: F_SLAB, color: '#ffd23a', y: 0.14, size: 0.14, maxW: 0.86, stroke: '#0d3a1d', strokeW: 6 },
+      { text: 'MART', font: F_SLAB, color: '#ffffff', y: 0.3, size: 0.17, maxW: 0.6, stroke: '#0d3a1d', strokeW: 6 },
+      { text: 'OPEN 7AM – MIDNIGHT', font: F_OS, weight: '700', color: '#ffd23a', y: 0.47, size: 0.07, maxW: 0.86 },
+      { text: 'WEEKLY SPECIALS', font: F_SLAB, color: '#1f6b3a', y: 0.62, size: 0.075, maxW: 0.8 },
+      { text: 'FRYER CHICKEN  .99/LB', font: F_OS, weight: '700', color: '#c8262c', y: 0.76, size: 0.07, maxW: 0.8 },
+      { text: 'BANANAS  .29/LB', font: F_OS, weight: '700', color: '#c8262c', y: 0.87, size: 0.07, maxW: 0.8 },
+    ], { border: '#ffd23a', borderW: 12, draw: (g, w, h) => { g.fillStyle = '#f4f1ea'; g.fillRect(24, h * 0.54, w - 48, h * 0.4); } }));
+  const interior = sgn(c, 'tm.in', groceryInterior);
+
+  k.at(x, z, ry, () => {
+    pave(k, 0, 0, W, D);
+    const zf = -8;
+    const bz = -16;
+    const H = 6.4;
+    k.solid(0, bz, 46, 16);
+    k.solid(-8, -9.1, 12, 8);
+    // lot: three rows of stalls, cart corrals, islands
+    stalls(k, -22.4, 2.8, 16, 0.6, 6.1);
+    stalls(k, -22.4, 2.8, 16, 6.1, 11.6);
+    stalls(k, -22.4, 2.8, 16, 18.8, 24.3);
+    for (const cx of [-22.4, 22.4]) island(k, cx, 12, 2.2, 2.4);
+    mark(k, 0, 14.8, 56, 0.12, 0xe7b93a);
+    mark(k, 0, -2.5, 46, 0.35, 0xe7b93a);
+    for (let i = 0; i < 6; i++) mark(k, -17 + i * 6.8, -1.6, 3.2, 0.4);
+    for (const lx of [-20, 0, 20]) {
+      lamp(k, lx, 12, 0, 9, true);
+      lamp(k, lx, 24.6, 0, 9, true);
+    }
+    for (const cx of [-14, 8, 24]) cartCorral(k, cx + 0.0, 3.2);
+    for (const cx of [-26.5, 26.5]) cartCorral(k, cx, 16);
+    island(k, 0, 24.9 + 0.0, 40, 2.4);
+    for (let i = 0; i < 8; i++) shrub(k, -18 + i * 5.2, 25.0, 0.6);
+    conifer(k, -28.4, -2, 7);
+    conifer(k, 28, -2, 7);
+    tree(k, 28, 20, 6);
+    // building
+    k.box(0, 0, bz, 46, H, 16, 0xe3d9bf, 'stucco');
+    k.box(0, 0, bz, 46.14, 0.5, 16.14, 0x8f8c87, 'concrete');
+    k.box(0, 4.2, zf - 0.03, 46, 0.35, 0.06, GREEN);
+    flatTop(k, rng, 0, bz, 46, 16, H, 0xb9b4ab, 5);
+    // entry tower
+    const tx = -8;
+    k.box(tx, 0, -9.1, 12, 8.4, 7.8, 0xefe8d4, 'stucco');
+    k.box(tx, 0, -9.1, 12.14, 0.5, 7.94, 0x8f8c87, 'concrete');
+    k.hipRoof(tx, 8.4, -9.1, 12, 7.8, 1.8, 0x23563a, 'roofMetal', 0.5);
+    k.sign(tx, 6.4, -5.2 + 0.1, 9.6, 3.0, tower, { thick: 0.2, back: 0x0d3a1d });
+    neon(k, tx, 4.55, -5.2 + 0.1, 11.6, 0.07, 0.05, 0xffd23a);
+    // sidewalk canopy + glazing
+    slab(k, 0, zf + 1.7, 46, 3.4, 0.15);
+    k.box(0, 3.75, zf + 1.7, 46.4, 0.25, 3.4, 0xe9e5d8);
+    k.box(0, 3.5, zf + 3.3, 46.4, 1.1, 0.2, GREEN, 'gloss');
+    k.box(0, 4.6, zf + 3.3, 46.6, 0.1, 0.26, YEL);
+    for (let i = 0; i <= 8; i++) {
+      const px = -23 + i * 5.75;
+      k.solid(px, zf + 3.1, 0.35, 0.35);
+      k.box(px, 0.15, zf + 3.1, 0.3, 3.6, 0.3, 0xe9e5d8);
+    }
+    k.sign(-14.5, 4.05, zf + 3.45, 15.5, 0.85, fasciaL, { thick: 0.1 });
+    k.sign(14.5, 4.05, zf + 3.45, 15.5, 0.85, fasciaR, { thick: 0.1 });
+    glassWall(k, -22.6, -14, 0.4, zf, 3.0, 0x1b3a28, 0.6);
+    glassWall(k, -2.2, 22.6, 0.4, zf, 3.0, 0x1b3a28, 0.6);
+    k.signPlane(-18.3, 0.4 + 1.5, zf + 0.02, 8.6, 3.0, interior);
+    k.signPlane(10.2, 0.4 + 1.5, zf + 0.02, 24.8, 3.0, interior);
+    // tower entry doors
+    k.box(tx, 0.4, -5.2 - 0.06, 8.6, 3.0, 0.12, P.glass, 'glass');
+    doubleDoor(k, tx - 1.6, 0.4, -5.2, 0x1b3a28);
+    doubleDoor(k, tx + 1.6, 0.4, -5.2, 0x1b3a28);
+    for (const sx of [-1, 1]) k.box(tx + sx * 4.5, 0.4, -5.2 + 0.03, 0.2, 3.0, 0.12, 0x1b3a28);
+    k.box(tx, 3.3, -5.2 + 0.03, 9.0, 0.2, 0.12, 0x1b3a28);
+    for (const bx of [tx - 4.6, tx + 4.6, tx - 0.0]) {
+      k.solid(bx, -4.6, 0.4, 0.4);
+      k.cyl(bx, 0, -4.6, 0.16, 0.16, 0.95, 6, 0xf2c230, 'metal');
+    }
+    // front stuff: ice chest, propane cage, benches, bins, kiddie ride
+    k.at(-1.0, zf + 0.8, 0, () => {
+      k.solid(0, 0, 2.0, 0.9);
+      k.box(0, 0, 0, 1.8, 1.2, 0.8, 0xf4f1ea, 'metal');
+      k.box(0, 1.2, 0, 1.85, 0.08, 0.85, 0x2a62b8);
+    });
+    k.at(18.5, zf + 0.9, 0, () => {
+      k.solid(0, 0, 1.6, 1.0);
+      k.box(0, 0, 0, 1.5, 0.1, 0.9, 0x5b5f66, 'metal');
+      for (let i = 0; i < 5; i++) k.box(-0.7 + i * 0.35, 0.1, 0, 0.04, 1.7, 0.04, 0xc8262c, 'metal');
+      k.box(0, 1.8, 0, 1.5, 0.05, 0.9, 0xc8262c, 'metal');
+      for (let i = 0; i < 4; i++) k.cyl(-0.5 + (i % 2) * 1.0, 0.1, -0.2 + (i >> 1) * 0.45, 0.2, 0.2, 0.8, 8, 0xe6e8ea, 'metal');
+    });
+    bench(k, 3.6, zf + 0.7, Math.PI);
+    bench(k, -18, zf + 0.7, Math.PI);
+    trashCan(k, 6.4, zf + 0.7);
+    trashCan(k, -11, zf + 0.7);
+    k.at(12.5, zf + 0.9, 0, () => {
+      k.solid(0, 0, 0.9, 0.9);
+      k.box(0, 0, 0, 0.6, 0.5, 0.6, 0x1d4aa3);
+      k.ico(0, 0.9, 0, 0.35, 0, 0xc8262c, 'gloss', 1, 1.1, 1);
+    });
+    // rear dock + compactor
+    for (const dx of [-14, -6]) {
+      k.box(dx, 0.15, bz - 8 - 0.06, 3.4, 3.0, 0.14, 0xe4e1d6, 'rollup');
+      k.box(dx, 0, bz - 8 - 0.6, 3.6, 1.1, 1.0, 0x6b6f73, 'concrete');
+    }
+    k.box(19, 0, -24.9, 4.6, 2.0, 1.8, 0x3f6b46, 'metal');
+    k.solid(19, -24.9, 4.6, 1.8);
+    dumpster(k, 12, -25.0, 0, P.dumpster, rng);
+    // cars
+    const types: VehicleType[] = ['sedan', 'pickup', 'wagon', 'van', 'coupe', 'suv', 'sedan', 'pickup', 'sedan', 'coupe', 'wagon', 'sedan', 'suv', 'sedan', 'pickup', 'van'];
+    const rows: [number, number][] = [[3.35, 8], [8.85, 5], [21.55, 5]];
+    let t = 0;
+    for (const [rz, n] of rows) {
+      for (const s of shuffled(rng, 16).slice(0, n)) {
+        park(c, types[t++ % types.length], -21 + s * 2.8, rz, rng.chance(0.5) ? HALF : -HALF, rng.pick(CAR_COLORS));
+      }
+    }
+  });
+}
+
 /* @@END */
 
 export const STRIP: BuildingDef[] = [
@@ -1430,4 +1792,6 @@ export const STRIP: BuildingDef[] = [
   { id: 'dairyDream', name: 'Dairy Dream', w: 36, d: 28, front: -1, tags: ['fastfood', 'dessert', 'highway', 'downtown'], build: dairyDream },
   { id: 'rewindVideo', name: 'Rewind Video', w: 44, d: 30, front: -1, tags: ['video', 'highway', 'downtown'], build: rewindVideo },
   { id: 'stripMall', name: 'Valley Plaza', w: 58, d: 34, front: -3.5, tags: ['retail', 'arcade', 'laundromat', 'highway'], build: stripMall },
+  { id: 'bowlORama', name: 'Bowl-O-Rama', w: 56, d: 46, front: 4, tags: ['entertainment', 'bowling', 'highway'], build: bowlORama },
+  { id: 'thriftyMart', name: 'Thrifty Mart', w: 60, d: 52, front: -8, tags: ['grocery', 'highway'], build: thriftyMart },
 ];
