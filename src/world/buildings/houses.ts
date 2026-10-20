@@ -626,7 +626,314 @@ const aframeDef: BuildingDef = {
   },
 };
 
+/* ───────────────────────────── extra helpers (catalogue 2) ───────────────────────────── */
+
+/** Polygon in the (z, y) plane extruded along X, centred on x (dormer cheeks, rounded roofs). */
+function prismYZ(k: Kit, x: number, w: number, pts: [number, number][], col: Col, mat = 'paint') {
+  const s = new THREE.Shape(pts.map(([z, y]) => new THREE.Vector2(z, y)));
+  k.at(x, 0, -Math.PI / 2, () => k.extrude(s, w, col, mat));
+}
+
+function garageDoor(k: Kit, x: number, zf: number, w: number, h: number, trim: Col, col: Col = 0xe9e8e4) {
+  k.box(x, 0, zf + 0.02, w + 0.3, h + 0.14, 0.08, trim);
+  k.box(x, 0, zf + 0.06, w, h, 0.06, col, 'rollup');
+}
+
+/** Exposed rafter tails under a ±Z eave (`dir` = +1 front, -1 back). */
+function tails(k: Kit, x0: number, x1: number, zw: number, yw: number, dir: number, run: number, drop: number, col: Col, step = 0.8) {
+  const n = Math.max(1, Math.round((x1 - x0) / step));
+  for (let i = 0; i <= n; i++) {
+    const x = x0 + ((x1 - x0) * i) / n;
+    k.beam({ x, y: yw, z: zw }, { x, y: yw - drop, z: zw + dir * run }, 0.09, 0.1, col);
+  }
+}
+
+/** Square tapered column (4-sided, wider at the base). */
+function taperCol(k: Kit, x: number, y: number, z: number, h: number, col: Col) {
+  k.cyl(x, y, z, 0.11, 0.18, h, 4, col, 'paint', { ry: Math.PI / 4 });
+  k.box(x, y + h, z, 0.3, 0.1, 0.3, col);
+}
+
+/** Round-top door with a stone surround and iron straps, facing +Z at zf. */
+function archDoor(k: Kit, x: number, y: number, zf: number, w: number, h: number, col: Col) {
+  const arch = (ww: number, hh: number) => {
+    const s = new THREE.Shape();
+    s.moveTo(-ww / 2, 0);
+    s.lineTo(ww / 2, 0);
+    s.lineTo(ww / 2, hh - ww / 2);
+    s.absarc(0, hh - ww / 2, ww / 2, 0, Math.PI, false);
+    s.lineTo(-ww / 2, 0);
+    return s;
+  };
+  k.extrude(arch(w + 0.45, h + 0.22), 0.08, 0xb9b3a6, 'stone', x, y, zf + 0.04);
+  k.extrude(arch(w, h), 0.07, col, 'paint', x, y, zf + 0.075);
+  for (const hy of [0.55, 1.3]) k.box(x, y + hy, zf + 0.12, w * 0.92, 0.07, 0.02, 0x2a2a2c, 'metal');
+  k.box(x + w * 0.3, y + 1.0, zf + 0.13, 0.07, 0.16, 0.05, 0x2a2a2c, 'metal');
+}
+
+/** Half-timbering on a front-facing gable triangle (half-width hw, rise R, base y0) at plane z. */
+function timbers(k: Kit, x: number, y0: number, z: number, hw: number, R: number, col: Col) {
+  const zz = z + 0.03;
+  k.box(x, y0, zz, hw * 2, 0.2, 0.07, col);
+  for (let i = -3; i <= 3; i++) {
+    const xx = x + (hw * i) / 3.6;
+    const hv = R * (1 - Math.abs(xx - x) / hw) - 0.2;
+    if (hv > 0.3) k.box(xx, y0 + 0.2, zz, 0.11, hv, 0.07, col);
+  }
+  const yy = y0 + R * 0.42;
+  k.box(x, yy, zz, hw * 1.16, 0.13, 0.07, col);
+  for (const s of [-1, 1]) k.beam({ x: x + s * hw * 0.78, y: y0 + 0.2, z: zz }, { x: x + s * hw * 0.2, y: yy, z: zz }, 0.1, 0.07, col);
+}
+
+function brickPlanter(k: Kit, r: Rng, x: number, z: number, w: number, d = 0.7) {
+  k.box(x, 0, z, w, 0.55, d, 0xffffff, 'brickRed');
+  k.box(x, 0.55, z, w + 0.12, 0.07, d + 0.12, 0xcfcac2, 'concrete');
+  k.box(x, 0.5, z, w - 0.3, 0.12, d - 0.3, 0x4a3a2c);
+  const n = Math.max(2, Math.round(w / 0.8));
+  for (let i = 0; i < n; i++) {
+    const xx = x - w / 2 + 0.4 + ((w - 0.8) * i) / Math.max(1, n - 1);
+    k.ico(xx, 0.8, z, 0.28, 0, r.pick(GREENS), 'paint', 1, 0.8, 1);
+    if (r.chance(0.6)) k.ico(xx + 0.1, 1.05, z + 0.05, 0.1, 0, r.pick([0xd84a6a, 0xe6c23a, 0xf0efe8, 0xb54aa0]));
+  }
+}
+
+/* ───────────────────────────── 6. Craftsman bungalow ───────────────────────────── */
+
+const CB_SCHEMES = [
+  { wall: 0x8a9a74, up: 0xc9b58a, trim: 0xefe6cf, acc: 0x6b3a22 },
+  { wall: 0x7b8fa0, up: 0xd9cfae, trim: 0xf1ead6, acc: 0x7a2c25 },
+  { wall: 0xb89a6a, up: 0x8a6a4a, trim: 0xefe6cf, acc: 0x2f4a3a },
+  { wall: 0x8c5a3c, up: 0xc2a97a, trim: 0xe8dfc6, acc: 0x2b4a3a },
+  { wall: 0x6f8a86, up: 0xd0c19a, trim: 0xf1ead6, acc: 0x8c3b3a },
+];
+
+const craftsmanBungalow = mk({
+  id: 'craftsmanBungalow',
+  name: 'Craftsman Bungalow',
+  tags: ['historic', 'suburban', 'victorian'],
+  x0: -5.9,
+  x1: 6.1,
+  z0: -4.1,
+  z1: 6.9,
+  zf: 3.5,
+  draw: ({ c, k, r, solid }) => {
+    const p = r.pick(CB_SCHEMES);
+    const roofC = r.pick(ROOFS);
+    const brick = r.chance(0.45);
+    const pierC: Col = brick ? 0xffffff : 0x9b9893;
+    const pierM = brick ? 'brickBrown' : 'stone';
+    const F = 0.6;
+    const H = 2.7;
+    const E = F + H;
+    solid(0, 0, 10, 7);
+    solid(0, 4.75, 10.2, 2.5);
+
+    block(k, 0, 0, 10, 7, F, H, p.wall, 'siding', p.trim, pierC, pierM);
+    // low gable whose front slope sweeps down over the porch
+    k.roof(0, E, 0, 10, [[6.1, -0.55], [0, 2.4], [-3.5, 0]], roofC, 'shingle', { trim: p.trim, fill: p.up, fillMat: 'shingle', ridge: roofC, eaveOH: 0.5, gableOH: 0.8, thick: 0.14 });
+    tails(k, -4.9, 4.9, 5.75, E - 0.4, 1, 0.65, 0.31, p.acc);
+    tails(k, -4.9, 4.9, -3.5, E - 0.02, -1, 0.42, 0.3, p.acc);
+    for (const s of [-1, 1])
+      for (const zz of [1.8, -1.8, ...(s < 0 ? [0] : [])]) {
+        const y = E + (zz > 0 ? 2.4 - 0.4836 * zz : 2.4 - 0.686 * -zz) - 0.2;
+        k.beam({ x: s * 4.95, y, z: zz }, { x: s * 5.75, y, z: zz }, 0.14, 0.14, p.acc);
+        k.beam({ x: s * 4.95, y: y - 0.7, z: zz }, { x: s * 5.6, y: y - 0.04, z: zz }, 0.1, 0.1, p.acc);
+      }
+
+    // shed dormer
+    const dz = 3.0;
+    k.box(0, E + 0.6, dz - 1.05, 4.2, 1.6, 2.1, p.wall, 'siding');
+    k.roof(0, 0, 0, 4.2, [[dz, E + 2.2], [dz - 2.3, E + 2.45]], roofC, 'shingle', { trim: p.trim, thick: 0.12, eaveOH: 0.3, gableOH: 0.3 });
+    for (const wx of [-1.35, 0, 1.35]) win(k, wx, E + 0.9, dz, 0.9, 0.75, p.trim, { mx: 2, my: 1 });
+
+    // windows and door
+    doorAt(k, 0.05, F, 3.5, 1.0, 2.15, p.acc, { frame: p.trim, glass: true });
+    win(k, -3.2, F + 0.6, 3.5, 1.3, 1.5, p.trim, { mx: 2, my: 2 });
+    win(k, 3.1, F + 0.6, 3.5, 2.0, 1.5, p.trim, { mx: 3, my: 2 });
+    for (const [s, zs] of [[-1, [-1.8, 1.8]], [1, [-2.2, 2.2]]] as [number, number[]][])
+      side(k, s, 5.0, (u) => zs.forEach((zz) => win(k, u(zz), F + 0.6, 0, 1.1, 1.5, p.trim, { mx: 2, my: 2 })));
+    back(k, -3.5, (u) => [-3, 0, 3].forEach((xx) => win(k, u(xx), F + 0.7, 0, 1.1, 1.4, p.trim, { mx: 2, my: 2 })));
+
+    // stone chimney on the gable end
+    k.box(5.5, 0, 0.5, 1.0, 4.4, 1.3, 0x9b9893, 'stone');
+    k.box(5.5, 4.4, 0.5, 0.85, 2.2, 1.15, 0x9b9893, 'stone');
+    k.box(5.5, 6.6, 0.5, 1.05, 0.14, 1.3, 0x6c6a66);
+
+    // porch: base, deck, knee walls, tapered columns on piers
+    const deckC = r.pick([0x7b6a56, 0x8a7a66]);
+    k.box(0, 0, 4.75, 10.0, F - 0.12, 2.4, pierC, pierM);
+    k.box(0, F - 0.12, 4.75, 10.2, 0.12, 2.5, deckC, 'planks');
+    for (const [x0, x1] of [[-4.45, -1.95], [1.85, 4.45]]) {
+      k.box((x0 + x1) / 2, F, 5.75, x1 - x0, 0.85, 0.4, pierC, pierM);
+      k.box((x0 + x1) / 2, F + 0.85, 5.75, x1 - x0, 0.07, 0.5, 0xcfcac2, 'concrete');
+    }
+    for (const x of [-4.75, 4.75]) k.box(x, F, 4.5, 0.4, 0.85, 2.0, pierC, pierM);
+    for (const x of [-4.75, -1.65, 1.75, 4.75]) {
+      k.box(x, F, 5.75, 0.8, 1.0, 0.8, pierC, pierM);
+      k.box(x, F + 1.0, 5.75, 0.9, 0.1, 0.9, 0xcfcac2, 'concrete');
+      taperCol(k, x, F + 1.1, 5.75, 0.95, p.trim);
+    }
+    k.box(0, 2.65, 5.75, 10.0, 0.25, 0.3, p.trim);
+    steps(k, 0.05, 6.0, 2.0, 3, F, 0xb5b2ab);
+
+    // 1990s life
+    if (r.chance(0.7)) chair(k, -3.4, F, 4.9, 0.15, r.pick([0xf2efe8, 0x2f4a3a, 0x7a2c25]));
+    if (r.chance(0.5)) chair(k, -2.6, F, 5.0, -0.2, r.pick([0xf2efe8, 0x2f4a3a]));
+    if (r.chance(0.6)) hangingPlant(k, 1.75, 2.7, 5.4, r);
+    if (r.chance(0.5)) flagBracket(k, c, 4.9, F + 1.7, 5.95);
+    if (r.chance(0.4)) bike(k, 3.4, 6.55, 0.4, r.pick([0xc43b32, 0x2c4a8c, 0xd9a441]));
+    if (r.chance(0.5)) dish(k, -2.4, E + 1.55, -1.5, Math.PI);
+    if (r.chance(0.5)) woodpile(k, -5.5, -1.0, Math.PI / 2);
+    if (r.chance(0.4)) hoseCoil(k, 4.0, F + 0.7, 3.55);
+    foundationShrubs(k, r, -5.0, 5.0, 6.45, [[-1.2, 1.3]], 5);
+  },
+});
+
+/* ───────────────────────────── 7. American Foursquare ───────────────────────────── */
+
+const foursquare = mk({
+  id: 'foursquare',
+  name: 'American Foursquare',
+  tags: ['historic', 'victorian'],
+  x0: -5.6,
+  x1: 5.6,
+  z0: -5.2,
+  z1: 7.7,
+  zf: 4.3,
+  draw: ({ c, k, r, solid }) => {
+    const wall = r.pick(WALLS);
+    const up = r.chance(0.5) ? wall : r.pick(WALLS);
+    const trim = r.pick(WHITES);
+    const roofC = r.pick(ROOFS);
+    const door = r.pick(DOORS);
+    const brick = r.chance(0.35);
+    const F = 0.8;
+    const H1 = 2.8;
+    const H2 = 2.7;
+    const top = F + H1 + H2;
+    solid(0, 0, 9.4, 8.6);
+
+    block(k, 0, 0, 9.4, 8.6, F, H1, brick ? 0xffffff : wall, brick ? 'brickRed' : 'siding', trim, 0x8b8782, 'stone');
+    k.box(0, F + H1, 0, 9.4, H2, 8.6, up, 'siding');
+    k.box(0, F + H1 - 0.12, 0, 9.55, 0.3, 8.75, trim);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.box(sx * 4.7, F + H1, sz * 4.3, 0.16, H2, 0.16, trim);
+    k.box(0, top - 0.12, 0, 9.5, 0.24, 8.7, trim);
+    k.hipRoof(0, top, 0, 9.4, 8.6, 3.2, roofC, 'shingle', 0.9);
+    chimney(k, 2.9, top + 1.5, -1.2, 2.0, 0xffffff, 'brickRed');
+
+    // hipped dormer
+    k.box(0, top + 0.7, 2.43, 2.2, 1.6, 1.94, up, 'siding');
+    k.hipRoof(0, top + 2.3, 2.43, 2.2, 1.94, 0.8, roofC, 'shingle', 0.3);
+    win(k, 0, top + 0.95, 3.4, 1.1, 0.9, trim, { mx: 3, my: 1 });
+
+    // windows and door
+    for (const x of [-3.2, 3.2]) {
+      win(k, x, F + 0.6, 4.3, 1.3, 1.7, trim, { mx: 2, my: 2 });
+      win(k, x, F + H1 + 0.65, 4.3, 1.2, 1.7, trim, { mx: 2, my: 2, shut: r.chance(0.4) ? r.pick(SHUT) : undefined });
+    }
+    win(k, 0, F + H1 + 0.65, 4.3, 1.2, 1.7, trim, { mx: 2, my: 2 });
+    doorAt(k, 0, F, 4.3, 1.1, 2.3, door, { frame: trim, glass: true });
+    for (const s of [-1, 1]) {
+      side(k, s, 4.7, (u) => {
+        for (const zz of [-2.2, 1.6]) {
+          win(k, u(zz), F + 0.6, 0, 1.1, 1.7, trim, { mx: 2, my: 2 });
+          win(k, u(zz), F + H1 + 0.65, 0, 1.1, 1.7, trim, { mx: 2, my: 2 });
+        }
+      });
+    }
+    back(k, -4.3, (u) => [-2.8, 0, 2.8].forEach((xx) => {
+      win(k, u(xx), F + 0.7, 0, 1.1, 1.6, trim, { mx: 2, my: 2 });
+      win(k, u(xx), F + H1 + 0.65, 0, 1.1, 1.7, trim, { mx: 2, my: 2 });
+    }));
+
+    // full-width porch
+    const deck = r.pick([0x8a7a66, 0x7b6a56]);
+    k.box(0, 0, 5.55, 10.0, F - 0.12, 2.5, 0x8b8782, 'stone');
+    k.box(0, F - 0.12, 5.55, 10.2, 0.12, 2.7, deck, 'planks');
+    k.roof(0, F + 2.5, 0, 10.4, [[6.9, 0], [4.3, 0.6]], roofC, 'shingle', { thick: 0.14, eaveOH: 0.4, gableOH: 0.3, trim });
+    for (const x of [-4.6, -1.4, 1.4, 4.6]) {
+      k.box(x, F, 6.6, 0.55, 0.9, 0.55, 0x8b8782, 'stone');
+      squarePost(k, x, F + 0.9, 6.6, 1.6, trim, 0.26);
+    }
+    k.box(0, F + 2.4, 6.6, 9.9, 0.2, 0.3, trim);
+    rail(k, -4.3, -1.7, F, 6.6, trim, 0.24, 0.9);
+    rail(k, 1.7, 4.3, F, 6.6, trim, 0.24, 0.9);
+    steps(k, 0, 6.9, 1.8, 3, F);
+
+    // 1990s life
+    if (r.chance(0.7)) chair(k, -3.2, F, 6.0, 0.2, r.pick([0xf2efe8, 0x2f4a3a, 0x7a2c25]));
+    if (r.chance(0.5)) chair(k, 3.3, F, 6.0, -0.15, r.pick([0xf2efe8, 0x2f4a3a]));
+    if (r.chance(0.6)) hangingPlant(k, -1.4, F + 2.4, 6.5, r);
+    if (r.chance(0.5)) flagBracket(k, c, 4.7, F + 1.7, 6.8);
+    if (r.chance(0.45)) dish(k, -2.2, top + 1.55, -2.0, Math.PI);
+    if (r.chance(0.4)) bike(k, 4.3, 7.4, 0.3, r.pick([0xc43b32, 0x2c4a8c, 0xd9a441]));
+    if (r.chance(0.4)) trashCans(k, 5.0, -2.0, 2);
+    foundationShrubs(k, r, -4.8, 4.8, 7.35, [[-1.1, 1.1]], 5);
+  },
+});
+
+/* ───────────────────────────── 8. Cape Cod ───────────────────────────── */
+
+const capeCod = mk({
+  id: 'capeCod',
+  name: 'Cape Cod',
+  tags: ['postwar', 'suburban'],
+  x0: -5.75,
+  x1: 5.75,
+  z0: -3.95,
+  z1: 5.7,
+  zf: 3.6,
+  draw: ({ c, k, r, solid }) => {
+    const wall = r.pick([0xf2efe8, 0xe4dccb, 0x9fb3c2, 0xd9cfa7, 0xb8c4cc, 0x8d9aa3, 0xa7b08a]);
+    const trim = r.pick(WHITES);
+    const roofC = r.pick(ROOFS);
+    const shut = r.chance(0.75) ? r.pick(SHUT) : undefined;
+    const door = r.pick(DOORS);
+    const F = 0.5;
+    const H = 2.5;
+    const E = F + H;
+    solid(0, 0, 10.8, 7.2);
+
+    block(k, 0, 0, 10.8, 7.2, F, H, wall, 'siding', trim, 0x8b8782, 'stone');
+    gX(k, 0, E, 0, 10.8, 7.2, 3.4, { col: roofC, trim, fill: wall, fillMat: 'siding', ridge: roofC, eave: 0.35, gable: 0.3 });
+    chimney(k, 0.4, E + 2.3, 0, 2.7, 0xffffff, 'brickRed');
+
+    // two gable dormers
+    for (const dx of [-2.7, 2.7]) {
+      k.box(dx, 4.0, 1.35, 1.9, 1.75, 1.5, wall, 'siding');
+      gZ(k, dx, 5.75, 1.35, 1.9, 1.5, 0.6, { col: roofC, trim, fill: wall, fillMat: 'siding', eave: 0.25, gable: 0.3, ridge: roofC });
+      win(k, dx, 4.7, 2.1, 0.8, 0.85, trim, { mx: 2, my: 2, shut });
+    }
+    // five-bay front
+    doorAt(k, 0, F, 3.6, 1.0, 2.1, door, { frame: trim });
+    for (const x of [-4.3, -2.6, 2.6, 4.3]) win(k, x, F + 0.55, 3.6, 0.8, 1.45, trim, { mx: 2, my: 3, shut });
+    for (const s of [-1, 1]) {
+      side(k, s, 5.4, (u) => {
+        for (const zz of [-1.6, 1.6]) win(k, u(zz), F + 0.55, 0, 0.9, 1.45, trim, { mx: 2, my: 3, shut });
+        win(k, u(0), E + 1.1, 0, 0.7, 0.8, trim, { mx: 2, my: 2 });
+      });
+    }
+    back(k, -3.6, (u) => [-3.6, -1.2, 1.2, 3.6].forEach((xx) => win(k, u(xx), F + 0.6, 0, 0.9, 1.4, trim, { mx: 2, my: 2 })));
+
+    // small portico
+    k.box(0, 0, 4.3, 2.6, F, 1.4, 0xc6c3bc, 'concrete');
+    gZ(k, 0, 3.05, 4.0, 2.7, 1.8, 0.75, { col: roofC, trim, fill: trim, eave: 0.2, gable: 0.35, ridge: roofC });
+    for (const x of [-1.05, 1.05]) k.cyl(x, F, 4.85, 0.085, 0.095, 2.4, 6, trim);
+    k.box(0, 2.82, 4.85, 2.4, 0.2, 0.2, trim);
+    steps(k, 0, 5.0, 1.6, 2, F, 0xc6c3bc);
+
+    // 1990s life
+    if (r.chance(0.5)) lights(k, -1.05, 2.78, 4.95, 1.05, 2.78, 4.95, 5, 0.2);
+    if (r.chance(0.5)) hoseCoil(k, 3.6, F + 0.7, 3.65);
+    if (r.chance(0.45)) dish(k, 3.5, E + 0.2 + 1.9, -1.0, Math.PI);
+    if (r.chance(0.4)) fenceSeg(k, -5.0, 5.5, -5.0, 1.0);
+    if (r.chance(0.4)) bike(k, -3.5, 5.0, 0.5, r.pick([0xc43b32, 0x2c4a8c, 0xd9a441]));
+    if (r.chance(0.5)) trashCans(k, 5.3, -2.5, 2);
+    foundationShrubs(k, r, -5.2, 5.2, 3.95, [[-1.4, 1.4]], 7);
+  },
+});
+
 /* @@MORE */
 
-const HOUSES0: BuildingDef[] = [victorianQueenAnne, minersCottage, colonialDef, ranchPorchDef, aframeDef];
+const HOUSES0: BuildingDef[] = [victorianQueenAnne, minersCottage, colonialDef, ranchPorchDef, aframeDef, craftsmanBungalow, foursquare, capeCod];
 export const HOUSES: BuildingDef[] = HOUSES0;
