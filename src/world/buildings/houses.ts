@@ -672,11 +672,11 @@ function archDoor(k: Kit, x: number, y: number, zf: number, w: number, h: number
 }
 
 /** Half-timbering on a front-facing gable triangle (half-width hw, rise R, base y0) at plane z. */
-function timbers(k: Kit, x: number, y0: number, z: number, hw: number, R: number, col: Col) {
+function timbers(k: Kit, x: number, y0: number, z: number, hw: number, R: number, col: Col, n = 3) {
   const zz = z + 0.03;
   k.box(x, y0, zz, hw * 2, 0.2, 0.07, col);
-  for (let i = -3; i <= 3; i++) {
-    const xx = x + (hw * i) / 3.6;
+  for (let i = -n; i <= n; i++) {
+    const xx = x + (hw * i) / (n + 0.6);
     const hv = R * (1 - Math.abs(xx - x) / hw) - 0.2;
     if (hv > 0.3) k.box(xx, y0 + 0.2, zz, 0.11, hv, 0.07, col);
   }
@@ -933,7 +933,816 @@ const capeCod = mk({
   },
 });
 
+/* ───────────────────────────── 9. Dutch Colonial ───────────────────────────── */
+
+const dutchColonial = mk({
+  id: 'dutchColonial',
+  name: 'Dutch Colonial',
+  tags: ['historic', 'suburban'],
+  x0: -6.5,
+  x1: 5.9,
+  z0: -4.2,
+  z1: 5.75,
+  zf: 3.75,
+  draw: ({ c, k, r, solid }) => {
+    const wall = r.pick(WALLS);
+    const trim = r.pick(WHITES);
+    const roofC = r.pick(ROOFS);
+    const shut = r.chance(0.8) ? r.pick(SHUT) : undefined;
+    const door = r.pick(DOORS);
+    const F = 0.5;
+    const H = 2.6;
+    const E = F + H;
+    solid(0, 0, 11, 7.5);
+
+    block(k, 0, 0, 11, 7.5, F, H, wall, 'siding', trim, 0x8b8782, 'stone');
+    // gambrel: steep lower slope, shallow upper slope
+    k.roof(0, E, 0, 11, [[3.75, 0], [2.5, 2.5], [0, 3.9], [-2.5, 2.5], [-3.75, 0]], roofC, 'shingle', { trim, fill: wall, fillMat: 'siding', ridge: roofC, eaveOH: 0.5, gableOH: 0.4, thick: 0.14 });
+    // long shed dormer flush with the front wall
+    k.box(0, E, 2.625, 6.8, 2.7, 2.25, wall, 'siding');
+    k.roof(0, 0, 0, 6.8, [[3.75, E + 2.7], [1.5, E + 3.0]], roofC, 'shingle', { trim, thick: 0.12, eaveOH: 0.4, gableOH: 0.3 });
+    for (const x of [-2.2, 0, 2.2]) win(k, x, E + 0.75, 3.75, 1.0, 1.35, trim, { mx: 2, my: 2, shut });
+    for (const x of [-4.3, -2.2, 2.2, 4.3]) win(k, x, F + 0.55, 3.75, 1.0, 1.5, trim, { mx: 2, my: 2, shut });
+    doorAt(k, 0, F, 3.75, 1.05, 2.2, door, { frame: trim, glass: true });
+    // entry hood on brackets
+    k.roof(0, F + 2.6, 0, 2.0, [[5.0, 0], [3.75, 0.35]], roofC, 'shingle', { trim, thick: 0.1, eaveOH: 0.1, gableOH: 0.15 });
+    for (const s of [-1, 1]) k.beam({ x: s * 0.85, y: F + 2.05, z: 3.8 }, { x: s * 0.85, y: F + 2.6, z: 4.9 }, 0.1, 0.1, trim);
+    k.box(0, 0, 4.45, 2.2, F, 1.4, 0xc6c3bc, 'concrete');
+    steps(k, 0, 5.15, 1.8, 2, F, 0xc6c3bc);
+    // gable-end brick chimney
+    chimney(k, -5.95, 0, 0, 7.8, 0xffffff, 'brickRed');
+    for (const s of [-1, 1])
+      side(k, s, 5.5, (u) => {
+        for (const zz of [-1.5, 1.5]) win(k, u(zz), F + 0.55, 0, 0.9, 1.5, trim, { mx: 2, my: 2, shut });
+        if (s > 0) win(k, u(0), E + 0.6, 0, 0.9, 1.0, trim, { mx: 2, my: 2 });
+      });
+    back(k, -3.75, (u) => [-4, -1.4, 1.4, 4].forEach((xx) => win(k, u(xx), F + 0.6, 0, 1.0, 1.4, trim, { mx: 2, my: 2 })));
+
+    if (r.chance(0.5)) flagBracket(k, c, -1.5, F + 1.8, 3.8);
+    if (r.chance(0.45)) dish(k, 2.5, E + 3.35, -1.2, Math.PI);
+    if (r.chance(0.5)) woodpile(k, 5.9, -2.0, Math.PI / 2);
+    if (r.chance(0.4)) hoseCoil(k, 3.3, F + 0.7, 3.8);
+    if (r.chance(0.4)) bike(k, -3.0, 5.0, 0.4, r.pick([0xc43b32, 0x2c4a8c, 0xd9a441]));
+    if (r.chance(0.4)) fenceSeg(k, 5.5, 5.5, 5.5, 1.5);
+    foundationShrubs(k, r, -5.3, 5.3, 4.0, [[-1.3, 1.3]], 7);
+  },
+});
+
+/* ───────────────────────────── 10. Tudor Revival ───────────────────────────── */
+
+const tudorRevival = mk({
+  id: 'tudorRevival',
+  name: 'Tudor Revival',
+  tags: ['historic', 'suburban'],
+  x0: -5.4,
+  x1: 5.4,
+  z0: -4.2,
+  z1: 5.6,
+  zf: 3.75,
+  draw: ({ k, r, solid }) => {
+    const w = r.pick([0xe6dcc3, 0xe8e6df, 0xd8cfae, 0xcbbf9f]);
+    const tb = r.pick([0x3d2b1f, 0x4a3626, 0x2e2420]);
+    const roofC = r.pick([0x4a3a32, 0x3b3d42, 0x5a4a40, 0x40483f, 0x2f3340]);
+    const door = r.pick([0x5a3a22, 0x3d2f28, 0x2b4a3a, 0x6b2a24]);
+    const F = 0.5;
+    const H = 2.9;
+    const E = F + H;
+    solid(0, 0, 10, 7.5);
+    solid(-2.7, 4.45, 4.6, 1.4);
+
+    block(k, 0, 0, 10, 7.5, F, H, w, 'stucco', tb, STONE, 'stone');
+    gX(k, 0, E, 0, 10, 7.5, 3.8, { col: roofC, trim: tb, fill: w, fillMat: 'stucco', ridge: roofC, eave: 0.4, gable: 0.35 });
+    for (const s of [-1, 1]) side(k, s, 5.0, () => timbers(k, 0, E, 0, 3.75, 3.8, tb));
+
+    // steep cross gable with a leaded bay
+    block(k, -2.7, 4.45, 4.6, 1.4, F, H, w, 'stucco', tb, STONE, 'stone');
+    gZ(k, -2.7, E, 2.575, 4.6, 5.15, 3.3, { col: roofC, trim: tb, fill: w, fillMat: 'stucco', ridge: roofC, eave: 0.4, gable: 0.35 });
+    timbers(k, -2.7, E, 5.15, 2.3, 3.3, tb);
+    win(k, -2.7, F + 0.55, 5.15, 3.0, 1.6, tb, { mx: 6, my: 3 });
+    win(k, -2.7 - 2.3, F + 0.6, 4.0, 0.9, 1.4, tb, { mx: 2, my: 3, noSill: true });
+
+    // entry vestibule with arched door
+    block(k, 1.7, 4.3, 2.2, 1.1, F, 2.7, w, 'stucco', tb, STONE, 'stone');
+    gZ(k, 1.7, F + 2.7, 3.425, 2.2, 2.85, 1.7, { col: roofC, trim: tb, fill: w, fillMat: 'stucco', ridge: roofC, eave: 0.3, gable: 0.3 });
+    timbers(k, 1.7, F + 2.7, 4.85, 1.1, 1.7, tb, 1);
+    archDoor(k, 1.7, F, 4.85, 1.0, 2.15, door);
+    steps(k, 1.7, 4.85, 1.4, 2, F, 0xb9b3a6, 'stone');
+
+    // big front chimney
+    k.box(4.15, 0, 4.4, 1.7, 3.1, 1.3, 0x9b9893, 'stone');
+    k.box(4.15, 3.1, 4.3, 1.4, 3.6, 1.1, 0xffffff, 'brickRed');
+    k.box(4.15, 6.7, 4.25, 1.15, 1.8, 0.95, 0xffffff, 'brickRed');
+    k.box(4.15, 8.5, 4.25, 1.35, 0.15, 1.15, 0x6c6a66);
+    for (const dx of [-0.25, 0.25]) k.cyl(4.15 + dx, 8.65, 4.25, 0.13, 0.15, 0.5, 6, 0x9a5a3a);
+
+    for (const s of [-1, 1])
+      side(k, s, 5.0, (u) => {
+        for (const zz of [-1.6, 1.6]) win(k, u(zz), F + 0.6, 0, 1.0, 1.4, tb, { mx: 3, my: 3 });
+      });
+    back(k, -3.75, (u) => [-3, 0, 3].forEach((xx) => win(k, u(xx), F + 0.6, 0, 1.1, 1.4, tb, { mx: 3, my: 3 })));
+    win(k, 0.1, F + 0.6, 3.75, 0.6, 1.4, tb, { mx: 1, my: 3, noSill: true });
+
+    if (r.chance(0.5)) dish(k, 2.0, E + 2.45, -1.5, Math.PI);
+    if (r.chance(0.5)) woodpile(k, 5.4, -1.5, Math.PI / 2);
+    if (r.chance(0.4)) trashCans(k, 5.4, -3.2, 2);
+    if (r.chance(0.4)) bike(k, -1.0, 5.3, 0.3, r.pick([0xc43b32, 0x2c4a8c, 0xd9a441]));
+    foundationShrubs(k, r, -5.0, 0.0, 5.5, [], 4);
+    foundationShrubs(k, r, 2.9, 3.4, 4.0, [], 1);
+  },
+});
+
+/* ───────────────────────────── 11. Mid-century ranch ───────────────────────────── */
+
+const midCenturyRanch = mk({
+  id: 'midCenturyRanch',
+  name: 'Mid-Century Ranch',
+  tags: ['postwar', 'suburban'],
+  x0: -9.4,
+  x1: 11.2,
+  z0: -4.7,
+  z1: 5.6,
+  zf: 3.8,
+  drive: 6.9,
+  draw: ({ c, k, r, solid }) => {
+    const bm = r.pick(['brickTan', 'brickRed', 'brickBrown']);
+    const brick = r.chance(0.6);
+    const wall: Col = brick ? 0xffffff : r.pick(WALLS);
+    const wm = brick ? bm : 'siding';
+    const trim = r.pick(WHITES);
+    const roofC = r.pick(ROOFS);
+    const door = r.pick(DOORS);
+    const gd = r.pick([0xe9e8e4, 0xd8d2c0, 0xa8805a, 0x8a9a8c]);
+    const F = 0.25;
+    const H = 2.5;
+    const E = F + H;
+    solid(-2.5, 0, 12, 7.6);
+    solid(6.9, 0.5, 6.8, 7.6);
+
+    k.box(-2.5, 0, 0, 12, F, 7.6, 0x9b9893, 'concrete');
+    k.box(-2.5, F, 0, 12, H, 7.6, wall, wm);
+    k.box(6.9, 0, 0.5, 6.8, F, 7.6, 0x9b9893, 'concrete');
+    k.box(6.9, F, 0.5, 6.8, H - 0.25, 7.6, wall, wm);
+    k.hipRoof(-2.5, E, 0, 12, 7.6, 1.5, roofC, 'shingle', 0.9);
+    k.at(6.9, 0.5, Math.PI / 2, () => k.hipRoof(0, E - 0.25, 0, 7.6, 6.8, 1.4, roofC, 'shingle', 0.7));
+    chimney(k, -5.0, E + 0.4, -0.8, 2.0, 0xffffff, bm);
+
+    // picture window, planter, covered entry
+    win(k, -6.4, F + 0.8, 3.8, 3.3, 1.35, trim, { mx: 3, my: 1 });
+    brickPlanter(k, r, -6.4, 4.6, 3.8);
+    win(k, 0.3, F + 0.85, 3.8, 1.4, 1.2, trim, { mx: 2, my: 2 });
+    doorAt(k, -3.0, F, 3.8, 1.0, 2.15, door, { frame: trim });
+    win(k, -1.95, F + 0.3, 3.8, 0.5, 1.7, trim, { mx: 1, my: 3, noSill: true });
+    k.box(-3.0, 0, 4.55, 2.9, F, 1.5, 0xc6c3bc, 'concrete');
+    k.box(-3.0, 2.5, 4.55, 3.2, 0.15, 1.9, trim);
+    for (const x of [-4.4, -1.6]) k.cyl(x, F, 5.35, 0.05, 0.05, 2.25, 5, 0x2a2a2c, 'metal');
+    steps(k, -3.0, 5.3, 2.0, 1, F, 0xc6c3bc);
+
+    garageDoor(k, 5.2, 4.3, 2.5, 2.15, trim, gd);
+    garageDoor(k, 8.6, 4.3, 2.5, 2.15, trim, gd);
+    side(k, -1, 8.5, (u) => [-1.5, 1.5].forEach((zz) => win(k, u(zz), F + 0.85, 0, 1.2, 1.1, trim, { mx: 2, my: 1 })));
+    side(k, 1, 10.3, (u) => win(k, u(-0.5), F + 0.9, 0, 0.9, 0.9, trim, { mx: 2, my: 2 }));
+    back(k, -3.8, (u) => [-6.5, -3, 0.5].forEach((xx) => win(k, u(xx), F + 0.85, 0, 1.4, 1.1, trim, { mx: 2, my: 1, ac: r.chance(0.15) })));
+
+    // 1990s life
+    k.at(11.0, 5.0, -Math.PI / 2, () => hoop(k, 0, 0));
+    if (r.chance(0.6)) trashCans(k, 10.7, -2.0, 2);
+    if (r.chance(0.5)) dish(k, -1.0, E + 0.9, -2.0, Math.PI);
+    if (r.chance(0.5)) flagBracket(k, c, -4.4, F + 1.8, 5.45);
+    if (r.chance(0.4)) bike(k, -0.5, 5.0, 0.3, r.pick([0xc43b32, 0x2c4a8c, 0xd9a441]));
+    if (r.chance(0.4)) hoseCoil(k, 2.2, F + 0.7, 3.85);
+    if (r.chance(0.4)) woodpile(k, -8.8, -2.0, Math.PI / 2);
+    foundationShrubs(k, r, -1.0, 3.4, 4.1, [], 3);
+  },
+});
+
+/* ───────────────────────────── 12. Split-level ───────────────────────────── */
+
+const splitLevel = mk({
+  id: 'splitLevel',
+  name: 'Split-Level',
+  tags: ['postwar', 'suburban'],
+  x0: -9.8,
+  x1: 9.4,
+  z0: -4.6,
+  z1: 5.7,
+  zf: 3.8,
+  drive: -5.6,
+  draw: ({ c, k, r, solid }) => {
+    const bm = r.pick(['brickTan', 'brickBrown', 'brickRed']);
+    const up = r.pick(WALLS);
+    const lowW = r.chance(0.5) ? r.pick(WALLS) : up;
+    const trim = r.pick(WHITES);
+    const roofC = r.pick(ROOFS);
+    const door = r.pick(DOORS);
+    const gd = r.pick([0xe9e8e4, 0xd8d2c0, 0xa8805a, 0x8a9a8c]);
+    solid(-4.6, 0.15, 9.2, 8.3);
+    solid(4.4, -0.15, 8.8, 7.1);
+
+    // two-storey wing: garage and den below, bedrooms above
+    k.box(-4.6, 0, -0.1, 9.2, 2.5, 7.8, 0xffffff, bm);
+    k.box(-4.6, 2.5, 0.15, 9.2, 2.5, 8.3, up, 'boards');
+    k.box(-4.6, 2.35, 0.15, 9.3, 0.3, 8.4, trim);
+    k.box(-4.6, 4.88, 0.15, 9.3, 0.24, 8.4, trim);
+    gX(k, -4.6, 5.0, 0.15, 9.2, 8.3, 1.9, { col: roofC, trim, fill: up, fillMat: 'boards', ridge: roofC, eave: 0.6, gable: 0.5 });
+    // single-storey wing raised half a level
+    k.box(4.4, 0, -0.15, 8.8, 1.3, 7.1, 0xffffff, bm);
+    k.box(4.4, 1.3, -0.15, 8.8, 2.5, 7.1, lowW, 'siding');
+    k.box(4.4, 3.68, -0.15, 8.9, 0.24, 7.2, trim);
+    gX(k, 4.4, 3.8, -0.15, 8.8, 7.1, 1.4, { col: roofC, trim, fill: lowW, fillMat: 'siding', ridge: roofC, eave: 0.6, gable: 0.5 });
+    chimney(k, 6.8, 4.2, -1.8, 2.4, 0xffffff, bm);
+
+    garageDoor(k, -5.6, 3.8, 5.0, 2.15, trim, gd);
+    win(k, -1.4, 1.1, 3.8, 1.6, 1.1, trim, { mx: 2, my: 1 });
+    for (const x of [-7.2, -4.6, -2.0]) win(k, x, 3.25, 4.3, 1.8, 1.3, trim, { mx: 3, my: 1, ac: x === -2.0 && r.chance(0.5) });
+    doorAt(k, 1.5, 1.3, 3.4, 1.0, 2.1, door, { frame: trim, glass: true });
+    k.box(1.5, 0, 3.95, 2.2, 1.3, 1.1, 0xffffff, bm);
+    steps(k, 1.5, 4.5, 1.8, 4, 1.3, 0xb5b2ab);
+    win(k, 5.5, 2.1, 3.4, 2.8, 1.4, trim, { mx: 2, my: 1 });
+    win(k, 7.9, 2.2, 3.4, 0.9, 1.0, trim, { mx: 1, my: 2 });
+    for (const x of [4.0, 6.5]) win(k, x, 0.6, 3.4, 0.9, 0.5, trim, { mx: 2, my: 1, noSill: true });
+    side(k, -1, 9.2, (u) => {
+      win(k, u(0), 0.9, 0, 0.9, 0.9, trim, { mx: 2, my: 1 });
+      for (const zz of [-1.5, 1.5]) win(k, u(zz), 3.2, 0, 1.0, 1.3, trim, { mx: 2, my: 2 });
+    });
+    side(k, 1, 8.8, (u) => [-1.5, 1.5].forEach((zz) => win(k, u(zz), 2.2, 0, 1.1, 1.3, trim, { mx: 2, my: 2 })));
+    back(k, -4.0, (u) => [-7, -4.6, -2.2].forEach((xx) => win(k, u(xx), 3.2, 0, 1.2, 1.3, trim, { mx: 2, my: 2 })));
+    back(k, -3.7, (u) => [3, 6.5].forEach((xx) => win(k, u(xx), 2.2, 0, 1.3, 1.3, trim, { mx: 2, my: 2 })));
+
+    // 1990s life
+    k.at(-9.6, 5.2, Math.PI / 2, () => hoop(k, 0, 0));
+    if (r.chance(0.6)) trashCans(k, -9.2, -2.4, 2);
+    if (r.chance(0.5)) dish(k, 6.0, 4.75, -1.0, Math.PI);
+    if (r.chance(0.5)) flagBracket(k, c, 0.5, 3.2, 4.0);
+    if (r.chance(0.4)) bike(k, 4.2, 5.0, 0.2, r.pick([0xc43b32, 0x2c4a8c, 0xd9a441]));
+    if (r.chance(0.4)) hoseCoil(k, 8.0, 2.0, 3.45);
+    foundationShrubs(k, r, 3.0, 8.6, 3.75, [], 4);
+  },
+});
+
+const farmhouse = mk({
+  id: 'farmhouse',
+  name: 'Farmhouse',
+  tags: ['rural'],
+  x0: -7.2,
+  x1: 5.6,
+  z0: -8.4,
+  z1: 5.8,
+  zf: 3,
+  draw: ({ k, r, solid }) => {
+    const wall = r.pick(WHITES);
+    const trim = r.pick([0xf4f2ec, 0xe9e6dc]);
+    const roofC = r.pick([0x7a7f84, 0x5d6a5a, 0x7b3b32, 0x4d5560]);
+    const door = r.pick(DOORS);
+    const shut = r.pick(SHUT);
+    solid(0, 0, 10, 6);
+    solid(3, -5.4, 4, 5.6);
+    block(k, 0, 0, 10, 6, 0.5, 5.2, wall, 'siding', trim);
+    block(k, 3, -5.4, 4, 5.6, 0.5, 5.2, wall, 'siding', trim);
+    gX(k, 0, 5.7, 0, 10, 6, 2.6, { col: roofC, mat: 'metal', trim, fill: wall, fillMat: 'siding', ridge: roofC, eave: 0.5, gable: 0.4 });
+    gZ(k, 3, 5.7, -5.4, 4, 5.6, 2.0, { col: roofC, mat: 'metal', trim, fill: wall, fillMat: 'siding', ridge: roofC, eave: 0.5, gable: 0.4 });
+    chimney(k, -4, 5.5, -1.5, 2.2, 0xffffff, 'brickRed');
+    // wraparound porch: front and left side
+    k.box(-0.5, 0, 4.4, 11.6, 0.6, 2.8, 0xb5b2ab, 'concrete');
+    k.box(-6.0, 0, -0.2, 2.4, 0.6, 6.4, 0xb5b2ab, 'concrete');
+    k.box(-0.5, 0.6, 4.4, 11.6, 0.1, 2.8, 0x8a6a4a, 'planks');
+    k.box(-6.0, 0.6, -0.2, 2.4, 0.1, 6.4, 0x8a6a4a, 'planks');
+    for (const x of [-6.8, -3, 0, 3, 5.2]) turnedPost(k, x, 0.7, 5.6, 2.6, trim);
+    for (const z of [-3, 1.5]) turnedPost(k, -7, 0.7, z, 2.6, trim);
+    k.box(-0.5, 3.3, 4.6, 12, 0.18, 2.6, trim);
+    k.box(-6.2, 3.3, -0.2, 2.2, 0.18, 6.4, trim);
+    k.roof(-0.6, 3.45, 4.6, 12.2, [[1.5, 0], [0, 0.9], [-1.5, 0]], roofC, 'metal', { trim, eaveOH: 0.2 });
+    rail(k, -6.8, 1.6, 0.7, 5.6, trim);
+    rail(k, 3.4, 5.2, 0.7, 5.6, trim);
+    railZ(k, -7, -3, 5.6, 0.7, trim);
+    steps(k, 2.4, 5.8, 1.8, 3, 0.6);
+    doorAt(k, 2.4, 0.7, 3, 1.1, 2.2, door, { frame: trim, glass: true });
+    for (const x of [-3.4, -0.4, 5.0]) win(k, x, 1.9, 3, 1.1, 1.7, trim, { my: 3, shut });
+    for (const x of [-3.4, -0.4]) win(k, x, 4.2, 3, 1.1, 1.3, trim, { my: 2, shut });
+    win(k, 3, 4.2, 3, 1.1, 1.3, trim, { my: 2, shut });
+    foundationShrubs(k, r, -5, 5, 3.2, [[-1, 4]], 3);
+  },
+});
+
+const logCabin = mk({
+  id: 'logCabin',
+  name: 'Log Cabin',
+  tags: ['lake', 'cabin', 'rural'],
+  x0: -5,
+  x1: 6,
+  z0: -3.3,
+  z1: 5.6,
+  zf: 3,
+  draw: ({ k, r, solid }) => {
+    const log = r.pick([0x8a5a36, 0x9a6a40, 0x7a4e30, 0xa07848]);
+    const roofC = r.pick([0x3f6a3c, 0x2f5a3a, 0x3a5f45]);
+    const trim = 0x4a2f1e;
+    solid(0, 0, 9, 6);
+    k.box(0, 0, 0, 9.2, 0.5, 6.2, STONE, 'stone');
+    k.box(0, 0.5, 0, 8.8, 2.8, 5.8, log, 'planks');
+    for (let y = 0.9; y < 3.3; y += 0.4) {
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.cylX(sx * 4.6, y, sz * 3.0, 0.2, 0.5, 6, log, 'planks');
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.cylZ(sx * 4.4, y + 0.2, sz * 3.1, 0.2, 0.5, 6, log, 'planks');
+    }
+    gX(k, 0, 3.3, 0, 8.8, 5.8, 2.2, { col: roofC, mat: 'metal', trim, fill: log, fillMat: 'planks', ridge: roofC, eave: 0.7, gable: 0.5 });
+    chimney(k, 5.2, 0, -0.5, 5.8, 0xffffff, 'stone');
+    k.box(0, 0, 4.4, 8.8, 0.45, 2.4, 0x8a6a4a, 'planks');
+    for (const x of [-4.2, -1.5, 4.2]) k.cyl(x, 0.45, 5.4, 0.13, 0.13, 2.6, 8, log, 'planks', { cast: true });
+    k.box(0, 3.05, 4.5, 9, 0.2, 2.6, trim);
+    gX(k, 0, 3.2, 4.4, 9, 2.6, 0.8, { col: roofC, mat: 'metal', trim, ridge: roofC, eave: 0.3, gable: 0.3 });
+    rail(k, -4.2, -1.5, 0.45, 5.4, trim);
+    rail(k, 1.2, 4.2, 0.45, 5.4, trim);
+    steps(k, -0.15, 5.6, 2.6, 2, 0.45, 0x8a6a4a, 'planks');
+    doorAt(k, -0.2, 0.5, 3, 1.1, 2.1, r.pick(DOORS), { frame: trim });
+    win(k, -2.9, 1.2, 3, 1.2, 1.2, trim, { mx: 2, my: 2 });
+    win(k, 2.4, 1.2, 3, 1.2, 1.2, trim, { mx: 2, my: 2 });
+    woodpile(k, -4.2, -3.2, 0);
+  },
+});
+
+const mobileHome = mk({
+  id: 'mobileHome',
+  name: 'Mobile Home',
+  tags: ['trailer'],
+  x0: -11.2,
+  x1: 11.2,
+  z0: -2.6,
+  z1: 5,
+  zf: 2.5,
+  draw: ({ k, r, solid }) => {
+    const wall = r.pick([0xe4dccb, 0xd9d4c4, 0xb9c4cc, 0xd8c690, 0xe8e6df]);
+    const stripe = r.pick([0x3d5a73, 0x7a2c25, 0x2b4a3a, 0x8a6a3a]);
+    const skirt = r.pick([0xb8b4a8, 0x9fa3a0, 0xd0cbbc]);
+    solid(0, 0, 22, 5);
+    k.box(0, 0, 0, 21.6, 0.7, 4.6, skirt, 'siding');
+    k.box(0, 0.7, 0, 22, 2.5, 5, wall, 'siding');
+    k.box(0, 1.9, 0, 22.06, 0.2, 5.06, stripe);
+    k.roof(0, 3.2, 0, 22, [[2.5, 0], [0, 0.5], [-2.5, 0]], 0xd8d8d4, 'metal', { trim: 0xc8c8c4, eaveOH: 0.3, gableOH: 0.2 });
+    doorAt(k, 6, 0.9, 2.5, 0.95, 2.0, r.pick(DOORS), { frame: 0xf4f2ec });
+    k.box(6, 0.9 + 2.1, 3.4, 2.0, 0.08, 1.8, stripe);
+    for (const sx of [-0.9, 0.9]) k.box(6 + sx, 0.9, 4.2, 0.08, 2.2, 0.08, 0xe9e6dc);
+    steps(k, 6, 3.1, 1.4, 3, 0.8, 0x9a7048, 'planks');
+    k.box(6, 0.8, 3.8, 1.6, 0.08, 1.3, 0x9a7048, 'planks');
+    for (const x of [-8.5, -5, -1.5, 1.5, 9]) win(k, x, 1.5, 2.5, 1.0, 1.0, 0xe9e6dc, { mx: 2, my: 1, ac: x === -1.5 });
+    k.box(-4, 0.2, -2.5, 1, 0.8, 0.5, 0xc9c6bc);
+  },
+});
+
+const doubleWide = mk({
+  id: 'doubleWide',
+  name: 'Double-Wide',
+  tags: ['trailer', 'rural'],
+  x0: -8.4,
+  x1: 8.4,
+  z0: -4.2,
+  z1: 7,
+  zf: 4,
+  draw: ({ k, r, solid }) => {
+    const wall = r.pick([0xd9cfa7, 0xa7b08a, 0xc9b79c, 0x9fb3c2, 0xe4dccb]);
+    const trim = r.pick(WHITES);
+    const roofC = r.pick(ROOFS);
+    const skirt = 0xb8b4a8;
+    solid(0, 0, 16, 8);
+    k.box(0, 0, 0, 15.6, 0.6, 7.6, skirt, 'siding');
+    k.box(0, 0.6, 0, 16, 2.5, 8, wall, 'siding');
+    k.box(0, 3.0, 0, 16.2, 0.2, 8.2, trim);
+    gX(k, 0, 3.1, 0, 16, 8, 1.5, { col: roofC, trim, fill: wall, fillMat: 'siding', ridge: roofC, eave: 0.5, gable: 0.4 });
+    doorAt(k, -2, 0.8, 4, 1.0, 2.1, r.pick(DOORS), { frame: trim, glass: true });
+    for (const x of [-6, -4.2, 1.5, 5, 7]) win(k, x, 1.6, 4, x === 5 ? 1.8 : 1.1, 1.1, trim, { mx: 2, my: 1, shut: x === -4.2 ? undefined : r.pick(SHUT) });
+    k.box(-2, 0, 5.4, 4, 0.8, 2.4, 0x8a6a4a, 'planks');
+    for (const x of [-3.9, 0.1]) squarePost(k, x, 0.8, 6.5, 1.0, trim, 0.1);
+    rail(k, -3.9, 0.1, 0.8, 6.5, trim);
+    railZ(k, -3.9, 4.8, 6.5, 0.8, trim);
+    railZ(k, 0.1, 4.8, 6.5, 0.8, trim);
+    steps(k, -2, 6.6, 1.2, 3, 0.8, 0x8a6a4a, 'planks');
+    k.box(5, 0.1, -4.3, 1, 0.8, 0.5, 0xc9c6bc);
+  },
+});
+
+const duplex = mk({
+  id: 'duplex',
+  name: 'Duplex',
+  tags: ['postwar', 'suburban'],
+  x0: -12.4,
+  x1: 12.4,
+  z0: -4.6,
+  z1: 6,
+  zf: 4,
+  drive: -10.2,
+  draw: ({ k, r, solid }) => {
+    const brick = r.pick(['brickTan', 'brickBrown', 'brickRed']);
+    const sid = r.pick(WALLS);
+    const trim = r.pick(WHITES);
+    const roofC = r.pick(ROOFS);
+    solid(0, 0, 16, 8);
+    k.box(0, 0, 0, 16, 1.2, 8, 0xffffff, brick);
+    k.box(0, 1.2, 0, 16, 1.6, 8, sid, 'siding');
+    k.box(0, 2.7, 0, 16.2, 0.25, 8.2, trim);
+    gX(k, 0, 2.8, 0, 16, 8, 1.6, { col: roofC, trim, fill: sid, fillMat: 'siding', ridge: roofC, eave: 0.6, gable: 0.5 });
+    k.box(0, 1.1, 4.02, 0.3, 1.8, 0.1, trim);
+    for (const s of [-1, 1]) {
+      const cx = s * 4;
+      const dc = r.pick(DOORS);
+      doorAt(k, cx + s * 1.2, 0, 4, 1.0, 2.1, dc, { frame: trim });
+      k.box(cx + s * 1.2, 2.4, 4.5, 2.0, 0.1, 1.0, trim);
+      win(k, cx - s * 1.6, 0.9, 4, 1.8, 1.2, trim, { mx: 2, my: 1 });
+      win(k, cx, 3.2, 4, 1.4, 0.5, trim, { mx: 2, my: 1, noSill: true });
+      steps(k, cx + s * 1.2, 4.1, 1.4, 1, 0.2);
+      // carport
+      const px = s * 10.2;
+      solid(px, 0.5, 4.4, 7);
+      k.box(px, 2.5, 1.2, 4.6, 0.15, 6.6, 0xd8d8d4, 'metal');
+      for (const sx of [-1, 1]) for (const z of [-1.9, 4]) squarePost(k, px + sx * 2.1, 0, z, 2.5, trim, 0.14);
+      k.box(px, 0, 1.2, 4.2, 0.08, 6.4, 0xa8a59e, 'concrete');
+    }
+    trashCans(k, 0, 5, 2);
+  },
+});
+
+/* ───────────────────────────── 13. Farmhouse ───────────────────────────── */
+
+const farmhouse = mk({
+  id: 'farmhouse',
+  name: 'Farmhouse',
+  tags: ['rural'],
+  x0: -5.2,
+  x1: 6.9,
+  z0: -3.7,
+  z1: 6.8,
+  zf: 3.25,
+  draw: ({ c, k, r, solid }) => {
+    const wall = r.chance(0.8) ? r.pick(WHITES) : r.pick([0xe4dccb, 0xd8c690, 0xb8c4cc]);
+    const trim = r.pick(WHITES);
+    const roofC = r.pick([0x7a2c25, 0x2f4a3a, 0x9ea3a8, 0x3b3d42, 0x6b3a2a]);
+    const shut = r.chance(0.6) ? r.pick(SHUT) : undefined;
+    const door = r.pick(DOORS);
+    const F = 0.6;
+    const H1 = 2.8;
+    const H2 = 2.6;
+    const E = F + H1 + H2;
+    solid(0, 0, 9.5, 6.5);
+    solid(-2.65, 4.625, 4.2, 2.75);
+
+    block(k, 0, 0, 9.5, 6.5, F, H1 + H2, wall, 'siding', trim, 0x8b8782);
+    k.box(0, F + H1 - 0.1, 0, 9.6, 0.2, 6.6, trim);
+    block(k, -2.65, 4.625, 4.2, 2.75, F, H1 + H2, wall, 'siding', trim, 0x8b8782);
+    k.box(-2.65, F + H1 - 0.1, 4.625, 4.3, 0.2, 2.85, trim);
+    const rf = { col: roofC, mat: 'roofMetal', trim, fill: wall, fillMat: 'siding', ridge: roofC, eave: 0.5, gable: 0.4, thick: 0.1 };
+    gX(k, 0, E, 0, 9.5, 6.5, 2.6, rf);
+    gZ(k, -2.65, E, 3.0, 4.2, 6.0, 2.4, rf);
+    chimney(k, 3.0, E + 0.8, -1.0, 2.4, 0xffffff, 'brickRed');
+
+    // windows and door
+    doorAt(k, 2.55, F, 3.25, 1.05, 2.2, door, { frame: trim, glass: true });
+    for (const x of [0.85, 4.25]) win(k, x, F + 0.6, 3.25, 1.0, 1.7, trim, { mx: 2, my: 2, shut });
+    for (const x of [0.85, 2.55, 4.25]) win(k, x, F + H1 + 0.55, 3.25, 1.0, 1.6, trim, { mx: 2, my: 2, shut });
+    for (const x of [-3.65, -1.65]) {
+      win(k, x, F + 0.6, 6.0, 0.95, 1.7, trim, { mx: 2, my: 2, shut });
+      win(k, x, F + H1 + 0.55, 6.0, 0.95, 1.6, trim, { mx: 2, my: 2, shut });
+    }
+    win(k, -2.65, E + 0.55, 6.0, 0.8, 0.7, trim, { mx: 2, my: 1 });
+    side(k, -1, 4.75, (u) => {
+      for (const zz of [4.6, 1.4, -1.6]) {
+        win(k, u(zz), F + 0.6, 0, 1.0, 1.7, trim, { mx: 2, my: 2 });
+        win(k, u(zz), F + H1 + 0.55, 0, 1.0, 1.6, trim, { mx: 2, my: 2 });
+      }
+    });
+    side(k, 1, 4.75, (u) => {
+      for (const zz of [-2.4, 1.0]) {
+        win(k, u(zz), F + 0.6, 0, 1.0, 1.7, trim, { mx: 2, my: 2 });
+        win(k, u(zz), F + H1 + 0.55, 0, 1.0, 1.6, trim, { mx: 2, my: 2 });
+      }
+    });
+    back(k, -3.25, (u) => [-3.2, -0.6, 2.0, 4.0].forEach((xx) => {
+      win(k, u(xx), F + 0.7, 0, 1.0, 1.6, trim, { mx: 2, my: 2 });
+      win(k, u(xx), F + H1 + 0.55, 0, 1.0, 1.6, trim, { mx: 2, my: 2 });
+    }));
+
+    // wraparound porch
+    const deck = r.pick([0x7b6a56, 0x8a7a66, 0x9a9288]);
+    k.box(2.975, 0, 4.425, 7.0, F - 0.12, 2.3, 0x8b8782, 'concrete');
+    k.box(2.975, F - 0.12, 4.425, 7.2, 0.12, 2.5, deck, 'planks');
+    k.box(5.625, 0, 0.925, 1.7, F - 0.12, 4.6, 0x8b8782, 'concrete');
+    k.box(5.625, F - 0.12, 0.925, 1.9, 0.12, 4.8, deck, 'planks');
+    k.roof(3.05, F + 2.45, 0, 7.3, [[5.55, 0], [3.25, 0.5]], roofC, 'roofMetal', { trim, thick: 0.1, eaveOH: 0.3, gableOH: 0.2 });
+    k.at(5.7, 0.95, Math.PI / 2, () => k.roof(0, F + 2.45, 0, 4.95, [[0.85, 0], [-0.95, 0.5]], roofC, 'roofMetal', { trim, thick: 0.1, eaveOH: 0.3, gableOH: 0.2 }));
+    for (const x of [0.15, 1.75, 3.35, 4.9, 6.3]) squarePost(k, x, F, 5.4, 2.45, trim, 0.2);
+    for (const z of [3.0, 0.6, -1.2]) squarePost(k, 6.3, F, z, 2.45, trim, 0.2);
+    k.box(3.2, F + 2.3, 5.4, 6.3, 0.18, 0.22, trim);
+    k.box(6.3, F + 2.3, 2.1, 0.22, 0.18, 6.6, trim);
+    rail(k, 0.25, 1.65, F, 5.4, trim, 0.22, 0.85);
+    rail(k, 3.45, 6.2, F, 5.4, trim, 0.22, 0.85);
+    railZ(k, 6.3, 5.3, -1.1, F, trim, 0.22, 0.85);
+    steps(k, 2.55, 5.675, 1.5, 3, F, deck, 'planks');
+
+    // 1990s life
+    if (r.chance(0.7)) chair(k, 0.9, F, 4.6, 0.25, r.pick([0xf2efe8, 0x2f4a3a, 0x7a2c25]));
+    if (r.chance(0.5)) chair(k, 4.0, F, 4.7, -0.2, r.pick([0xf2efe8, 0x2f4a3a]));
+    if (r.chance(0.6))
+      k.at(5.85, 1.2, Math.PI / 2, () => {
+        k.box(0, F + 0.45, 0, 1.5, 0.07, 0.55, 0xf2efe8);
+        k.box(0, F + 0.5, -0.27, 1.5, 0.6, 0.05, 0xf2efe8, 'paint', { rx: -0.25 });
+        for (const s of [-1, 1]) k.box(s * 0.7, F + 0.5, 0, 0.02, 1.7, 0.02, 0x333333);
+      });
+    if (r.chance(0.6)) hangingPlant(k, 1.75, F + 2.3, 5.45, r);
+    if (r.chance(0.5)) flagBracket(k, c, 6.3, F + 1.7, 5.55);
+    if (r.chance(0.45)) dish(k, 1.0, E + 1.6, -1.2, Math.PI);
+    if (r.chance(0.5)) woodpile(k, -5.0, -1.0, Math.PI / 2);
+    if (r.chance(0.4)) bike(k, -4.0, 6.4, 0.3, r.pick([0xc43b32, 0x2c4a8c, 0xd9a441]));
+    if (r.chance(0.4)) hoseCoil(k, -4.6, F + 0.7, 6.05);
+    if (r.chance(0.4)) fenceSeg(k, -5.0, 6.6, -5.0, 3.5);
+    foundationShrubs(k, r, -4.6, -0.8, 6.2, [], 3);
+  },
+});
+
+/* ───────────────────────────── 14. Log cabin ───────────────────────────── */
+
+const logCabin = mk({
+  id: 'logCabin',
+  name: 'Log Cabin',
+  tags: ['lake', 'cabin', 'rural'],
+  x0: -4.8,
+  x1: 4.7,
+  z0: -3.6,
+  z1: 6.1,
+  zf: 3.34,
+  draw: ({ c, k, r, solid }) => {
+    const logC = r.pick([0x8a5e3c, 0x7a5236, 0x9a6b44, 0x6b4a32, 0xa07a50]);
+    const logD = new THREE.Color(logC).multiplyScalar(0.84).getHex();
+    const roofC = r.pick([0x3c5a3a, 0x2f4a3a, 0x456b48]);
+    const trim = r.pick([0x4a3626, 0x2f4a3a, 0xe8dfc6]);
+    const door = r.pick([0x4a3626, 0x2f4a3a, 0x7a2c25]);
+    const F = 0.5;
+    const W = 7.0;
+    const D = 6.4;
+    const N = 9;
+    const E = F + 2.5;
+    solid(0, 0, W, D);
+
+    k.box(0, 0, 0, W - 0.1, F, D - 0.1, 0x9b9893, 'stone');
+    k.box(0, F, 0, W - 0.3, N * 0.27, D - 0.3, logD);
+    // horizontal logs with saddle-notched, projecting corners
+    for (let i = 0; i < N; i++) {
+      const y = F + 0.14 + i * 0.27;
+      const col = i % 2 ? logD : logC;
+      for (const s of [-1, 1]) {
+        k.cylX(0, y, (s * D) / 2, 0.14, W + 0.8, 6, col);
+        k.cylZ((s * W) / 2, y + 0.135, 0, 0.14, D + 0.8, 6, col);
+      }
+    }
+    // front-gabled green metal roof sweeping over the porch
+    gZ(k, 0, E, 1.1, 7.0, 8.6, 2.8, { col: roofC, mat: 'roofMetal', trim, fill: logD, fillMat: 'boards', ridge: roofC, eave: 0.55, gable: 0.3, thick: 0.1 });
+    k.cylZ(0, E + 1.0, 5.43, 0.34, 0.05, 8, trim);
+    k.cylZ(0, E + 1.0, 5.46, 0.25, 0.05, 8, P.glass, 'glass');
+
+    // door and windows
+    doorAt(k, 0, F, 3.34, 1.0, 2.05, door, { frame: trim });
+    for (const x of [-2.2, 2.2]) win(k, x, F + 0.7, 3.34, 1.1, 1.1, trim, { mx: 2, my: 2, shut: r.chance(0.4) ? r.pick(SHUT) : undefined });
+    side(k, -1, 3.64, (u) => [-1.0, 1.4].forEach((zz) => win(k, u(zz), F + 0.7, 0, 1.0, 1.1, trim, { mx: 2, my: 2 })));
+    side(k, 1, 3.64, (u) => win(k, u(2.0), F + 0.7, 0, 1.0, 1.1, trim, { mx: 2, my: 2 }));
+    back(k, -3.34, (u) => [-1.8, 1.8].forEach((xx) => win(k, u(xx), F + 0.7, 0, 1.0, 1.1, trim, { mx: 2, my: 2 })));
+
+    // river-stone chimney
+    k.box(4.14, 0, -0.3, 1.0, 3.4, 1.7, 0x9b9893, 'stone');
+    k.box(4.14, 3.4, -0.3, 0.85, 2.3, 1.5, 0x9b9893, 'stone');
+    k.box(4.14, 5.7, -0.3, 1.05, 0.14, 1.7, 0x6c6a66);
+
+    // porch with peeled-log posts
+    k.box(0, 0, 4.4, 7.0, F - 0.12, 2.0, 0x9b9893, 'stone');
+    k.box(0, F - 0.12, 4.4, 7.4, 0.12, 2.1, 0x7b6a56, 'planks');
+    for (const x of [-3.5, -1.5, 1.5, 3.5]) k.cyl(x, F, 5.25, 0.1, 0.12, 2.45, 6, logC);
+    k.cylX(0, E - 0.12, 5.25, 0.12, 7.4, 6, logC);
+    for (const [x0, x1] of [[-3.5, -1.5], [1.5, 3.5]]) for (const y of [F + 0.45, F + 0.95]) k.cylX((x0 + x1) / 2, y, 5.25, 0.05, x1 - x0, 5, logC);
+    steps(k, 0, 5.4, 1.8, 2, F, 0x9b9893, 'stone');
+
+    // 1990s life
+    if (r.chance(0.6)) chair(k, 2.4, F, 4.5, -0.25, r.pick([0x6b3a22, 0x2f4a3a, 0xf2efe8]));
+    if (r.chance(0.6)) k.at(-2.8, 4.6, 0, () => woodpile(k, 0, 0, 0), F);
+    if (r.chance(0.4)) lights(k, -3.5, E - 0.35, 5.3, 3.5, E - 0.35, 5.3, 8, 0.3);
+    if (r.chance(0.4)) dish(k, 1.2, 5.0, -1.0, Math.PI);
+    if (r.chance(0.5)) {
+      k.cyl(2.9, 0, 5.75, 0.24, 0.27, 0.42, 7, 0x8a6a46);
+      k.box(2.9, 0.42, 5.75, 0.04, 0.04, 0.6, 0x5a4332, 'paint', { rx: 0.2 });
+      k.box(2.9, 0.5, 5.9, 0.16, 0.1, 0.03, 0x8a8e92, 'metal');
+    }
+    if (r.chance(0.4)) hangingPlant(k, -1.5, E - 0.2, 5.3, r);
+    shrub(k, -3.8, 6.0, 0.5, r.pick(GREENS));
+    shrub(k, 3.9, 5.6, 0.45, r.pick(GREENS));
+  },
+});
+
+/* ───────────────────────────── 15. Single-wide mobile home ───────────────────────────── */
+
+function roundRectShape(w: number, d: number, rad: number) {
+  const x = w / 2;
+  const y = d / 2;
+  const s = new THREE.Shape();
+  s.moveTo(-x + rad, -y);
+  s.lineTo(x - rad, -y);
+  s.quadraticCurveTo(x, -y, x, -y + rad);
+  s.lineTo(x, y - rad);
+  s.quadraticCurveTo(x, y, x - rad, y);
+  s.lineTo(-x + rad, y);
+  s.quadraticCurveTo(-x, y, -x, y - rad);
+  s.lineTo(-x, -y + rad);
+  s.quadraticCurveTo(-x, -y, -x + rad, -y);
+  return s;
+}
+
+const MH_STRIPES: [number, number][] = [[0x7a4a2a, 0xc4602a], [0x2f6b6a, 0xd9a441], [0x2a3f6a, 0xb8423a], [0x6b3a52, 0xe0b8a0], [0x3f6a3a, 0xd8cf9a]];
+
+const mobileHome = mk({
+  id: 'mobileHome',
+  name: 'Single-Wide Mobile Home',
+  tags: ['trailer'],
+  x0: -11.5,
+  x1: 10.4,
+  z0: -2.2,
+  z1: 3.5,
+  zf: 1.9,
+  draw: ({ k, r, solid }) => {
+    const wall = r.pick([0xe4dccb, 0xb8c4cc, 0xc9b79c, 0xa7b08a, 0xf2efe8, 0xd8c690]);
+    const [s1, s2] = r.pick(MH_STRIPES);
+    const roofC = r.pick([0xe3e5e6, 0xb8bcc0, 0x9ea3a8, 0xd0d2c8]);
+    const skirt = r.pick([0xd8d4c8, 0xc9b79c, 0x8d6e4c, 0xb8c4cc]);
+    const frame = 0xdcdcd8;
+    const awn = r.chance(0.5) ? s1 : s2;
+    const acAt = r.int(0, 5);
+    solid(0, 0, 20, 3.8);
+
+    k.box(0, 0, 0, 19.8, 0.75, 3.6, skirt, 'corrugated');
+    for (const x of [-7.5, -2.5, 4.5, 8.5]) k.box(x, 0.28, 1.81, 0.55, 0.2, 0.02, 0x2a2a2a);
+    // rounded-corner body and low arched roof
+    k.extrude(roundRectShape(20, 3.8, 0.5), 2.35, wall, 'siding', 0, 0.75 + 1.175, 0, { rx: -Math.PI / 2 });
+    prismYZ(k, 0, 20.2, [[-2.05, 3.1], [-2.0, 3.22], [-1.5, 3.4], [-0.8, 3.54], [0, 3.58], [0.8, 3.54], [1.5, 3.4], [2.0, 3.22], [2.05, 3.1]], roofC, 'roofMetal');
+    // two-tone stripe on both long sides
+    for (const sz of [-1, 1]) {
+      k.box(0, 1.45, sz * 1.91, 19.0, 0.2, 0.03, s1);
+      k.box(0, 1.28, sz * 1.91, 19.0, 0.08, 0.03, s2);
+    }
+    // windows, door, awnings
+    [-8.2, -5.7, -3.2, -0.7, 5.2, 7.7].forEach((x, i) => {
+      win(k, x, 1.95, 1.9, 1.3, 1.0, frame, { mx: 2, my: 1, ac: i === acAt });
+      if (r.chance(0.45)) k.roof(x, 3.1, 0, 1.7, [[2.55, -0.25], [1.9, 0.0]], awn, 'corrugated', { thick: 0.04, eaveOH: 0.02, gableOH: 0.05 });
+    });
+    doorAt(k, 2.4, 0.75, 1.9, 0.9, 2.0, r.pick([0x6b3a22, 0x2f4a3a, 0x7a2c25, 0xe4dccb]), { frame, glass: false });
+    k.box(2.4, 1.9, 1.95, 0.5, 0.5, 0.04, P.glass, 'glass');
+    k.roof(2.4, 0.75 + 2.3, 0, 2.4, [[2.95, 0], [1.9, 0.35]], awn, 'corrugated', { thick: 0.05, eaveOH: 0.05, gableOH: 0.05 });
+    for (const x of [1.3, 3.5]) k.box(x, 0.75, 2.85, 0.07, 2.3, 0.07, 0xe8e8e4, 'metal');
+    k.box(2.4, 0, 2.4, 2.4, 0.75, 1.0, 0x9a7a56, 'planks');
+    railZ(k, 1.25, 1.9, 2.9, 0.75, 0xe8e8e4, 0.2, 0.8);
+    railZ(k, 3.55, 1.9, 2.9, 0.75, 0xe8e8e4, 0.2, 0.8);
+    steps(k, 2.4, 2.9, 1.2, 2, 0.75, 0x9a7a56, 'planks');
+    // end windows, hitch tongue, roof antenna and dish
+    for (const sx of [-1, 1]) {
+      side(k, sx, 10.0, (u) => win(k, u(0), 1.95, 0, 0.8, 0.9, frame, { mx: 1, my: 1 }));
+      for (const z of [-0.5, 0.5]) if (sx < 0) k.box(-10.7, 0.3, z, 1.4, 0.12, 0.12, 0x2f2f30);
+    }
+    if (r.chance(0.6)) {
+      k.cyl(-6.5, 3.55, -0.4, 0.025, 0.025, 1.8, 4, 0x8a8e92, 'metal');
+      for (const y of [4.4, 4.8, 5.1]) k.box(-6.5, y, -0.4, 0.04, 0.03, 0.9 - (y - 4.4), 0x8a8e92, 'metal');
+    } else dish(k, -6.0, 3.55, 0.3, 0.2);
+    if (r.chance(0.6)) trashCans(k, 7.6, 2.6, 2);
+    if (r.chance(0.4)) hoseCoil(k, 6.2, 0.9, 1.85);
+    if (r.chance(0.4)) bike(k, -4.5, 2.9, 0.3, r.pick([0xc43b32, 0x2c4a8c, 0xd9a441]));
+    if (r.chance(0.4)) shrub(k, -1.5, 2.4, 0.5, r.pick(GREENS));
+  },
+});
+
+/* ───────────────────────────── 16. Double-wide ───────────────────────────── */
+
+const doubleWide = mk({
+  id: 'doubleWide',
+  name: 'Double-Wide',
+  tags: ['trailer', 'rural'],
+  x0: -9.0,
+  x1: 9.0,
+  z0: -4.1,
+  z1: 6.4,
+  zf: 3.6,
+  draw: ({ k, r, solid }) => {
+    const wall = r.pick(WALLS);
+    const trim = r.pick(WHITES);
+    const roofC = r.pick(ROOFS);
+    const shut = r.chance(0.5) ? r.pick(SHUT) : undefined;
+    const door = r.pick(DOORS);
+    const skirt = r.pick([0xd8d4c8, 0xc9b79c, 0x8d6e4c, 0xb8c4cc]);
+    const F = 0.8;
+    const E = F + 2.5;
+    solid(0, 0, 17, 7.2);
+
+    k.box(0, 0, 0, 16.9, F, 7.1, skirt, r.chance(0.5) ? 'corrugated' : 'boards');
+    for (const x of [-6, -1.5, 5.5]) k.box(x, 0.3, 3.56, 0.6, 0.22, 0.02, 0x2a2a2a);
+    k.box(0, F, 0, 17, 2.5, 7.2, wall, 'siding');
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.box(sx * 8.5, F, sz * 3.6, 0.14, 2.5, 0.14, trim);
+    k.box(0, E - 0.1, 0, 17.1, 0.2, 7.3, trim);
+    gX(k, 0, E, 0, 17, 7.2, 1.4, { col: roofC, trim, fill: wall, fillMat: 'siding', ridge: roofC, eave: 0.5, gable: 0.4, thick: 0.12 });
+    k.cyl(-3.0, 4.2, -1.2, 0.12, 0.12, 0.95, 6, 0x8a8e92, 'metal');
+    k.cyl(-3.0, 5.15, -1.2, 0.2, 0.12, 0.1, 6, 0x8a8e92, 'metal');
+
+    // windows and entry
+    for (const x of [-6.9, -4.5, -2.1]) win(k, x, F + 0.6, 3.6, 1.2, 1.4, trim, { mx: 2, my: 2, shut });
+    win(k, 6.4, F + 0.6, 3.6, 2.0, 1.4, trim, { mx: 3, my: 2, shut });
+    doorAt(k, 2.7, F, 3.6, 0.95, 2.05, door, { frame: trim, glass: true });
+    for (const s of [-1, 1])
+      side(k, s, 8.5, (u) => {
+        for (const zz of [-1.6, 1.6]) win(k, u(zz), F + 0.6, 0, 1.1, 1.4, trim, { mx: 2, my: 2 });
+        win(k, u(0), E + 0.45, 0, 0.7, 0.5, trim, { mx: 2, my: 1 });
+      });
+    back(k, -3.6, (u) => [-6.5, -3.5, -0.5, 2.5, 6.0].forEach((xx) => win(k, u(xx), F + 0.65, 0, 1.2, 1.4, trim, { mx: 2, my: 2 })));
+
+    // small deck under a gabled cover
+    k.box(2.7, 0, 4.5, 3.6, F - 0.12, 1.8, 0x8a7a66, 'planks');
+    k.box(2.7, F - 0.12, 4.5, 3.8, 0.12, 2.0, 0x8a7a66, 'planks');
+    gZ(k, 2.7, F + 2.25, 3.55, 3.6, 3.7, 1.0, { col: roofC, trim, fill: wall, fillMat: 'siding', ridge: roofC, eave: 0.3, gable: 0.3, thick: 0.1 });
+    for (const x of [1.1, 4.3]) squarePost(k, x, F, 5.25, 2.25, trim, 0.14);
+    for (const [a, b] of [[1.2, 1.9], [3.5, 4.2]]) rail(k, a, b, F, 5.25, trim, 0.2, 0.85);
+    railZ(k, 0.95, 3.6, 5.25, F, trim, 0.2, 0.85);
+    railZ(k, 4.45, 3.6, 5.25, F, trim, 0.2, 0.85);
+    steps(k, 2.7, 5.4, 1.5, 3, F, 0x8a7a66, 'planks');
+
+    // 1990s life
+    if (r.chance(0.5)) win(k, -6.9, F + 0.6, 3.6, 1.2, 1.4, trim, { mx: 2, my: 2, ac: true, noSill: true });
+    if (r.chance(0.6)) dish(k, 5.0, 4.55, -0.5, 0.3);
+    if (r.chance(0.6)) {
+      k.box(-7.0, 0, -4.1, 0.9, 0.85, 0.9, 0xd9d6cc);
+      k.cyl(-7.0, 0.85, -4.1, 0.34, 0.34, 0.05, 7, 0x3a3d40, 'metal');
+    }
+    if (r.chance(0.5)) woodpile(k, 8.9, 1.0, Math.PI / 2);
+    if (r.chance(0.5)) trashCans(k, 6.0, 4.4, 2);
+    if (r.chance(0.4)) bike(k, -5.0, 5.2, 0.3, r.pick([0xc43b32, 0x2c4a8c, 0xd9a441]));
+    if (r.chance(0.4)) hoseCoil(k, -1.0, F + 0.7, 3.65);
+    if (r.chance(0.4)) chair(k, 3.6, F, 4.5, -0.3, r.pick([0xf2efe8, 0x2f4a3a, 0x7a2c25]));
+    foundationShrubs(k, r, -8.0, 0.4, 3.95, [], 5);
+  },
+});
+
+/* ───────────────────────────── 17. 1970s duplex ───────────────────────────── */
+
+const duplex = mk({
+  id: 'duplex',
+  name: '1970s Duplex',
+  tags: ['postwar', 'suburban'],
+  x0: -10.95,
+  x1: 10.95,
+  z0: -5.4,
+  z1: 6.3,
+  zf: 4.5,
+  drive: 8.95,
+  draw: ({ k, r, solid }) => {
+    const bm = r.pick(['brickTan', 'brickBrown', 'brickRed']);
+    const up = r.pick([0xb9a98b, 0xc9b79c, 0xa7b08a, 0xd9cfa7, 0x93a8a0]);
+    const wood = r.pick([0x5a4332, 0x4a3626, 0x6b4a32]);
+    const roofC = r.pick([0x5a4a40, 0x4d3a33, 0x3b3d42, 0x40483f]);
+    const trim = r.pick(WHITES);
+    const doors = [r.pick(DOORS), r.pick(DOORS)];
+    const F = 0.3;
+    const E = 2.9;
+    solid(0, 0, 14, 9);
+
+    k.box(0, 0, 0, 14, F, 9, 0x9b9893, 'concrete');
+    k.box(0, F, 0, 14, 1.0, 9, 0xffffff, bm);
+    k.box(0, F + 1.0, 0, 14, 1.6, 9, up, 'boards');
+    k.box(0, F + 0.98, 0, 14.1, 0.1, 9.1, wood);
+    gX(k, 0, E, 0, 14, 9, 1.5, { col: roofC, trim: wood, fill: up, fillMat: 'boards', ridge: roofC, eave: 0.9, gable: 0.7, thick: 0.14 });
+
+    // paired entries under a shared flat canopy with a block privacy screen
+    k.box(0, 2.55, 5.25, 7.2, 0.15, 1.5, wood);
+    k.box(0, 2.45, 5.25, 7.0, 0.1, 1.4, 0xd8d2c0);
+    for (const x of [-3.3, 3.3]) k.box(x, F, 5.85, 0.14, 2.25, 0.14, wood);
+    k.box(0, F, 5.0, 0.25, 2.2, 1.0, 0xd0cfc9, 'cinder');
+    [-1, 1].forEach((s, i) => {
+      doorAt(k, s * 1.6, F, 4.5, 0.95, 2.1, doors[i], { frame: trim });
+      k.box(s * 1.6, 0, 5.2, 1.8, F, 1.4, 0xc6c3bc, 'concrete');
+      win(k, s * 2.75, F + 0.55, 4.5, 0.45, 1.2, trim, { mx: 1, my: 3, noSill: true });
+      win(k, s * 4.9, F + 0.9, 4.5, 2.4, 1.3, trim, { mx: 3, my: 1, ac: r.chance(0.35) });
+      win(k, s * 6.25, F + 1.2, 4.5, 0.6, 0.7, trim, { mx: 1, my: 1, noSill: true });
+    });
+    back(k, -4.5, (u) => [-5, -1.6, 1.6, 5].forEach((xx) => win(k, u(xx), F + 1.0, 0, 1.6, 1.1, trim, { mx: 2, my: 1 })));
+
+    // flat-roofed carports with storage closets
+    for (const s of [-1, 1]) {
+      const cx = s * 8.9;
+      k.box(cx, F, 0.35, 3.7, 2.2, 1.7, up, 'boards');
+      k.box(cx, 2.55, 2.2, 4.2, 0.15, 5.8, roofC);
+      k.box(cx, 2.45, 2.2, 4.2, 0.08, 5.8, wood);
+      k.box(cx, 0, 3.0, 3.7, F, 3.6, 0xb8b6ae, 'concrete');
+      for (const dx of [-1.85, 1.85]) k.box(cx + dx, F, 4.7, 0.15, 2.25, 0.15, wood);
+      k.box(cx, F + 0.8, -0.52, 1.0, 1.3, 0.04, 0x6b4a32, 'planks');
+    }
+
+    // 1990s life
+    k.at(10.8, 5.3, -Math.PI / 2, () => hoop(k, 0, 0));
+    if (r.chance(0.6)) trashCans(k, -9.4, -1.2, 2);
+    if (r.chance(0.5)) dish(k, -3.5, 3.85, 2.0, 0.2);
+    if (r.chance(0.4)) dish(k, 3.8, 3.85, 2.0, -0.2);
+    if (r.chance(0.5)) bike(k, -4.5, 5.6, 0.4, r.pick([0xc43b32, 0x2c4a8c, 0xd9a441]));
+    if (r.chance(0.4)) hoseCoil(k, 6.6, F + 0.7, 4.55);
+    foundationShrubs(k, r, -6.8, -3.9, 4.8, [], 3);
+    foundationShrubs(k, r, 3.9, 6.8, 4.8, [], 3);
+  },
+});
+
 /* @@MORE */
 
-const HOUSES0: BuildingDef[] = [victorianQueenAnne, minersCottage, colonialDef, ranchPorchDef, aframeDef, craftsmanBungalow, foursquare, capeCod];
+const HOUSES0: BuildingDef[] = [victorianQueenAnne, minersCottage, colonialDef, ranchPorchDef, aframeDef, craftsmanBungalow, foursquare, capeCod, dutchColonial, tudorRevival, midCenturyRanch, splitLevel, farmhouse, logCabin, mobileHome, doubleWide, duplex];
 export const HOUSES: BuildingDef[] = HOUSES0;
