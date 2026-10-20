@@ -459,6 +459,9 @@ export interface Rect {
   c: number;
   s: number;
   ry: number;
+  /** Optional vertical extent (solids such as bridge parapets only block within it). */
+  y0: number;
+  y1: number;
 }
 
 /** Spatial hash of rotated rectangles (keeps trees off roads/buildings; vehicle collision). */
@@ -470,8 +473,8 @@ export class Occupancy {
   solids: Occupancy | null = null;
   constructor(private size = 40) {}
 
-  add(cx: number, cz: number, w: number, d: number, ry = 0, pad = 0, solid = true) {
-    const r: Rect = { cx, cz, hw: w / 2 + pad, hd: d / 2 + pad, c: Math.cos(ry), s: Math.sin(ry), ry };
+  add(cx: number, cz: number, w: number, d: number, ry = 0, pad = 0, solid = true, y0 = -Infinity, y1 = Infinity) {
+    const r: Rect = { cx, cz, hw: w / 2 + pad, hd: d / 2 + pad, c: Math.cos(ry), s: Math.sin(ry), ry, y0, y1 };
     this.list.push(r);
     const ext = Math.hypot(r.hw, r.hd);
     const x0 = Math.floor((cx - ext) / this.size);
@@ -485,13 +488,14 @@ export class Occupancy {
         if (!arr) this.cells.set(k, (arr = []));
         arr.push(r);
       }
-    if (solid && this.solids) this.solids.add(cx, cz, w, d, ry, 0, false);
+    if (solid && this.solids) this.solids.add(cx, cz, w, d, ry, 0, false, y0, y1);
   }
 
-  blocked(x: number, z: number, pad = 0): boolean {
+  blocked(x: number, z: number, pad = 0, y?: number): boolean {
     const arr = this.cells.get(`${Math.floor(x / this.size)},${Math.floor(z / this.size)}`);
     if (!arr) return false;
     for (const r of arr) {
+      if (y !== undefined && (y < r.y0 || y > r.y1)) continue;
       const dx = x - r.cx;
       const dz = z - r.cz;
       const lx = dx * r.c - dz * r.s;
