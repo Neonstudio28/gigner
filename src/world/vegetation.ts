@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { prepare, type Col, type Occupancy } from './core/kit';
 import { Rng } from './core/rng';
-import { heightAt, forestDensity, townEllipse, MAP_RADIUS } from './terrain';
+import { heightAt, forestDensity, valley, MAP_RADIUS } from './terrain';
 import { addWindSway } from './materials';
 import { P } from './palette';
 
@@ -431,7 +431,6 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
       if (Math.hypot(x, z) > R) continue;
       const d = forestDensity(x, z);
       if (d <= 0.02 || rng.next() > d * 0.92) continue;
-      if (Math.abs(z) < 16 && townEllipse(x, z) > 0.9) continue;
       if (input.occ.blocked(x, z, 3) || cleared(x, z)) continue;
       const roll = rng.next();
       const kind: TreeKind = roll < 0.66 ? 'fir' : roll < 0.86 ? 'pine' : roll < 0.95 ? 'oak' : 'young';
@@ -441,16 +440,15 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
     gz += stepZ;
   }
 
-  // Sparse trees and bushes inside town blocks (yards, lot edges).
-  for (let gz = -340; gz < 340; gz += 13)
-    for (let gx = -420; gx < 420; gx += 13) {
+  // Sparse trees and bushes on the valley floor (yards, lot edges, field margins).
+  for (let gz = -420; gz < 640; gz += 13)
+    for (let gx = -1300; gx < 1300; gx += 13) {
       const x = gx + rng.range(0, 13);
       const z = gz + rng.range(0, 13);
-      if (townEllipse(x, z) > 1.0) continue;
-      const core = Math.abs(x) < 130 && z > -200 && z < 60;
-      const p = core ? 0.02 : z < -90 || Math.abs(x) > 135 ? 0.2 : 0.08;
-      if (rng.next() > p) continue;
-      if (input.occ.blocked(x, z, 2.5)) continue;
+      if (valley(x, z).e > -8) continue;
+      const core = x > -320 && x < 320 && z > -125 && z < 95;
+      if (rng.next() > (core ? 0.01 : 0.07)) continue;
+      if (input.occ.blocked(x, z, 2.5) || cleared(x, z)) continue;
       const roll = rng.next();
       placeTree(roll < 0.45 ? 'fir' : roll < 0.75 ? 'oak' : roll < 0.85 ? 'pine' : 'bush', x, z, rng.range(0.6, 1.1));
     }
@@ -462,14 +460,14 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
       if (input.occ.blocked(x, z, 0.3)) continue;
       add(rng.pick(['grass0', 'grass1']), x, heightAt(x, z), z, rng.range(0, 6), rng.range(0.6, 1.1));
     }
-  for (let i = 0; i < 12000; i++) {
+  for (let i = 0; i < 16000; i++) {
     const a = rng.range(0, Math.PI * 2);
-    const r = Math.sqrt(rng.next()) * 900;
+    const r = Math.sqrt(rng.next()) * 1300;
     const x = Math.cos(a) * r;
     const z = Math.sin(a) * r;
     if (input.occ.blocked(x, z, 0.6)) continue;
     if (forestDensity(x, z) > 0.6 && rng.chance(0.6)) continue;
-    if (townEllipse(x, z) < 0.95 && rng.chance(0.7)) continue;
+    if (valley(x, z).e < 0 && Math.abs(x) < 1100 && rng.chance(0.7)) continue;
     add(rng.pick(['grass0', 'grass1']), x, heightAt(x, z), z, rng.range(0, 6), rng.range(0.7, 1.4));
   }
 

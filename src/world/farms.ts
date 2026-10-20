@@ -3,21 +3,20 @@ import { windowAt, doorAt } from './buildings/common';
 import { barn, colonial, ranch } from './buildings/homes';
 import { railFence, picketFence, ruralMailbox, roundBale, squareBales, cow, crateStack, barrel, postSign, propaneTank } from './props';
 import { addFlatPad, heightAt } from './terrain';
-import { drapedStrip } from './infrastructure';
 import type { PlacedTree } from './vegetation';
 import type { Kit, Col } from './core/kit';
 import { P } from './palette';
 
 export const FARMS = {
-  dairy: { x: -610, z: 72, w: 140, d: 100 },
-  hay: { x: -112, z: -735, w: 110, d: 190 },
-  orchard: { x: 110, z: 600, w: 140, d: 150 },
+  dairy: { x: -1450, z: 10, w: 140, d: 100 },
+  hay: { x: -1205, z: 70, w: 110, d: 150 },
+  orchard: { x: 1180, z: 165, w: 140, d: 150 },
 };
 
 /** Flattens every farmyard; must run before anything samples heightAt. Returns pad heights. */
 export function registerFarmPads() {
   return {
-    dairy: addFlatPad(FARMS.dairy.x, FARMS.dairy.z, FARMS.dairy.w, FARMS.dairy.d, 40, 0),
+    dairy: addFlatPad(FARMS.dairy.x, FARMS.dairy.z, FARMS.dairy.w, FARMS.dairy.d, 40),
     hay: addFlatPad(FARMS.hay.x, FARMS.hay.z, FARMS.hay.w, FARMS.hay.d, 34),
     orchard: addFlatPad(FARMS.orchard.x, FARMS.orchard.z, FARMS.orchard.w, FARMS.orchard.d, 22),
   };
@@ -93,10 +92,9 @@ export function dairyFarm(c: Ctx, y: number, trees: PlacedTree[]) {
   const { kit: k, rng } = c;
   const { x: cx, z: cz } = FARMS.dairy;
   // driveway from US-20
-  k.plane(cx - 12, 0.03, (6.2 + cz) / 2, 5, cz - 6.2, P.dirt, 'gravel');
-  c.occ.add(cx - 12, (6.2 + cz) / 2, 5, cz - 6.2, 0, 1, false);
-  gateArch(c, cx - 12, 24, 0, 'dairy', 0);
-  ruralMailbox(k, cx - 16, 7.4, Math.PI, 0xc8262c);
+  // entrance from Dairy Rd (north)
+  gateArch(c, cx - 1, cz - 47, 0, 'dairy', heightAt(cx - 1, cz - 47));
+  k.at(0, 0, 0, () => ruralMailbox(k, cx + 4, cz - 96, Math.PI, 0xc8262c), heightAt(cx + 4, cz - 96));
   k.at(
     0,
     0,
@@ -142,11 +140,11 @@ export function hayFarm(c: Ctx, y: number, trees: PlacedTree[]) {
   const { kit: k, rng, signs } = c;
   const { x: cx, z: cz, w, d } = FARMS.hay;
   const east = cx + w / 2;
-  drapedStrip(k, [[-6.4, cz + 30], [east + 2, cz + 30], [cx + 10, cz + 30]], 4.6, P.dirt, 'gravel');
-  c.occ.add((cx + 10 - 6.4) / 2, cz + 30, Math.abs(cx + 10 + 6.4), 6, 0, 1, false);
-  gateArch(c, east - 6, cz + 30, Math.PI / 2, 'ridgeview', y);
-  k.at(0, 0, 0, () => postSign(k, signs, 'hayForSale', -7.6, cz + 46, Math.PI / 2, { w: 1.6, h: 0.55, y: 1.2 }), heightAt(-7.6, cz + 46));
-  k.at(0, 0, 0, () => ruralMailbox(k, -7.6, cz + 24, Math.PI / 2), heightAt(-7.6, cz + 24));
+  void east;
+  // entrance from Ridgeview Rd (north-west)
+  gateArch(c, cx + 2, cz - 98, 0, 'ridgeview', heightAt(cx + 2, cz - 98));
+  k.at(0, 0, 0, () => postSign(k, signs, 'hayForSale', cx + 8, cz - 150, Math.PI, { w: 1.6, h: 0.55, y: 1.2 }), heightAt(cx + 8, cz - 150));
+  k.at(0, 0, 0, () => ruralMailbox(k, cx + 7, cz - 160, Math.PI), heightAt(cx + 7, cz - 160));
   k.at(
     0,
     0,
