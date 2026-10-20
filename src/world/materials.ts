@@ -4,6 +4,15 @@ import type { LayerDef } from './textures';
 
 /** Shared uniform used by foliage/flag vertex animation. */
 export const windUniform = { value: 0 };
+/** Weather/time-of-day uniforms shared by the world and glass materials. */
+export const surfaceUniforms = { uWet: { value: 0 }, uWindowGlow: { value: 0 } };
+
+const NOISE_GLSL = `
+float wHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float wNoise(vec2 p) {
+  vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(wHash(i), wHash(i + vec2(1.0, 0.0)), f.x), mix(wHash(i + vec2(0.0, 1.0)), wHash(i + vec2(1.0, 1.0)), f.x), f.y);
+}`;
 
 const LAYER_SIZE = 512;
 
@@ -20,13 +29,27 @@ function worldMaterial(layers: THREE.DataArrayTexture, decal: boolean): THREE.Me
   }
   m.onBeforeCompile = (s) => {
     s.uniforms.uLayers = { value: layers };
+    s.uniforms.uWet = surfaceUniforms.uWet;
     s.vertexShader = s.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float layer;\nattribute vec2 pbr;\nvarying float vLayer;\nvarying vec2 vPbr;\nvarying vec2 vTileUv;')
-      .replace('#include <uv_vertex>', '#include <uv_vertex>\nvLayer = layer;\nvPbr = pbr;\nvTileUv = uv;');
+      .replace('#include <common>', '#include <common>\nattribute float layer;\nattribute vec2 pbr;\nvarying float vLayer;\nvarying vec2 vPbr;\nvarying vec2 vTileUv;\nvarying vec2 vWetXZ;')
+      .replace('#include <uv_vertex>', '#include <uv_vertex>\nvLayer = layer;\nvPbr = pbr;\nvTileUv = uv;')
+      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWetXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
     s.fragmentShader = s.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform sampler2DArray uLayers;\nvarying float vLayer;\nvarying vec2 vPbr;\nvarying vec2 vTileUv;')
+      .replace('#include <common>', '#include <common>\nuniform sampler2DArray uLayers;\nuniform float uWet;\nvarying float vLayer;\nvarying vec2 vPbr;\nvarying vec2 vTileUv;\nvarying vec2 vWetXZ;' + NOISE_GLSL)
       .replace('#include <map_fragment>', '#include <map_fragment>\nif (vLayer > -0.5) diffuseColor.rgb *= texture(uLayers, vec3(vTileUv, floor(vLayer + 0.5))).rgb;')
-      .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = vPbr.x;')
+      .replace(
+        '#include <roughnessmap_fragment>',
+        `float roughnessFactor = vPbr.x;
+        {
+          // rain-soaked look: up-facing surfaces darken, turn glossy and collect puddles
+          vec3 wn = cross(dFdx(vViewPosition), dFdy(vViewPosition));
+          float up = dot(wn, wn) > 1e-24 ? dot(normalize(wn), normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz)) : 0.0;
+          float wet = uWet * smoothstep(0.72, 0.95, up);
+          float puddle = smoothstep(0.62, 0.78, wNoise(vWetXZ * 0.22) * 0.7 + wNoise(vWetXZ * 0.9) * 0.3);
+          roughnessFactor = mix(roughnessFactor, mix(roughnessFactor * 0.38, 0.05, puddle), wet);
+          diffuseColor.rgb *= 1.0 - wet * (0.22 + 0.25 * puddle);
+        }`,
+      )
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vPbr.y;');
   };
   m.customProgramCacheKey = () => 'pinehollow-world';
@@ -46,6 +69,7 @@ export class MaterialLib implements MatResolver {
       // flip rows so v = 0 is the canvas bottom, matching CanvasTexture.flipY
       for (let y = 0; y < S; y++) data.set(img.subarray((S - 1 - y) * S * 4, (S - y) * S * 4), (i * S * S + y * S) * 4);
       this.specs.set(L.name, { bucket: 'world', layer: i, tile: L.tile, rough: L.rough, metal: L.metal });
+      this.specs.set(`${L.name}@decal`, { bucket: 'decal', layer: i, tile: L.tile, rough: L.rough, metal: L.metal });
     });
     const tex = new THREE.DataArrayTexture(data, S, S, layerDefs.length);
     tex.format = THREE.RGBAFormat;
@@ -75,7 +99,28 @@ export class MaterialLib implements MatResolver {
 
     this.set('world', worldMaterial(tex, false));
     this.set('decal', worldMaterial(tex, true));
-    this.set('glass', new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.08, metalness: 0.4, envMapIntensity: 1.8 }));
+    const glass = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.08, metalness: 0.4, envMapIntensity: 1.8 });
+    glass.onBeforeCompile = (s) => {
+      s.uniforms.uWindowGlow = surfaceUniforms.uWindowGlow;
+      s.vertexShader = s.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vWinWorld;')
+        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWinWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      s.fragmentShader = s.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform float uWindowGlow;\nvarying vec3 vWinWorld;' + NOISE_GLSL)
+        .replace(
+          '#include <emissivemap_fragment>',
+          `#include <emissivemap_fragment>
+          {
+            // about half of the windows are lit after dark, in warm incandescent tones
+            vec2 cell = floor(vWinWorld.xz * 0.45) + floor(vWinWorld.y / 2.9) * 17.0;
+            float on = step(0.48, wHash(cell));
+            vec3 tone = mix(vec3(1.0, 0.68, 0.36), vec3(1.0, 0.86, 0.6), wHash(cell + 3.1));
+            totalEmissiveRadiance += uWindowGlow * on * tone * 1.6;
+          }`,
+        );
+    };
+    glass.customProgramCacheKey = () => 'pinehollow-glass';
+    this.set('glass', glass);
     // Unlit, pushed above 1.0 so bloom picks up lamps and neon.
     this.set('light', new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(2.2, 2.2, 2.2) }));
     this.set('wire', new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }));
