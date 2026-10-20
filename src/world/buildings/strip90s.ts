@@ -1074,11 +1074,10 @@ function cart(k: Kit, x: number, z: number, ry: number, y = 0) {
     k.box(0, 0.35, 0, 0.58, 0.45, 0.95, 0xb8bcc0, 'metal');
     k.box(0, 0.12, 0, 0.5, 0.05, 0.9, 0x55585c, 'metal');
     k.box(0, 0.8, -0.5, 0.6, 0.04, 0.05, 0xc8262c, 'paint');
-    for (const sx of [-1, 1]) for (const sz of [-0.4, 0.4]) k.box(sx * 0.24, 0, sz, 0.05, 0.12, 0.05, 0x222222);
   }, y);
 }
 /** Open-sided pen of shopping carts opening toward +Z. */
-function cartCorral(k: Kit, x: number, z: number, n = 5) {
+function cartCorral(k: Kit, x: number, z: number, n = 4) {
   k.at(x, z, 0, () => {
     k.solid(0, 0, 1.9, 4.6);
     for (const s of [-1, 1]) {
@@ -1420,6 +1419,789 @@ function stripMall(c: Ctx, x: number, z: number, ry: number, seed: number) {
   });
 }
 
+/* ================================================================================================
+ * 8. BOWL-O-RAMA — windowless lane hall, glass entry block, Googie tower sign, giant roof pin
+ * ============================================================================================== */
+
+/** Window run on a +Z wall: glass, kick plate, mullions and a header (no door). */
+function glassWall(k: Kit, x0: number, x1: number, y: number, zf: number, h: number, frame: Col, kick = 0.5) {
+  const w = x1 - x0;
+  const cx = (x0 + x1) / 2;
+  k.box(cx, y, zf - 0.04, w, h, 0.1, P.glass, 'glass');
+  k.box(cx, y, zf + 0.03, w, kick, 0.1, frame);
+  k.box(cx, y + h - 0.14, zf + 0.03, w, 0.16, 0.12, frame);
+  const n = Math.max(2, Math.round(w / 2.2));
+  for (let i = 0; i <= n; i++) k.box(x0 + (w * i) / n, y, zf + 0.03, 0.1, h, 0.1, frame);
+}
+/** Double glass doors on a +Z wall, centred at x. */
+function doubleDoor(k: Kit, x: number, y: number, zf: number, frame: Col) {
+  k.box(x, y, zf + 0.02, 2.6, 2.4, 0.1, frame);
+  for (const s of [-1, 1]) {
+    k.box(x + s * 0.6, y + 0.05, zf + 0.07, 1.05, 2.25, 0.04, P.glassLit, 'glass');
+    k.box(x + s * 0.12, y + 1.0, zf + 0.12, 0.05, 0.3, 0.05, 0xc0c3c6, 'metal');
+  }
+}
+function bowlInterior(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(512, 168);
+  g.fillStyle = '#1a1233';
+  g.fillRect(0, 0, 512, 168);
+  g.fillStyle = '#ff3ea5';
+  g.fillRect(0, 6, 512, 4);
+  g.fillStyle = '#3fe0ff';
+  g.fillRect(0, 14, 512, 4);
+  for (let i = 0; i < 7; i++) {
+    const tx = 48 + i * 62;
+    const bx = 10 + i * 72;
+    g.fillStyle = '#d9a85a';
+    g.beginPath();
+    g.moveTo(tx, 40);
+    g.lineTo(tx + 40, 40);
+    g.lineTo(bx + 62, 168);
+    g.lineTo(bx, 168);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = '#3a2a1a';
+    g.lineWidth = 3;
+    g.stroke();
+    g.fillStyle = '#ffffff';
+    for (const [px, py] of [[20, 32], [14, 36], [26, 36], [8, 40], [20, 40], [32, 40]]) {
+      g.beginPath();
+      g.arc(tx + px, py - 6, 2.4, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.fillStyle = ['#3fe0ff', '#ffe14a', '#ff4fd8'][i % 3];
+    g.fillRect(tx + 6, 22, 28, 8);
+  }
+  g.save();
+  g.shadowColor = '#ff3ea5';
+  g.shadowBlur = 10;
+  g.fillStyle = '#ff7ac8';
+  g.font = '26px "Bebas Neue", sans-serif';
+  g.textAlign = 'center';
+  g.fillText('OPEN BOWLING', 256, 108);
+  g.restore();
+  return c;
+}
+function lathe(k: Kit, pts: [number, number][], x: number, y: number, z: number, s: number, color: Col, mat = 'gloss', seg = 10) {
+  const g = new THREE.LatheGeometry(pts.map(([r, h]) => new THREE.Vector2(r * s, h * s)), seg);
+  k.add(g, color, mat, k.local(x, y, z));
+}
+const PIN: [number, number][] = [[0.01, 0], [1.15, 0], [1.5, 1.2], [2.1, 2.8], [2.38, 4.5], [2.2, 6.2], [1.55, 8.2], [0.95, 10], [0.9, 11], [1.2, 12.3], [1.27, 13.6], [0.9, 14.6], [0.01, 15]];
+function giantPin(k: Kit, x: number, y: number, z: number, h: number) {
+  const s = h / 15;
+  lathe(k, PIN, x, y, z, s, 0xf4f1ea);
+  for (const [y0, rr] of [[9.4, 0.97], [10.2, 0.95]] as [number, number][]) k.cyl(x, y + y0 * s, z, rr * s, rr * s, 0.6 * s, 10, 0xc8262c, 'gloss');
+}
+function starburst(k: Kit, x: number, y: number, z: number, r: number, col: Col, spokes = 8) {
+  for (let i = 0; i < spokes; i++) {
+    const a = (i / spokes) * Math.PI;
+    const long = i % 2 === 0;
+    k.boxC(x, y, z, r * (long ? 2 : 1.3), 0.1, 0.1, col, 'light', { rz: a, cast: false });
+  }
+  for (let i = 0; i < spokes * 2; i += 2) {
+    const a = (i / (spokes * 2)) * Math.PI * 2;
+    k.sphere(x + Math.cos(a) * r, y + Math.sin(a) * r, z, 0.17, 0xffe58a, 'light', 6, 4);
+  }
+}
+
+function bowlORama(c: Ctx, x: number, z: number, ry: number, seed: number) {
+  const k = c.kit;
+  const rng = new Rng(seed);
+  const W = 56;
+  const D = 46;
+  c.occ.add(x, z, W, D, ry, 1, false);
+  const TEAL = 0x1f8f9a;
+  const ORANGE = 0xf0742a;
+  const wall = sgn(c, 'bw.wall', () =>
+    panelSign(1024, 170, '#1b3a52', [
+      { text: 'BOWL-O-RAMA', font: F_SLAB, color: '#ffb23a', y: 0.45, size: 0.62, maxW: 0.7, stroke: '#7a2a0a', strokeW: 8 },
+      { text: '40 LANES · COSMIC BOWL · SNACK BAR · LOUNGE', font: F_OS, weight: '700', color: '#7fe6f0', y: 0.88, size: 0.14, maxW: 0.8, letter: 4 },
+    ], { border: '#ffb23a', borderW: 8 }));
+  const tower = sgn(c, 'bw.tower', () =>
+    panelSign(640, 240, '#f4f1ea', [
+      { text: 'BOWL-O-RAMA', font: F_SLAB, color: '#d9421f', y: 0.38, size: 0.34, maxW: 0.9, stroke: '#1b3a52', strokeW: 6 },
+      { text: 'LANES · LEAGUES · LOUNGE', font: F_OS, weight: '700', color: '#1b3a52', y: 0.72, size: 0.14, maxW: 0.86, letter: 3 },
+      { text: 'OPEN 10AM – 2AM', font: F_OS, weight: '700', color: '#1f8f9a', y: 0.9, size: 0.1 },
+    ], { border: '#1f8f9a', borderW: 14 }));
+  const reader = sgn(c, 'bw.reader', () =>
+    panelSign(576, 160, '#16181c', [
+      { text: 'COSMIC BOWL FRI & SAT', font: F_OS, weight: '700', color: '#ffe14a', y: 0.24, size: 0.2, maxW: 0.92 },
+      { text: 'MEN’S LEAGUE TUES 7PM', font: F_OS, weight: '700', color: '#ffffff', y: 0.5, size: 0.2, maxW: 0.92 },
+      { text: 'KIDS BOWL FREE SUMMER', font: F_OS, weight: '700', color: '#7fe6f0', y: 0.76, size: 0.2, maxW: 0.92 },
+    ], { border: '#ffe14a', borderW: 8 }));
+  const lobby = sgn(c, 'bw.lobby', bowlInterior);
+
+  k.at(x, z, ry, () => {
+    pave(k, 0, 0, W, D);
+    const HX = 4;
+    const H = 8.2;
+    const hz = -11.75;
+    const zf = 4;
+    k.solid(HX, hz, 40, 21.5);
+    k.solid(HX, 1.5, 24, 5);
+    // lot
+    slab(k, HX, 4.6, 24, 1.2, 0.12);
+    stalls(k, -12.2, 2.8, 14, 5.4, 10.9);
+    stalls(k, -12.2, 2.8, 14, 17.5, 22.9);
+    mark(k, 7, 14.2, 40, 0.12, 0xe7b93a);
+    for (const lx of [-8, 8, 24]) lamp(k, lx, 14.2, 0, 9, true);
+    island(k, -22, 23 - 1.0, 12, 2.0);
+    for (let i = 0; i < 4; i++) shrub(k, -26 + i * 2.8, 22.2, 0.6);
+    conifer(k, -25.4, 8, 7);
+    conifer(k, 25.6, 20.5, 6);
+    // hall
+    k.box(HX, 0, hz, 40, H, 21.5, 0xffffff, 'cinder');
+    k.box(HX, 0, hz, 40.14, 0.5, 21.64, 0x8f8c87, 'concrete');
+    k.box(HX, 5.4, hz + 10.77, 40.1, 0.5, 0.06, TEAL);
+    k.box(HX, 5.95, hz + 10.77, 40.1, 0.4, 0.06, ORANGE);
+    for (const s of [-1, 1]) {
+      k.box(HX + (s * 40) / 2, 5.4, hz, 0.06, 0.5, 21.6, TEAL);
+      k.box(HX + (s * 40) / 2, 5.95, hz, 0.06, 0.4, 21.6, ORANGE);
+    }
+    flatTop(k, rng, HX, hz, 40, 21.5, H, 0xb9b4ab, 5);
+    k.sign(HX - 1.5, 6.9, -1 + 0.14, 20, 3.0, wall, { thick: 0.2, back: 0x1b3a52 });
+    neon(k, HX - 1.5, 5.3, -1 + 0.26, 20.4, 0.07, 0.05, 0xff3ea5);
+    neon(k, HX - 1.5, 8.5, -1 + 0.26, 20.4, 0.07, 0.05, 0x3fe0ff);
+    // entry block
+    const ex = 4;
+    k.box(ex, 0, 1.5, 24, 4.8, 5, 0xffffff, 'brickTan');
+    k.box(ex, 0, 1.5, 24.14, 0.4, 5.14, 0x8f8c87, 'concrete');
+    k.box(ex, 4.8, 1.5, 24.6, 0.3, 5.6, 0xb9b4ab, 'concrete');
+    k.box(ex, 4.1, zf + 0.04, 24.2, 0.7, 0.1, TEAL, 'gloss');
+    neon(k, ex, 4.0, zf + 0.12, 24.2, 0.07, 0.05, 0x3fe0ff);
+    neon(k, ex, 4.5, zf + 0.12, 24.2, 0.07, 0.05, 0xff3ea5);
+    glassWall(k, ex - 9, ex + 9, 0.4, zf, 3.4, 0x20262c, 0.55);
+    k.signPlane(ex, 0.4 + 1.7, zf + 0.02, 18, 3.4, lobby);
+    doubleDoor(k, ex, 0.4, zf, 0x20262c);
+    for (const sx of [-1, 1]) {
+      k.box(ex + sx * 10.7, 0, zf - 0.05, 3.2, 4.8, 0.14, 0xffffff, 'brickRed');
+    }
+    // roof pin + bolt-on cradle
+    k.box(21, H, -6, 2.4, 0.3, 2.4, 0x8a8f94, 'metal');
+    giantPin(k, 21, H + 0.3, -6, 7.2);
+    // Googie tower sign
+    k.at(-21, 15.5, 0, () => {
+      k.solid(0, 0, 3.4, 1.8);
+      k.box(0, 0, 0, 4.6, 0.6, 1.8, CURB, 'concrete');
+      for (const s of [-1, 1]) k.beam({ x: s * 1.9, y: 0.6, z: 0 }, { x: s * 1.2, y: 11.4, z: 0 }, 0.5, 0.5, 0x6f7377, 'metal');
+      k.box(0, 7.2, 0, 4.2, 0.35, 0.5, 0x6f7377, 'metal');
+      k.sign(0, 8.8, 0, 7.6, 2.9, tower, { thick: 0.5, back: 0x1b3a52, twoSided: true, frame: 0.22 });
+      k.sign(0, 5.2, 0, 4.6, 1.3, reader, { thick: 0.35, back: 0x16181c, twoSided: true, frame: 0.15 });
+      neon(k, 0, 10.45, 0.3, 8.0, 0.08, 0.05, 0xff3ea5);
+      neon(k, 0, 7.15, 0.3, 8.0, 0.08, 0.05, 0x3fe0ff);
+      neon(k, 0, 10.45, -0.3, 8.0, 0.08, 0.05, 0xff3ea5);
+      neon(k, 0, 7.15, -0.3, 8.0, 0.08, 0.05, 0x3fe0ff);
+      starburst(k, 0, 12.6, 0, 1.4, 0xff9a3a);
+      starburst(k, -3.9, 11.4, 0, 0.95, 0x3fe0ff, 6);
+      starburst(k, 3.9, 11.4, 0, 0.95, 0xff3ea5, 6);
+      k.sphere(0, 12.6, 0, 0.5, 0xffe14a, 'light', 8, 6);
+    });
+    // side / rear details
+    for (const s of [-1, 1]) {
+      k.at(HX + s * 20, hz + 4, s * HALF, () => {
+        doorAt(k, 0, 0.15, 0, 1.2, 2.2, 0x6b6f73);
+        k.box(0, 3.2, 0.1, 0.5, 0.25, 0.25, 0xe8e4d8);
+        neon(k, 0, 3.6, 0.3, 0.5, 0.1, 0.05, 0xffb23a);
+      });
+    }
+    k.at(HX - 20, hz - 5, -HALF, () => {
+      for (const dx of [-3, 3]) k.box(dx, 0.15, 0.07, 3.6, 3.3, 0.14, 0xe4e1d6, 'rollup');
+      k.box(0, 0, 0.5, 9, 1.1, 1.0, 0x6b6f73, 'concrete');
+    });
+    trashCorral(k, -22.5, -18, rng, 'brickDark');
+    // cars
+    const types: VehicleType[] = ['pickup', 'sedan', 'van', 'coupe', 'suv', 'sedan', 'wagon', 'pickup', 'sedan', 'coupe', 'suv', 'sedan'];
+    const row1 = shuffled(rng, 14).slice(0, 6);
+    const row2 = shuffled(rng, 14).slice(0, 4);
+    row1.forEach((s, i) => park(c, types[i], -10.8 + s * 2.8, 8.1, rng.chance(0.5) ? HALF : -HALF, rng.pick(CAR_COLORS)));
+    row2.forEach((s, i) => park(c, types[i + 6], -10.8 + s * 2.8, 20.2, rng.chance(0.5) ? HALF : -HALF, rng.pick(CAR_COLORS)));
+  });
+}
+
+/* ================================================================================================
+ * 9. THRIFTY MART — neighbourhood supermarket: entry tower, long canopy, cart corrals, big lot
+ * ============================================================================================== */
+
+function groceryInterior(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(512, 168);
+  g.fillStyle = '#efe6cf';
+  g.fillRect(0, 0, 512, 168);
+  g.fillStyle = '#bfb59a';
+  g.fillRect(0, 130, 512, 38);
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, 512, 10);
+  const prod = ['#d6301f', '#f2c230', '#4f9a3a', '#e8782a', '#2a62b8', '#8a3ab0'];
+  for (let a = 0; a < 5; a++) {
+    const x = 20 + a * 96;
+    g.fillStyle = '#8a8f94';
+    g.fillRect(x, 40, 70, 92);
+    for (let r = 0; r < 4; r++) {
+      for (let i = 0; i < 7; i++) {
+        g.fillStyle = prod[(a + r + i) % prod.length];
+        g.fillRect(x + 3 + i * 9.4, 44 + r * 22, 7, 16);
+      }
+    }
+    g.fillStyle = '#1b6b3a';
+    g.fillRect(x + 20, 18, 30, 12);
+  }
+  g.fillStyle = '#2a7a3a';
+  g.fillRect(0, 108, 512, 8);
+  return c;
+}
+
+function thriftyMart(c: Ctx, x: number, z: number, ry: number, seed: number) {
+  const k = c.kit;
+  const rng = new Rng(seed);
+  const W = 60;
+  const D = 52;
+  c.occ.add(x, z, W, D, ry, 1, false);
+  const GREEN = 0x1f6b3a;
+  const YEL = 0xffd23a;
+  const tower = sgn(c, 'tm.tower', () =>
+    panelSign(768, 240, '#1f6b3a', [
+      { text: 'THRIFTY MART', font: F_SLAB, color: '#ffd23a', y: 0.4, size: 0.4, maxW: 0.9, stroke: '#0d3a1d', strokeW: 8 },
+      { text: 'LOW PRICES EVERY DAY', font: F_OS, weight: '700', color: '#ffffff', y: 0.78, size: 0.16, maxW: 0.8, letter: 4 },
+    ], { border: '#ffd23a', borderW: 12 }));
+  const fasciaL = sgn(c, 'tm.fl', () =>
+    panelSign(640, 96, '#ffd23a', [{ text: 'FRESH PRODUCE · MEATS · DELI · BAKERY', font: F_SLAB, color: '#1f6b3a', y: 0.52, size: 0.4, maxW: 0.94 }], { border: '#1f6b3a', borderW: 6 }));
+  const fasciaR = sgn(c, 'tm.fr', () =>
+    panelSign(640, 96, '#c8262c', [{ text: 'PHARMACY · FILM DEVELOPING · MONEY ORDERS', font: F_SLAB, color: '#ffffff', y: 0.52, size: 0.34, maxW: 0.95 }], { border: '#ffd23a', borderW: 6 }));
+  const pole = sgn(c, 'tm.pole', () =>
+    panelSign(512, 600, '#1f6b3a', [
+      { text: 'THRIFTY', font: F_SLAB, color: '#ffd23a', y: 0.14, size: 0.14, maxW: 0.86, stroke: '#0d3a1d', strokeW: 6 },
+      { text: 'MART', font: F_SLAB, color: '#ffffff', y: 0.3, size: 0.17, maxW: 0.6, stroke: '#0d3a1d', strokeW: 6 },
+      { text: 'OPEN 7AM – MIDNIGHT', font: F_OS, weight: '700', color: '#ffd23a', y: 0.47, size: 0.07, maxW: 0.86 },
+      { text: 'WEEKLY SPECIALS', font: F_SLAB, color: '#1f6b3a', y: 0.62, size: 0.075, maxW: 0.8 },
+      { text: 'FRYER CHICKEN  .99/LB', font: F_OS, weight: '700', color: '#c8262c', y: 0.76, size: 0.07, maxW: 0.8 },
+      { text: 'BANANAS  .29/LB', font: F_OS, weight: '700', color: '#c8262c', y: 0.87, size: 0.07, maxW: 0.8 },
+    ], { border: '#ffd23a', borderW: 12, draw: (g, w, h) => { g.fillStyle = '#f4f1ea'; g.fillRect(24, h * 0.54, w - 48, h * 0.4); } }));
+  const interior = sgn(c, 'tm.in', groceryInterior);
+
+  k.at(x, z, ry, () => {
+    pave(k, 0, 0, W, D);
+    const zf = -8;
+    const bz = -16;
+    const H = 6.4;
+    k.solid(0, bz, 46, 16);
+    k.solid(-8, -9.1, 12, 8);
+    // lot: three rows of stalls, cart corrals, islands
+    stalls(k, -22.4, 2.8, 16, 0.6, 6.1);
+    stalls(k, -22.4, 2.8, 16, 6.1, 11.6);
+    stalls(k, -22.4, 2.8, 16, 18.4, 23.9);
+    mark(k, 0, 15, 56, 0.12, 0xe7b93a);
+    mark(k, 0, -2.5, 46, 0.35, 0xe7b93a);
+    for (let i = 0; i < 6; i++) mark(k, -17 + i * 6.8, -1.6, 3.2, 0.4);
+    for (const lx of [-20, 0, 20]) {
+      lamp(k, lx, 12, 0, 9, true);
+      lamp(k, lx, 24.6, 0, 9, true);
+    }
+    const corralStall = (i: number) => -22.4 + i * 2.8 + 1.4;
+    cartCorral(k, corralStall(3), 3.35);
+    cartCorral(k, corralStall(12), 3.35);
+    cartCorral(k, corralStall(5), 21.15);
+    cartCorral(k, corralStall(10), 21.15);
+    island(k, 0, 24.9, 40, 2.0);
+    for (let i = 0; i < 6; i++) shrub(k, -16 + i * 6.4, 24.9, 0.6);
+    conifer(k, -27.2, -2, 6.5);
+    conifer(k, 27.2, -2, 6.5);
+    tree(k, 26.2, 22, 5);
+    // building
+    k.box(0, 0, bz, 46, H, 16, 0xe3d9bf, 'stucco');
+    k.box(0, 0, bz, 46.14, 0.5, 16.14, 0x8f8c87, 'concrete');
+    k.box(0, 4.2, zf - 0.03, 46, 0.35, 0.06, GREEN);
+    flatTop(k, rng, 0, bz, 46, 16, H, 0xb9b4ab, 5);
+    // entry tower
+    const tx = -8;
+    k.box(tx, 0, -9.1, 12, 8.4, 7.8, 0xefe8d4, 'stucco');
+    k.box(tx, 0, -9.1, 12.14, 0.5, 7.94, 0x8f8c87, 'concrete');
+    k.hipRoof(tx, 8.4, -9.1, 12, 7.8, 1.8, 0x23563a, 'roofMetal', 0.5);
+    k.sign(tx, 6.4, -5.2 + 0.1, 9.6, 3.0, tower, { thick: 0.2, back: 0x0d3a1d });
+    neon(k, tx, 4.55, -5.2 + 0.1, 11.6, 0.07, 0.05, 0xffd23a);
+    // sidewalk canopy + glazing
+    slab(k, 0, zf + 1.7, 46, 3.4, 0.15);
+    k.box(0, 3.75, zf + 1.7, 46.4, 0.25, 3.4, 0xe9e5d8);
+    k.box(0, 3.5, zf + 3.3, 46.4, 1.1, 0.2, GREEN, 'gloss');
+    k.box(0, 4.6, zf + 3.3, 46.6, 0.1, 0.26, YEL);
+    for (let i = 0; i <= 8; i++) {
+      const px = -23 + i * 5.75;
+      k.solid(px, zf + 3.1, 0.35, 0.35);
+      k.box(px, 0.15, zf + 3.1, 0.3, 3.6, 0.3, 0xe9e5d8);
+    }
+    k.sign(-14.5, 4.05, zf + 3.45, 15.5, 0.85, fasciaL, { thick: 0.1 });
+    k.sign(14.5, 4.05, zf + 3.45, 15.5, 0.85, fasciaR, { thick: 0.1 });
+    glassWall(k, -22.6, -14, 0.4, zf, 3.0, 0x1b3a28, 0.6);
+    glassWall(k, -2.2, 22.6, 0.4, zf, 3.0, 0x1b3a28, 0.6);
+    k.signPlane(-18.3, 0.4 + 1.5, zf + 0.02, 8.6, 3.0, interior);
+    k.signPlane(10.2, 0.4 + 1.5, zf + 0.02, 24.8, 3.0, interior);
+    // tower entry doors
+    k.box(tx, 0.4, -5.2 - 0.06, 8.6, 3.0, 0.12, P.glass, 'glass');
+    doubleDoor(k, tx - 1.6, 0.4, -5.2, 0x1b3a28);
+    doubleDoor(k, tx + 1.6, 0.4, -5.2, 0x1b3a28);
+    for (const sx of [-1, 1]) k.box(tx + sx * 4.5, 0.4, -5.2 + 0.03, 0.2, 3.0, 0.12, 0x1b3a28);
+    k.box(tx, 3.3, -5.2 + 0.03, 9.0, 0.2, 0.12, 0x1b3a28);
+    for (const bx of [tx - 4.6, tx + 4.6, tx - 0.0]) {
+      k.solid(bx, -4.6, 0.4, 0.4);
+      k.cyl(bx, 0, -4.6, 0.16, 0.16, 0.95, 6, 0xf2c230, 'metal');
+    }
+    // front stuff: ice chest, propane cage, benches, bins, kiddie ride
+    k.at(-1.0, zf + 0.8, 0, () => {
+      k.solid(0, 0, 2.0, 0.9);
+      k.box(0, 0, 0, 1.8, 1.2, 0.8, 0xf4f1ea, 'metal');
+      k.box(0, 1.2, 0, 1.85, 0.08, 0.85, 0x2a62b8);
+    });
+    k.at(18.5, zf + 0.9, 0, () => {
+      k.solid(0, 0, 1.6, 1.0);
+      k.box(0, 0, 0, 1.5, 0.1, 0.9, 0x5b5f66, 'metal');
+      for (let i = 0; i < 5; i++) k.box(-0.7 + i * 0.35, 0.1, 0, 0.04, 1.7, 0.04, 0xc8262c, 'metal');
+      k.box(0, 1.8, 0, 1.5, 0.05, 0.9, 0xc8262c, 'metal');
+      for (let i = 0; i < 4; i++) k.cyl(-0.5 + (i % 2) * 1.0, 0.1, -0.2 + (i >> 1) * 0.45, 0.2, 0.2, 0.8, 8, 0xe6e8ea, 'metal');
+    });
+    bench(k, 3.6, zf + 0.7, Math.PI);
+    bench(k, -18, zf + 0.7, Math.PI);
+    trashCan(k, 6.4, zf + 0.7);
+    trashCan(k, -11, zf + 0.7);
+    k.at(12.5, zf + 0.9, 0, () => {
+      k.solid(0, 0, 0.9, 0.9);
+      k.box(0, 0, 0, 0.6, 0.5, 0.6, 0x1d4aa3);
+      k.ico(0, 0.9, 0, 0.35, 0, 0xc8262c, 'gloss', 1, 1.1, 1);
+    });
+    // rear dock + compactor
+    for (const dx of [-14, -6]) {
+      k.box(dx, 0.15, bz - 8 - 0.06, 3.4, 3.0, 0.14, 0xe4e1d6, 'rollup');
+      k.box(dx, 0, bz - 8 - 0.6, 3.6, 1.1, 1.0, 0x6b6f73, 'concrete');
+    }
+    k.box(19, 0, -24.9, 4.6, 2.0, 1.8, 0x3f6b46, 'metal');
+    k.solid(19, -24.9, 4.6, 1.8);
+    dumpster(k, 12, -25.0, 0, P.dumpster, rng);
+    // cars
+    const types: VehicleType[] = ['sedan', 'pickup', 'wagon', 'van', 'coupe', 'suv', 'sedan', 'pickup'];
+    const rows: [number, number, number[]][] = [[3.35, 5, [3, 12]], [8.85, 3, []], [21.15, 2, [5, 10]]];
+    let t = 0;
+    for (const [rz, n, skip] of rows) {
+      for (const s of shuffled(rng, 16).filter((i) => !skip.includes(i)).slice(0, n)) {
+        park(c, types[t++ % types.length], -21 + s * 2.8, rz, rng.chance(0.5) ? HALF : -HALF, rng.pick(CAR_COLORS));
+      }
+    }
+  });
+}
+
+/* ================================================================================================
+ * 10. SPLASH CAR WASH — automatic tunnel, three self-serve bays, vacuum row
+ * ============================================================================================== */
+
+function arrowDecal(k: Kit, x: number, z: number, ry: number, col: Col = WHITE) {
+  k.at(x, z, ry, () => {
+    k.plane(0, 0.046, 0.5, 0.3, 2.2, col, 'decal');
+    for (const s of [-1, 1]) k.plane(s * 0.38, 0.046, -0.55, 0.28, 1.1, col, 'decal', { ry: s * 0.8 });
+  });
+}
+
+function carWash(c: Ctx, x: number, z: number, ry: number, seed: number) {
+  const k = c.kit;
+  const rng = new Rng(seed);
+  const W = 56;
+  const D = 44;
+  c.occ.add(x, z, W, D, ry, 1, false);
+  const BLUE = 0x1d4aa3;
+  const splash = sgn(c, 'cw.splash', () =>
+    panelSign(512, 160, '#1d4aa3', [
+      { text: 'SPLASH', font: F_SLAB, color: '#ffffff', y: 0.36, size: 0.52, maxW: 0.7, stroke: '#0c2a66', strokeW: 8 },
+      { text: 'AUTOMATIC CAR WASH', font: F_OS, weight: '700', color: '#ffd24a', y: 0.8, size: 0.18, maxW: 0.8, letter: 3 },
+    ], {
+      border: '#ffffff',
+      borderW: 8,
+      draw: (g, w, h) => {
+        for (const [yy, col] of [[0.88, '#5bb8ff'], [0.94, '#ffffff']] as [number, string][]) {
+          g.fillStyle = col;
+          g.beginPath();
+          g.moveTo(0, h);
+          for (let i = 0; i <= 32; i++) g.lineTo((i / 32) * w, h * yy + Math.sin(i * 0.9) * 5);
+          g.lineTo(w, h);
+          g.closePath();
+          g.fill();
+        }
+      },
+    }));
+  const selfSign = sgn(c, 'cw.self', () =>
+    panelSign(768, 100, '#1d4aa3', [
+      { text: 'SELF SERVE BAYS', font: F_SLAB, color: '#ffffff', y: 0.38, size: 0.46, maxW: 0.6 },
+      { text: 'HAND WASH · FOAM BRUSH · WAX · SPOT FREE RINSE', font: F_OS, weight: '700', color: '#ffd24a', y: 0.82, size: 0.2, maxW: 0.9, letter: 2 },
+    ], { border: '#ffd24a', borderW: 6 }));
+  const nums = sgn(c, 'cw.nums', () => {
+    const [cv, g] = makeCanvas(384, 128);
+    ['1', '2', '3'].forEach((n, i) => {
+      g.fillStyle = '#ffd24a';
+      g.fillRect(i * 128 + 8, 8, 112, 112);
+      g.fillStyle = '#1d4aa3';
+      g.fillRect(i * 128 + 14, 14, 100, 100);
+    });
+    drawLines(g, 384, 128, ['1', '2', '3'].map((n, i) => ({ text: n, font: F_SLAB, color: '#ffffff', y: 0.5, size: 0.6, x: (i + 0.5) / 3 })));
+    return cv;
+  });
+  const menu = sgn(c, 'cw.menu', () => menuBoard('WASH MENU', [['BASIC', '3.00'], ['DELUXE', '5.00'], ['SUPREME', '7.00'], ['HAND WAX', '9.00'], ['UNDERBODY', '1.00']], '#5bb8ff', '#0c2a66'));
+  const pole = sgn(c, 'cw.pole', () =>
+    panelSign(512, 600, '#1d4aa3', [
+      { text: 'SPLASH', font: F_SLAB, color: '#ffffff', y: 0.13, size: 0.16, maxW: 0.86, stroke: '#0c2a66', strokeW: 8 },
+      { text: 'CAR WASH', font: F_SLAB, color: '#ffd24a', y: 0.28, size: 0.11, maxW: 0.7 },
+      { text: 'AUTOMATIC  3.00', font: F_OS, weight: '700', color: '#ffffff', y: 0.45, size: 0.075, maxW: 0.8 },
+      { text: 'SELF SERVE  .50', font: F_OS, weight: '700', color: '#ffffff', y: 0.58, size: 0.075, maxW: 0.8 },
+      { text: 'HAND WAX  9.00', font: F_OS, weight: '700', color: '#ffffff', y: 0.71, size: 0.075, maxW: 0.8 },
+      { text: 'FREE VACUUMS WITH WASH', font: F_OS, weight: '700', color: '#ffd24a', y: 0.87, size: 0.065, maxW: 0.86 },
+    ], { border: '#ffd24a', borderW: 12 }));
+  const vac = sgn(c, 'cw.vac', () => panelSign(512, 80, '#ffd24a', [{ text: 'FREE VACUUMS · SPLASH WASH CUSTOMERS', font: F_SLAB, color: '#1d4aa3', y: 0.52, size: 0.5, maxW: 0.96 }], { border: '#1d4aa3', borderW: 6 }));
+
+  k.at(x, z, ry, () => {
+    pave(k, 0, 0, W, D);
+    const TX = -14;
+    // lane edges, exit-lane arrows, queue arrows
+    mark(k, TX - 3.2, 14.5, 0.12, 15, 0xe7b93a);
+    mark(k, TX + 3.2, 14.5, 0.12, 15, 0xe7b93a);
+    mark(k, -21.5, 1, 0.12, 40, 0xe7b93a);
+    for (const az of [-14, -4, 6, 16]) arrowDecal(k, -25, az, 0);
+    arrowDecal(k, TX, 17.5, Math.PI);
+    mark(k, 13, 14.6, 14.4, 0.14);
+    stallsZ(k, -0.9, 2.8, 6, 22.2, 27.4);
+    // tunnel shell
+    k.solid(TX - 3.8, -5, 1.4, 28);
+    k.solid(TX + 3.8, -5, 1.4, 28);
+    k.box(TX, 4.6, -5, 9.6, 0.5, 29, 0xe9e9e4);
+    for (const s of [-1, 1]) {
+      k.box(TX + s * 3.8, 0, -5, 1.4, 4.6, 28, 0xffffff, 'stucco');
+      k.box(TX + s * 3.8, 3.3, -5, 1.46, 0.45, 28.06, BLUE);
+      neon(k, TX + s * 3.05, 3.8, -5, 0.08, 0.1, 26, 0x5bb8ff);
+    }
+    k.box(TX, 3.7, 8.7, 6.2, 0.9, 0.6, 0xffffff, 'stucco');
+    k.box(TX, 3.7, -18.7, 6.2, 0.9, 0.6, 0xffffff, 'stucco');
+    k.sign(TX, 6.4, 8.9, 8.8, 2.3, splash, { thick: 0.4, back: BLUE, twoSided: true, frame: 0.15 });
+    for (const [bx, by, br] of [[-3.2, 8.1, 0.55], [-2.2, 8.7, 0.8], [3.0, 8.4, 0.65], [2.2, 9.1, 0.4], [4.1, 7.9, 0.35]]) k.ico(TX + bx, by, 8.9, br, 0, 0x9fdcff, 'gloss');
+    // equipment inside
+    for (const [bz2, col] of [[-1.5, 0x2a62b8], [-6.5, 0xe23a8a]] as [number, number][]) {
+      for (const s of [-1, 1]) {
+        k.cyl(TX + s * 1.5, 0, bz2, 0.5, 0.5, 3.2, 8, col, 'paint');
+        k.box(TX + s * 2.45, 0, bz2, 0.4, 3.6, 0.4, 0x5b5f66, 'metal');
+      }
+    }
+    k.cylX(TX, 3.3, -4.2, 0.38, 3.2, 8, 0xe23a8a);
+    for (let i = 0; i < 9; i++) k.box(TX - 2.4 + i * 0.6, 2.5, -10 + (i % 2) * 0.2, 0.3, 1.3, 0.05, i % 2 ? 0x2a62b8 : 0xffd24a, 'paint');
+    for (const s of [-1, 1]) k.box(TX + s * 1.2, 0.2, -14.8, 0.9, 3.2, 1.3, 0x8a8f94, 'metal');
+    k.box(TX, 3.3, -14.8, 3.6, 0.5, 1.3, 0x8a8f94, 'metal');
+    park(c, 'sedan', TX, -3.2, HALF, rng.pick(CAR_COLORS));
+    // pay island + kiosk
+    const kx = -9.6;
+    k.box(kx, 0, 14.5, 1.8, 0.17, 4.2, CURB, 'concrete');
+    k.at(kx, 14.5, 0, () => {
+      k.solid(0, 0, 1.2, 1.2);
+      k.box(0, 0.17, 0, 0.9, 1.5, 0.7, 0xf4f1ea, 'gloss');
+      k.box(0, 1.67, 0, 1.0, 0.25, 0.8, BLUE, 'gloss');
+      k.box(0, 1.1, 0.36, 0.5, 0.3, 0.03, 0x2b9a4a, 'light', { cast: false });
+      for (const s of [-1, 1]) k.box(s * 1.1, 0.17, -0.1, 0.12, 2.9, 0.12, 0xe9e9e4);
+      k.box(0, 3.05, -0.1, 2.5, 0.16, 2.2, 0xe9e9e4);
+      k.box(0, 3.05, 1.0, 2.5, 0.4, 0.06, BLUE, 'gloss');
+    });
+    k.beam({ x: kx - 0.2, y: 1.0, z: 15.6 }, { x: kx - 0.7, y: 2.7, z: 15.6 }, 0.1, 0.1, 0xc8262c);
+    k.at(-5.6, 12.5, -0.3, () => {
+      k.solid(0, 0, 1.6, 0.4);
+      k.box(-0.6, 0, 0, 0.1, 1.9, 0.1, 0x5b5f66, 'metal');
+      k.box(0.6, 0, 0, 0.1, 1.9, 0.1, 0x5b5f66, 'metal');
+      k.sign(0, 1.45, 0.02, 1.45, 1.9, menu, { thick: 0.06, back: 0x0c2a66 });
+    });
+    park(c, 'wagon', TX, 12.2, HALF, rng.pick(CAR_COLORS));
+    // self-serve block
+    const BX = 13;
+    k.box(BX, 3.5, -13, 14.6, 0.35, 8.8, 0xe9e9e4);
+    k.box(BX, 2.9, -8.7, 14.6, 0.95, 0.15, BLUE, 'gloss');
+    k.sign(BX, 3.35, -8.6, 13.6, 0.7, selfSign, { thick: 0.06 });
+    k.box(BX, 0, -17.05, 14.5, 3.5, 0.3, 0xffffff, 'stucco');
+    k.solid(BX, -17.05, 14.5, 0.3);
+    for (let i = 0; i <= 3; i++) {
+      const dx = BX - 6.9 + i * 4.6;
+      k.box(dx, 0, -13, 0.3, 3.5, 8.4, 0xffffff, 'stucco');
+      k.solid(dx, -13, 0.3, 8.4);
+    }
+    for (let i = 0; i < 3; i++) {
+      const bx = BX - 4.6 + i * 4.6;
+      k.box(bx, 0.04, -13.5, 1.7, 0.01, 6.5, 0x45484d, 'decal');
+      k.signPlane(bx - 0.9, 2.55, -16.88, 0.9, 0.9, subRef(nums, 3, 1, i, 0));
+      k.box(bx + 1.35, 0.9, -16.8, 0.5, 1.0, 0.3, 0x2a62b8, 'gloss');
+      k.box(bx + 1.35, 1.2, -16.64, 0.3, 0.2, 0.02, 0xc8262c, 'light', { cast: false });
+      k.cylBetween({ x: bx - 1.4, y: 2.9, z: -16.7 }, { x: bx - 1.2, y: 1.1, z: -16.5 }, 0.04, 4, 0x1b1b1d, 'paint');
+      k.box(bx - 1.2, 0.85, -16.4, 0.06, 0.3, 0.5, 0xc8262c);
+    }
+    park(c, 'pickup', BX, -13, HALF, rng.pick(CAR_COLORS));
+    // vacuum canopy
+    k.box(24.8, 3.1, 7.5, 6.4, 0.3, 17.2, 0xe9e9e4);
+    k.sign(24.8, 3.5, 16.0, 6.0, 0.75, vac, { thick: 0.08, ry: 0 });
+    for (let i = 0; i <= 6; i++) {
+      const vz = -0.9 + i * 2.8;
+      k.solid(27.65, vz, 0.4, 0.4);
+      k.box(27.65, 0, vz, 0.3, 3.1, 0.3, 0xe9e9e4);
+      if (i > 0 && i < 6) {
+        k.box(27.2, 0.9, vz, 0.5, 0.9, 0.5, BLUE, 'gloss');
+        k.box(26.94, 1.35, vz, 0.02, 0.3, 0.3, 0x2b9a4a, 'light', { cast: false });
+        k.torus(26.9, 0.5, vz, 0.3, 0.05, 4, 8, 0x1b1b1d, 'rubber', { ry: HALF });
+      }
+      k.solid(22.0, vz, 0.4, 0.4);
+      k.box(22.0, 0, vz, 0.25, 3.1, 0.25, 0xe9e9e4);
+    }
+    park(c, 'suv', 24.7, 3.3, 0, rng.pick(CAR_COLORS));
+    park(c, 'coupe', 24.7, 9.0, Math.PI, rng.pick(CAR_COLORS));
+    // tall sign, lamps, planting
+    poleSign(k, 3, 20.2, { h: 11, w: 4.6, sh: 5.4, ref: pole, back: BLUE, twin: 3.4 });
+    for (const lx of [-24, -4, 21]) lamp(k, lx, 18.5, 0, 9, true);
+    lamp(k, 2, -7, 0, 9, true);
+    island(k, -25.5, -19.5, 4.5, 3.0);
+    island(k, 18, -20, 12, 3.0);
+    shrub(k, -25, -19.5, 0.7);
+    shrub(k, 17, -20, 0.7);
+    conifer(k, 26, -19.5, 6.5);
+    conifer(k, -26, 20, 6);
+  });
+}
+
+/* ================================================================================================
+ * 11. SILVER VALLEY TRUCK STOP — diesel canopy for semis, store + diner, tall price sign, rig parking
+ * ============================================================================================== */
+
+function fuelIsland(k: Kit, x: number, z: number, w: number, d: number) {
+  k.box(x, 0, z, w, 0.17, d, CURB, 'concrete', { cast: false });
+}
+/** Tractor + trailer; (x,z) is the cab origin, nose toward local +X (see vehicles.ts). */
+function parkSemi(c: Ctx, x: number, z: number, ry: number, color: Col, accent: Col) {
+  vehicle(c.kit, c.signs, 'semi', x, z, ry, color, { trailer: true, accent });
+  c.kit.solid(x - 5.6 * Math.cos(ry), z + 5.6 * Math.sin(ry), 18.6, 2.7, ry);
+}
+
+function truckStop(c: Ctx, x: number, z: number, ry: number, seed: number) {
+  const k = c.kit;
+  const rng = new Rng(seed);
+  const W = 70;
+  const D = 55;
+  c.occ.add(x, z, W, D, ry, 1, false);
+  const SILVER = 0xb8bcc0;
+  const RED = 0xc8262c;
+  const logo = sgn(c, 'ts.logo', () =>
+    panelSign(640, 280, '#0f3a5c', [
+      { text: 'SILVER VALLEY', font: F_SLAB, color: '#e8ecef', y: 0.2, size: 0.2, maxW: 0.9, stroke: '#061a2c', strokeW: 6 },
+      { text: 'TRUCK STOP', font: F_SLAB, color: '#ffd24a', y: 0.45, size: 0.26, maxW: 0.8, stroke: '#061a2c', strokeW: 6 },
+      { text: 'DIESEL · FOOD · SHOWERS · 24 HRS', font: F_OS, weight: '700', color: '#ffffff', y: 0.82, size: 0.1, maxW: 0.88, letter: 2 },
+    ], {
+      border: '#e8ecef',
+      borderW: 12,
+      draw: (g, w, h) => {
+        g.fillStyle = '#4b6d8a';
+        g.beginPath();
+        g.moveTo(14, h * 0.7);
+        g.lineTo(w * 0.2, h * 0.62);
+        g.lineTo(w * 0.3, h * 0.7);
+        g.lineTo(w * 0.7, h * 0.7);
+        g.lineTo(w * 0.8, h * 0.62);
+        g.lineTo(w - 14, h * 0.7);
+        g.fill();
+      },
+    }));
+  const prices = sgn(c, 'ts.prices', () =>
+    panelSign(512, 360, '#15171a', [
+      { text: 'DIESEL', font: F_OS, weight: '700', color: '#ffffff', y: 0.14, size: 0.16, x: 0.28 },
+      { text: '1.099', font: F_SLAB, color: '#ff5a3a', y: 0.14, size: 0.2, x: 0.74 },
+      { text: 'REGULAR', font: F_OS, weight: '700', color: '#ffffff', y: 0.38, size: 0.16, x: 0.28 },
+      { text: '1.159', font: F_SLAB, color: '#ffd24a', y: 0.38, size: 0.2, x: 0.74 },
+      { text: 'UNLEADED', font: F_OS, weight: '700', color: '#ffffff', y: 0.62, size: 0.16, x: 0.28 },
+      { text: '1.199', font: F_SLAB, color: '#ffd24a', y: 0.62, size: 0.2, x: 0.74 },
+      { text: 'TRUCKERS WELCOME', font: F_OS, weight: '700', color: '#7fe6f0', y: 0.88, size: 0.1, maxW: 0.86 },
+    ], { border: '#e8ecef', borderW: 10 }));
+  const amen = sgn(c, 'ts.amen', () =>
+    panelSign(512, 200, '#c8262c', [
+      { text: 'RESTAURANT', font: F_SLAB, color: '#ffffff', y: 0.22, size: 0.22, maxW: 0.8 },
+      { text: 'SHOWERS · LAUNDRY · SCALES', font: F_OS, weight: '700', color: '#ffd24a', y: 0.52, size: 0.15, maxW: 0.9, letter: 2 },
+      { text: 'CB · PHONES · GIFTS', font: F_OS, weight: '700', color: '#ffffff', y: 0.8, size: 0.14, maxW: 0.8, letter: 2 },
+    ], { border: '#ffffff', borderW: 10 }));
+  const roofSign = sgn(c, 'ts.roof', () =>
+    panelSign(1024, 160, '#0f3a5c', [
+      { text: 'EAT', font: F_SLAB, color: '#ff5a3a', y: 0.5, size: 0.7, x: 0.1 },
+      { text: 'FRESH PIE · HOME COOKING · 24 HOURS', font: F_SLAB, color: '#ffffff', y: 0.5, size: 0.42, x: 0.58, maxW: 0.76 },
+    ], { border: '#ffd24a', borderW: 10 }));
+  const scale = sgn(c, 'ts.scale', () => panelSign(384, 120, '#ffd24a', [{ text: 'CAT SCALE', font: F_SLAB, color: '#15171a', y: 0.5, size: 0.6 }], { border: '#15171a', borderW: 8 }));
+  const dieselFascia = sgn(c, 'ts.df', () => panelSign(768, 96, '#c8262c', [{ text: 'DIESEL · DIESEL · DIESEL · TRUCK LANES', font: F_SLAB, color: '#ffffff', y: 0.52, size: 0.42, maxW: 0.94 }], { border: '#ffffff', borderW: 6 }));
+
+  k.at(x, z, ry, () => {
+    pave(k, 0, 0, W, D);
+    // diesel apron + canopy (x -28..-12, z 5..19)
+    slab(k, -20, 12, 16.4, 14.4, 0.06, 0xb7b9bb);
+    fuelIsland(k, -22.75, 12, 1.4, 10.5);
+    fuelIsland(k, -17.25, 12, 1.4, 10.5);
+    canopy(k, -20, 12, 16, 14, 5.5, RED, SILVER, [[-22.75, 6.4], [-22.75, 17.6], [-17.25, 6.4], [-17.25, 17.6]]);
+    k.sign(-20, 5.0, 19.15, 11, 0.75, dieselFascia, { thick: 0.06 });
+    for (const px of [-22.75, -17.25]) for (const pz of [9.4, 14.6]) pump(k, px, pz, HALF, 0x1d1d1f, RED);
+    parkSemi(c, -25.5, 11, HALF, 0x2c3858, 0xd9d9d6);
+    // truck parking
+    stalls(k, -33.0, 4.2, 5, -26.8, -7);
+    parkSemi(c, -30.9, -22.5, HALF, 0x8f1f1f, 0xf2f1ec);
+    parkSemi(c, -22.5, -22.5, HALF, 0x1d6b3a, 0xd9d9d6);
+    parkSemi(c, -18.3, -22.5, HALF, 0x1d1d1f, 0xe7b93a);
+    park(c, 'semi', -10.0, -20.5, HALF, 0xe7b93a, { accent: 0x1d1d1f });
+    // scale
+    k.box(-4, 0, 14, 3.6, 0.12, 10.5, 0x8b9096, 'metal', { cast: false });
+    k.at(-0.6, 15, 0, () => {
+      k.solid(0, 0, 2.0, 2.0);
+      k.box(0, 0, 0, 2.0, 2.3, 2.0, 0xe9e9e4);
+      k.box(0, 2.3, 0, 2.3, 0.15, 2.3, SILVER, 'metal');
+      k.box(0, 1.0, 1.01, 1.2, 0.9, 0.03, P.glass, 'glass');
+    });
+    k.sign(-3.0, 3.4, 20.1, 2.4, 0.75, scale, { thick: 0.08, back: 0x15171a });
+    k.box(-3.0, 0, 20.1, 0.18, 3.0, 0.18, 0x5b5f66, 'metal');
+    // car fuel canopy (x 16..28, z 10..18)
+    slab(k, 22, 14, 12.4, 8.4, 0.06, 0xb7b9bb);
+    fuelIsland(k, 22, 14, 6, 1.2);
+    canopy(k, 22, 14, 12, 8, 4.6, RED, SILVER, [[19.2, 14], [24.8, 14]]);
+    for (const px of [20.2, 23.8]) pump(k, px, 14, 0, 0x1d1d1f, 0xe7b93a);
+    park(c, 'pickup', 22, 11.6, 0, 0x2a4a7a);
+    // store + diner (x 8..34, z -21.5..-8.5)
+    const bx = 21;
+    const bz = -15;
+    const zf = -8.5;
+    k.solid(bx, bz, 26, 13);
+    k.box(bx, 0, bz, 26, 4.6, 13, 0xe9e2d0, 'siding');
+    k.box(bx, 0, bz, 26.14, 0.4, 13.14, 0x8f8c87, 'concrete');
+    k.roof(bx, 4.6, bz, 26, [[6.5, 0], [0, 2.8], [-6.5, 0]], 0x8f1f1f, 'roofMetal', { trim: 0xf2efe8, fill: 0xe9e2d0, fillMat: 'siding', ridge: 0x8f1f1f, eaveOH: 0.5 });
+    slab(k, bx, zf + 1.6, 26.6, 3.2, 0.15);
+    k.box(bx, 3.5, zf + 1.6, 26.8, 0.25, 3.2, 0xdad6cc);
+    k.box(bx, 3.3, zf + 3.15, 26.8, 0.9, 0.18, RED, 'gloss');
+    for (let i = 0; i <= 5; i++) {
+      const px = bx - 12.5 + i * 5;
+      k.solid(px, zf + 3.0, 0.35, 0.35);
+      k.box(px, 0.15, zf + 3.0, 0.25, 3.15, 0.25, 0xe9e5d8);
+    }
+    k.sign(bx - 6.5, 3.75, zf + 3.3, 10.6, 0.7, amen, { thick: 0.06 });
+    glassWall(k, bx - 12.6, bx - 0.4, 0.4, zf, 2.9, 0x2a2a2e, 0.6);
+    k.signPlane(bx - 6.5, 0.4 + 1.45, zf + 0.02, 12.2, 2.9, sgn(c, 'ts.in.store', () => interiorTex('radio')));
+    doubleDoor(k, bx - 6.5, 0.4, zf, 0x2a2a2e);
+    glassWall(k, bx + 1.0, bx + 12.6, 0.4, zf, 2.9, 0x2a2a2e, 0.6);
+    k.signPlane(bx + 6.8, 0.4 + 1.45, zf + 0.02, 11.6, 2.9, sgn(c, 'ts.in.diner', () => interiorTex('wok')));
+    neon(k, bx + 6.8, 3.2, zf + 0.12, 11.6, 0.07, 0.05, 0xff5a3a);
+    // rooftop billboard on posts
+    for (const sx of [-1, 1]) k.box(bx + sx * 8, 4.6, bz - 0.4, 0.3, 2.4, 0.3, 0x5b5f66, 'metal');
+    k.sign(bx, 7.5, bz - 0.4, 18, 2.4, roofSign, { thick: 0.3, back: 0x0f3a5c, twoSided: true, frame: 0.15 });
+    trashCorral(k, 30, -24.3, rng, 'brickDark');
+    k.at(14, -22.8, 0, () => {
+      k.solid(0, 0, 1.6, 1.2);
+      k.cyl(0, 0, 0, 0.8, 0.8, 2.2, 8, 0xe6e8ea, 'metal');
+    });
+    stalls(k, 10.8, 2.8, 8, -7.6, -2.1);
+    park(c, 'sedan', 14.2, -4.85, HALF, rng.pick(CAR_COLORS));
+    park(c, 'van', 28.8, -4.85, -HALF, rng.pick(CAR_COLORS));
+    // tall pylon sign
+    k.at(2, 24.5, 0, () => {
+      k.solid(0, 0, 5.6, 1.0);
+      k.box(0, 0, 0, 6.6, 0.5, 1.2, CURB, 'concrete');
+      for (const s of [-1, 1]) k.box(s * 2.4, 0.5, 0, 0.45, 20.5, 0.45, 0x6f7377, 'metal');
+      k.sign(0, 19.6, 0, 6.2, 3.1, logo, { thick: 0.5, back: 0x0f3a5c, twoSided: true, frame: 0.2 });
+      k.sign(0, 15.4, 0, 5.0, 1.95, amen, { thick: 0.4, back: 0x8f1f1f, twoSided: true, frame: 0.15 });
+      k.sign(0, 11.4, 0, 4.4, 3.1, prices, { thick: 0.5, back: 0x15171a, twoSided: true, frame: 0.18 });
+    });
+    for (const [lx, lz] of [[-8, 2], [-8, -12], [8, 3], [34, 2]]) lamp(k, lx, lz, 0, 12, true);
+    conifer(k, 32.8, 23, 6.5);
+    conifer(k, -32.8, 24, 6.5);
+    conifer(k, -32.8, -1, 6);
+  });
+}
+
+/* ================================================================================================
+ * 12. CASCADE MOTORS — glass showroom, service wing, pennant strings, front-line inventory
+ * ============================================================================================== */
+
+function carDealer(c: Ctx, x: number, z: number, ry: number, seed: number) {
+  const k = c.kit;
+  const rng = new Rng(seed);
+  const W = 60;
+  const D = 46;
+  c.occ.add(x, z, W, D, ry, 1, false);
+  const NAVY = 0x14305c;
+  const roofSign = sgn(c, 'cd.roof', () =>
+    panelSign(800, 170, '#14305c', [
+      { text: 'CASCADE MOTORS', font: F_SLAB, color: '#ffffff', y: 0.4, size: 0.5, maxW: 0.9, stroke: '#061a2c', strokeW: 6 },
+      { text: 'NEW & USED · WE FINANCE · TRADES WELCOME', font: F_OS, weight: '700', color: '#ffd24a', y: 0.84, size: 0.16, maxW: 0.88, letter: 3 },
+    ], { border: '#c8262c', borderW: 10 }));
+  const banner = sgn(c, 'cd.banner', () =>
+    panelSign(768, 110, '#c8262c', [{ text: 'BIG SALE · NO MONEY DOWN · LOW APR', font: F_SLAB, color: '#ffe14a', y: 0.52, size: 0.48, maxW: 0.94, stroke: '#4a0d0d', strokeW: 5 }], { border: '#ffffff', borderW: 6 }));
+  const service = sgn(c, 'cd.service', () => panelSign(512, 120, '#14305c', [{ text: 'SERVICE · PARTS', font: F_SLAB, color: '#ffffff', y: 0.52, size: 0.55, maxW: 0.9 }], { border: '#ffd24a', borderW: 8 }));
+  const pole = sgn(c, 'cd.pole', () =>
+    panelSign(512, 640, '#14305c', [
+      { text: 'CASCADE', font: F_SLAB, color: '#ffffff', y: 0.14, size: 0.14, maxW: 0.86 },
+      { text: 'MOTORS', font: F_SLAB, color: '#ffd24a', y: 0.3, size: 0.16, maxW: 0.8 },
+      { text: 'NEW · USED', font: F_OS, weight: '700', color: '#ffffff', y: 0.5, size: 0.1, maxW: 0.8 },
+      { text: 'WE FINANCE', font: F_OS, weight: '700', color: '#ffffff', y: 0.64, size: 0.1, maxW: 0.8 },
+      { text: 'SERVICE DEPT', font: F_OS, weight: '700', color: '#ffffff', y: 0.78, size: 0.1, maxW: 0.8 },
+      { text: 'OPEN 7 DAYS', font: F_OS, weight: '700', color: '#ffd24a', y: 0.92, size: 0.085, maxW: 0.7 },
+    ], { border: '#c8262c', borderW: 14 }));
+  const showIn = sgn(c, 'cd.in', () => interiorTex('showroom'));
+  const flagCols = [0xc8262c, 0xffffff, 0x1d4aa3, 0xffd23a];
+
+  k.at(x, z, ry, () => {
+    pave(k, 0, 0, W, D);
+    const sx = -9;
+    const zf = -6;
+    // lot markings
+    stalls(k, -28.5, 3.0, 19, 15.0, 20.0);
+    mark(k, 0, 9.0, 57, 0.12, 0xe7b93a);
+    // showroom
+    k.solid(sx, -12, 24, 12);
+    k.box(sx, 0, -12, 24, 4.8, 12, 0xe9e5dc, 'stucco');
+    k.box(sx, 0, -12, 24.14, 0.4, 12.14, 0x8f8c87, 'concrete');
+    k.box(sx, 4.8, -12, 24.5, 0.3, 12.5, 0xb9b4ab, 'concrete');
+    k.box(sx, 3.9, zf + 0.04, 24.4, 0.9, 0.12, NAVY, 'gloss');
+    neon(k, sx, 3.9, zf + 0.12, 24.4, 0.07, 0.05, 0xffffff);
+    glassWall(k, sx - 10, sx + 10, 0.4, zf, 3.5, 0xdfe3e6, 0.45);
+    k.signPlane(sx, 0.4 + 1.75, zf + 0.02, 20, 3.5, showIn);
+    doubleDoor(k, sx + 1.5, 0.4, zf, 0xdfe3e6);
+    flatTop(k, rng, sx, -12, 24, 12, 4.8, 0xb9b4ab, 2);
+    // roof sign on posts
+    for (const px of [-5, 5]) k.box(sx + px, 5.3, -8.6, 0.3, 1.2, 0.3, 0x5b5f66, 'metal');
+    k.sign(sx, 7.5, -8.6, 13.4, 2.8, roofSign, { thick: 0.4, back: NAVY, twoSided: true, frame: 0.18 });
+    k.sign(sx, 5.8, zf + 0.2, 16, 1.0, banner, { thick: 0.1 });
+    // service wing
+    const wx = 13;
+    k.solid(wx, -12, 14, 12);
+    k.box(wx, 0, -12, 14, 4.4, 12, 0xd7d9dc, 'cinder');
+    k.box(wx, 0, -12, 14.14, 0.3, 12.14, 0x8f8c87, 'concrete');
+    flatTop(k, rng, wx, -12, 14, 12, 4.4, 0xb9b4ab, 2);
+    for (const dx of [-3.3, 3.3]) {
+      k.box(wx + dx, 0.15, zf - 0.05, 4.4, 3.4, 0.14, 0xe4e1d6, 'rollup');
+      k.box(wx + dx, 3.55, zf + 0.0, 4.8, 0.2, 0.18, NAVY);
+    }
+    k.sign(wx, 4.0, zf + 0.1, 7.0, 1.0, service, { thick: 0.1 });
+    tireStack(k, wx + 6.3, zf + 1.2, 4);
+    tireStack(k, wx - 6.2, zf + 1.2, 3);
+    cone(k, wx - 3.3, zf + 4.2);
+    cone(k, wx + 3.3, zf + 4.2);
+    // display pad with raised cars
+    slab(k, sx, 0.8, 24, 6.4, 0.3);
+    k.box(sx, 0, 3.9, 24, 0.12, 0.8, 0xd9d9d6, 'concrete');
+    park(c, 'coupe', sx - 5, -0.6, 0.35, 0xc8262c);
+    // front-line inventory
+    const front: [VehicleType, number, number][] = [['sedan', -22, 13.6], ['pickup', -12, 13.4], ['suv', 6, 13.8], ['wagon', 18, 13.5], ['van', 26, 13.7]];
+    for (const [t, px, pz] of front) park(c, t, px, pz, -HALF + rng.range(-0.2, 0.2), rng.pick(CAR_COLORS));
+    park(c, 'sedan', wx - 2, 0.5, 0.2, rng.pick(CAR_COLORS));
+    // pennant strings
+    const polesAt: [number, number][] = [[-28.6, 20.8], [28.6, 20.8], [-28.6, 9.8], [28.6, 9.8]];
+    for (const [px, pz] of polesAt) {
+      k.solid(px, pz, 0.4, 0.4);
+      k.cyl(px, 0, pz, 0.08, 0.12, 8.2, 5, 0x6f7377, 'metal');
+    }
+    pennants(k, [-28.6, 8.2, 20.8], [28.6, 8.2, 20.8], 1.1, flagCols, 52);
+    pennants(k, [-28.6, 8.2, 9.8], [28.6, 8.2, 9.8], 1.1, flagCols, 52);
+    pennants(k, [-28.6, 8.2, 9.8], [-28.6, 8.2, 20.8], 0.7, flagCols, 14);
+    pennants(k, [28.6, 8.2, 9.8], [28.6, 8.2, 20.8], 0.7, flagCols, 14);
+    poleSign(k, 22.5, 7.0, { h: 9.5, w: 4.2, sh: 5.4, ref: pole, back: NAVY, twin: 3.0 });
+    for (const lx of [-20, 0, 20]) lamp(k, lx, 6.5, 0, 9, true);
+    island(k, -25, -20.5, 5, 3.4);
+    shrub(k, -25, -20.5, 0.8);
+    conifer(k, 27.5, -19, 7);
+    conifer(k, -27.4, -4, 6.5);
+    trashCan(k, sx + 12.4, -5.2);
+    bench(k, sx - 12, -5.0, 0);
+  });
+}
+
 /* @@END */
 
 export const STRIP: BuildingDef[] = [
@@ -1430,4 +2212,9 @@ export const STRIP: BuildingDef[] = [
   { id: 'dairyDream', name: 'Dairy Dream', w: 36, d: 28, front: -1, tags: ['fastfood', 'dessert', 'highway', 'downtown'], build: dairyDream },
   { id: 'rewindVideo', name: 'Rewind Video', w: 44, d: 30, front: -1, tags: ['video', 'highway', 'downtown'], build: rewindVideo },
   { id: 'stripMall', name: 'Valley Plaza', w: 58, d: 34, front: -3.5, tags: ['retail', 'arcade', 'laundromat', 'highway'], build: stripMall },
+  { id: 'bowlORama', name: 'Bowl-O-Rama', w: 56, d: 46, front: 4, tags: ['entertainment', 'bowling', 'highway'], build: bowlORama },
+  { id: 'thriftyMart', name: 'Thrifty Mart', w: 60, d: 52, front: -8, tags: ['grocery', 'highway'], build: thriftyMart },
+  { id: 'carWash', name: 'Splash Car Wash', w: 56, d: 44, front: 9, tags: ['carwash', 'highway'], build: carWash },
+  { id: 'truckStop', name: 'Silver Valley Truck Stop', w: 70, d: 55, front: -8.5, tags: ['truckstop', 'gas', 'diner', 'highway'], build: truckStop },
+  { id: 'carDealer', name: 'Cascade Motors', w: 60, d: 46, front: -6, tags: ['dealer', 'highway'], build: carDealer },
 ];
