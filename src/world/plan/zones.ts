@@ -244,32 +244,33 @@ export function neighbourhoods(pl: Placer) {
 export function strip(pl: Placer) {
   const net = pl.net;
   const front = net.byName('Front St');
-  const north = ['rewindVideo', 'stripMall', 'bowlORama', 'thriftyMart', 'driveIn', 'carDealer', 'truckStop'].map(D).filter(Boolean) as BuildingDef[];
+  const east = net.byName('Old US-10 E');
+  const west = net.byName('Old US-10 W');
+  const north = [
+    D('rewindVideo'),
+    D('stripMall'),
+    D('bowlORama'),
+    D('thriftyMart'),
+    legacy('tex', 42, 33, (c, x, z, ry) => texOutpost(c, x, z, ry)),
+    D('carDealer'),
+    D('driveIn'),
+    D('truckStop'),
+  ].filter(Boolean) as BuildingDef[];
   const south = [
-    D('cluckers'),
+    legacy('policeStation', 28, 25, (c, x, z, ry) => policeStation(c, x, z - 2.5, ry)),
     D('bigBun'),
+    D('cluckers'),
     legacy('gas86', 42, 36, (c, x, z, ry) => gasStation(c, x, z - 1, ry)),
     D('tacoShack'),
     D('pizzaPalace'),
     D('dairyDream'),
     D('carWash'),
-    legacy('policeStation', 28, 25, (c, x, z, ry) => policeStation(c, x, z - 2.5, ry)),
     D('motel2'),
     legacy('burgerBarn', 26, 18, (c, x, z, ry) => burgerBarn(c, x, z, ry)),
     D('roadsideGas'),
     legacy('autoService', 20, 21, (c, x, z, ry) => autoService(c, x, z, ry)),
-  ].filter(Boolean) as BuildingDef[];
-  let ni = 0;
-  pl.along(front, 1, 6, front.length - 20, () => north[ni++] ?? null, { setback: 1.5, gap: 6, maxSlope: 2.5 });
-  let si = 0;
-  pl.along(front, -1, 6, front.length - 20, () => south[si++] ?? null, { setback: 1.5, gap: 5, maxSlope: 2.5 });
-  // Cascade Motor Inn + Bob's Used Cars + Tex Outpost on the old highway east of the exit
-  const e = net.byName('Old US-10 E');
-  const extra: BuildingDef[] = [
     legacy('cascadeInn', 70, 26, (c, x, z, ry) => {
-      c.kit.at(x, z, ry, () => {
-        c.kit.box(0, 0, 3, 70, 0.04, 20, 0x6f737b, 'asphalt', { cast: false });
-      });
+      c.kit.at(x, z, ry, () => c.kit.box(0, 0, 3, 70, 0.04, 20, 0x6f737b, 'asphalt', { cast: false }));
       const [mx, mz] = Placer.world(x, z, ry, 6, -6);
       motel(c, mx, mz, ry, 12);
       const [ox, oz] = Placer.world(x, z, ry, -28, 2);
@@ -278,11 +279,29 @@ export function strip(pl: Placer) {
       motelPylon(c, px, pz, ry);
     }),
     legacy('bobsCars', 64, 46, (c, x, z, ry) => bobsCars(c, x, z, ry)),
-    legacy('tex', 42, 33, (c, x, z, ry) => texOutpost(c, x, z, ry)),
+  ].filter(Boolean) as BuildingDef[];
+  // the strip runs from the end of Bank St along Front St, over the river and on toward Exit 62
+  const fill = (queue: BuildingDef[], side: 1 | -1, spans: [typeof front, number, number][]) => {
+    let i = 0;
+    for (const [r, s0, s1] of spans) {
+      if (i >= queue.length) break;
+      pl.along(r, side, s0, s1, () => queue[i++] ?? null, { setback: 1.5, gap: 6, maxSlope: 3 });
+      i = Math.max(0, i - 1); // the def that didn't fit carries over to the next span
+    }
+    return queue.slice(i).map((d) => d.id);
+  };
+  const left = [
+    ...fill(north, 1, [
+      [front, 6, front.length - 6],
+      [east, 30, 760],
+    ]),
+    ...fill(south, -1, [
+      [front, 6, front.length - 6],
+      [east, 30, 760],
+      [west, west.length - 700, west.length - 40],
+    ]),
   ];
-  let ei = 0;
-  pl.along(e, -1, 60, 520, () => extra[ei++] ?? null, { setback: 2, gap: 12, maxSlope: 3 });
-  if (pl.skipped.length) console.info('[layout] skipped:', [...new Set(pl.skipped)].join(', '));
+  if (left.length) console.info('[layout] strip did not fit:', left.join(', '));
 }
 
 function bobsCars(c: Parameters<BuildingDef['build']>[0], x: number, z: number, ry: number) {

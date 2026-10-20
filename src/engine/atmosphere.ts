@@ -126,7 +126,7 @@ export class Mist {
     uTime: { value: 0 },
   };
 
-  constructor(count = 760) {
+  constructor(count = 520) {
     this.uniforms.map.value = mistTexture();
     const mat = new THREE.ShaderMaterial({
       uniforms: this.uniforms,
@@ -146,7 +146,10 @@ export class Mist {
           mv.xy += position.xy * vec2(s, s * 0.42);
           vUv = uv;
           float d = -mv.z;
-          vFade = smoothstep(35.0, 160.0, d) * (1.0 - smoothstep(1700.0, 2800.0, d));
+          // cards are only convincing seen edge-on; fade them when looked down on from above
+          vec3 toCard = c - cameraPosition;
+          float steep = abs(toCard.y) / max(length(toCard), 1.0);
+          vFade = smoothstep(35.0, 160.0, d) * (1.0 - smoothstep(1700.0, 2800.0, d)) * (1.0 - smoothstep(0.18, 0.42, steep));
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: `
@@ -177,29 +180,29 @@ export class Mist {
       let z: number;
       let y: number;
       let s: number;
-      if (kind < 0.62) {
+      if (kind < 0.6) {
         // forested slopes: banks clinging to the trees
         x = rng.range(-MAP_RADIUS, MAP_RADIUS);
         z = rng.range(-MAP_RADIUS, MAP_RADIUS);
         const v = valley(x, z);
         if (v.e < 15 || v.e > 700 || forestDensity(x, z) < 0.35) continue;
-        y = heightAt(x, z) + rng.range(8, 34);
-        s = rng.range(70, 170);
-      } else if (kind < 0.84) {
+        y = heightAt(x, z) + rng.range(10, 40);
+        s = rng.range(110, 230);
+      } else if (kind < 0.9) {
         // low mist along the river
         const p = river.pts[rng.int(0, river.pts.length - 1)];
         x = p.x + rng.range(-25, 25);
         z = p.z + rng.range(-25, 25);
-        y = p.water + rng.range(3, 9);
-        s = rng.range(45, 90);
+        y = p.water + rng.range(3, 8);
+        s = rng.range(55, 110);
       } else {
         // over the lake
         const a = rng.range(0, Math.PI * 2);
         const r = Math.sqrt(rng.next()) * 0.95;
         x = LAKE.x + Math.cos(a) * LAKE.rx * r;
         z = LAKE.z + Math.sin(a) * LAKE.rz * r;
-        y = LAKE.level + rng.range(4, 12);
-        s = rng.range(70, 140);
+        y = LAKE.level + rng.range(3, 9);
+        s = rng.range(80, 150);
       }
       m.makeScale(s, s, s).setPosition(x, y, z);
       this.mesh.setMatrixAt(n++, m);
@@ -238,7 +241,7 @@ export const PRESETS: AtmoPreset[] = [
     sky: { intensity: 0.95, tint: 0xe6edf0, horizon: 0.16, horizonMix: 0.85 },
     hemi: 0.34,
     fog: { color: 0x9aa9ad, density: 0.0018, falloff: 0.011, haze: 0.00005, max: 0.9, inscatter: 0.4 },
-    mist: { opacity: 0.55, color: 0xcfd8d8 },
+    mist: { opacity: 0.42, color: 0xcfd8d8 },
     grade: { saturation: 0.86, contrast: 1.06, lift: [0.015, 0.03, 0.035], gain: [0.98, 1.0, 0.99], split: 0.6, shadowTint: 0x2f6f6a, highTint: 0xf2d9b0 },
     wet: 0.55,
     windows: 0.12,
@@ -253,7 +256,7 @@ export const PRESETS: AtmoPreset[] = [
     sky: { intensity: 0.78, tint: 0xd5dde2, horizon: 0.24, horizonMix: 0.95 },
     hemi: 0.45,
     fog: { color: 0x8b979c, density: 0.0028, falloff: 0.009, haze: 0.00008, max: 0.94, inscatter: 0.15 },
-    mist: { opacity: 0.75, color: 0xc2cacc },
+    mist: { opacity: 0.6, color: 0xc2cacc },
     grade: { saturation: 0.72, contrast: 1.04, lift: [0.025, 0.035, 0.04], gain: [0.96, 0.99, 1.0], split: 0.5, shadowTint: 0x2c5c63, highTint: 0xdfe3e2 },
     wet: 0.95,
     windows: 0.35,
