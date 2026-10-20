@@ -7,6 +7,9 @@ import type { PostFX } from './post';
 import type { CameraDirector } from './controls';
 import type { TownWorld } from '../world';
 import { DRIVABLE, type DriveMode } from './drive';
+import { PRESETS, type Mist } from './atmosphere';
+import { surfaceUniforms } from '../world/materials';
+import { fogUniforms } from './atmosphere';
 
 export function createUI(o: {
   sky: SkyRig;
@@ -18,6 +21,9 @@ export function createUI(o: {
   driveState: { vehicle: string; color: string };
   enterDrive: () => void;
   exitDrive: () => void;
+  mist: Mist;
+  setPreset: (name: string) => void;
+  preset: { name: string };
 }) {
   const { sky, post, director, world, renderer, drive, driveState } = o;
   const gui = new GUI({ title: 'Pine Hollow' });
@@ -66,6 +72,22 @@ export function createUI(o: {
   fDrive.add(dv, 'sound').name('Engine sound').onChange((v: boolean) => drive.audio.setEnabled(v));
   fDrive.open();
 
+  const fAtmo = gui.addFolder('Atmosphere');
+  fAtmo
+    .add(o.preset, 'name', PRESETS.map((p) => p.name))
+    .name('Preset')
+    .onChange((n: string) => {
+      o.setPreset(n);
+      gui.controllersRecursive().forEach((c) => c.updateDisplay());
+    });
+  fAtmo.add(sky, 'hazeDensity', 0, 0.006, 0.0001).name('Valley fog').onChange(() => sky.apply());
+  fAtmo.add(sky, 'fogFalloff', 0.002, 0.03, 0.0005).name('Fog height falloff').onChange(() => sky.apply());
+  fAtmo.add(o.mist.uniforms.uOpacity, 'value', 0, 1.2, 0.01).name('Mist banks');
+  fAtmo.add(surfaceUniforms.uWet, 'value', 0, 1, 0.01).name('Wet roads');
+  fAtmo.add(surfaceUniforms.uWindowGlow, 'value', 0, 1.5, 0.01).name('Lit windows');
+  fAtmo.add(fogUniforms.uInscatter, 'value', 0, 1.5, 0.01).name('Sun glow in fog');
+  fAtmo.open();
+
   const fLight = gui.addFolder('Lighting');
   const apply = () => sky.apply();
   fLight.add(sky, 'azimuth', 0, 360, 1).name('Sun bearing °').onChange(apply);
@@ -74,7 +96,6 @@ export function createUI(o: {
   fLight.add(sky, 'envIntensity', 0, 2, 0.01).name('Sky light (IBL)').onChange(apply);
   fLight.add(sky, 'skyIntensity', 0.2, 2, 0.01).name('Sky brightness').onChange(apply);
   fLight.add(sky, 'exposure', 0.3, 2, 0.01).name('Exposure').onChange(apply);
-  fLight.add(sky, 'hazeDensity', 0, 0.0006, 0.00001).name('Haze').onChange(apply);
 
   const fPost = gui.addFolder('Post FX');
   fPost.add(post.ao, 'enabled').name('Ambient occlusion');
@@ -85,7 +106,9 @@ export function createUI(o: {
   const tm = { mode: 'ACES' };
   const modes: Record<string, number> = { ACES: ToneMappingMode.ACES_FILMIC, AgX: ToneMappingMode.AGX, Neutral: ToneMappingMode.NEUTRAL, Reinhard: ToneMappingMode.REINHARD2 };
   fPost.add(tm, 'mode', Object.keys(modes)).name('Tone mapping').onChange((m: string) => (post.tone.mode = modes[m]));
-  fPost.add(post.saturation, 'saturation', -0.5, 0.5, 0.01).name('Saturation');
+  fPost.add(post.grade.u('uSat'), 'value', 0, 1.5, 0.01).name('Saturation');
+  fPost.add(post.grade.u('uContrast'), 'value', 0.7, 1.4, 0.01).name('Contrast');
+  fPost.add(post.grain.blendMode.opacity, 'value', 0, 0.3, 0.005).name('Film grain');
 
   const fWorld = gui.addFolder('World');
   fWorld.add(world.traffic, 'enabled').name('Traffic');
