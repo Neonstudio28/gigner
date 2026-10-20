@@ -46,6 +46,7 @@ export class MaterialLib implements MatResolver {
       // flip rows so v = 0 is the canvas bottom, matching CanvasTexture.flipY
       for (let y = 0; y < S; y++) data.set(img.subarray((S - 1 - y) * S * 4, (S - y) * S * 4), (i * S * S + y * S) * 4);
       this.specs.set(L.name, { bucket: 'world', layer: i, tile: L.tile, rough: L.rough, metal: L.metal });
+      this.specs.set(`${L.name}@decal`, { bucket: 'decal', layer: i, tile: L.tile, rough: L.rough, metal: L.metal });
     });
     const tex = new THREE.DataArrayTexture(data, S, S, layerDefs.length);
     tex.format = THREE.RGBAFormat;
