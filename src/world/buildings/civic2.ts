@@ -312,3 +312,175 @@ function courthouse(c: Ctx, x: number, z: number, ry: number, seed: number) {
   });
 }
 CIVIC.push({ id: 'courthouse', name: 'Pine County Courthouse', w: 58, d: 42, front: 12, tags: ['civic', 'landmark', 'downtown'], build: courthouse });
+
+/* ------------------------------------------------------------------------------------------------
+ * 2. Pine Hollow City Hall: red-brick Romanesque/Italianate with a corner clock tower
+ * ---------------------------------------------------------------------------------------------- */
+function townHall(c: Ctx, x: number, z: number, ry: number, seed: number) {
+  const { kit: k } = c;
+  const rng = new Rng(seed);
+  const W = 44;
+  const D = 24;
+  const ZC = -7;
+  const B = 2.4;
+  const s2 = B + 5.0;
+  const TOP = s2 + 4.4;
+  const zf = D / 2;
+  const STONE = 0xdcd0b6;
+  const RUBBLE = 0x9a9183;
+  const CREAM = 0xf0e7d2;
+  const SLATE = 0x4b525d;
+  const GL = 0x24303b;
+  const px = 3.5;
+  const tx = -22.5;
+  const tz = 11;
+  const clock = sgn(c, 'th.clock', () => clockFace());
+  const plaque = lineSign(c, 'th.plaque', 512, 110, '#d9cdb2', [{ text: 'CITY HALL', font: F_SLAB, color: '#33261a', y: 0.52, size: 0.62, maxW: 0.9, letter: 4 }], { border: '#8c7b58', borderW: 8 });
+  const founded = lineSign(c, 'th.founded', 384, 96, '#4a3a2a', [
+    { text: 'PINE HOLLOW', font: F_OSW, weight: '700', color: '#e8d9a0', y: 0.32, size: 0.36, letter: 3 },
+    { text: 'CITY HALL · 1902', font: F_OSW, weight: '600', color: '#e8d9a0', y: 0.72, size: 0.32, letter: 2 },
+  ]);
+  c.occ.add(x, z, 56, 42, ry, 1, false);
+  k.at(x, z, ry, () => {
+    k.solid(0, ZC, W + 1, D + 1);
+    k.solid(tx, ZC + tz, 9, 9);
+    k.solid(px, ZC + zf + 1.8, 8.6, 3.8);
+    k.at(0, ZC, 0, () => {
+      // walls, rough stone base, belt courses
+      k.box(0, 0, 0, W + 0.8, B, D + 0.8, RUBBLE, 'stone');
+      k.box(0, B - 0.35, 0, W + 1.1, 0.35, D + 1.1, STONE, 'stone');
+      k.box(0, B, 0, W, TOP - B, D, 0xffffff, 'brickRed');
+      for (const y of [s2, TOP - 1.1]) k.box(0, y - 0.2, 0, W + 0.24, 0.4, D + 0.24, STONE, 'stone');
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+        for (let j = 0; j < 7; j++) k.box(sx * (W / 2), B + j * 1.3, sz * zf, 0.9 + (j % 2) * 0.4, 0.7, 0.9 + (j % 2) * 0.4, STONE, 'stone');
+      }
+      // brick eaves with Italianate brackets
+      for (const s of ['f', 'b', 'l', 'r'] as Side[]) onFace(k, s, W, D, (len, f) => {
+        k.box(0, TOP - 0.9, f + 0.05, len + 0.1, 0.4, 0.24, STONE, 'stone');
+        const n = Math.floor(len / 1.7);
+        for (let i = 0; i < n; i++) {
+          const bx = -len / 2 + 0.9 + (i * (len - 1.8)) / Math.max(1, n - 1);
+          k.box(bx, TOP - 0.82, f + 0.42, 0.3, 0.78, 0.82, CREAM);
+        }
+      });
+      k.hipRoof(0, TOP, 0, W, D, 6.2, SLATE, 'shingle', 1.2);
+      for (const sx of [-1, 1]) chimney(k, sx * 9, TOP + 3.9, -3, 3.6, 0xffffff, 'brickRed');
+      // dormers on the front slope
+      for (const dx of [-12, -6, 9.5, 15]) {
+        k.box(dx, TOP + 1.4, 6, 2.7, 2.7, 4, 0xffffff, 'brickRed');
+        k.at(dx, 6, HALF, () => k.roof(0, TOP + 4.1, 0, 4.4, [[1.9, 0], [0, 1.4], [-1.9, 0]], SLATE, 'shingle', { trim: CREAM, fill: 0xffffff, fillMat: 'brickRed', eaveOH: 0.25, gableOH: 0.3 }));
+        windowAt(k, dx, TOP + 2.55, 8.0, 1.0, 1.4, { frame: CREAM, mx: 1, my: 2, glass: GL });
+      }
+
+      // front windows: arched ground floor, arched upper floor
+      for (const wx of [-13.5, -9.5, -5.5, 10.5, 14.5, 18.5]) {
+        archWin(k, wx, B + 0.9, zf, 1.8, 3.8, { trim: STONE, glass: GL, mx: 1, bars: [1.7] });
+        archWin(k, wx, s2 + 0.8, zf, 1.5, 3.3, { trim: STONE, glass: GL, mx: 1, bars: [1.4], sill: true });
+        for (const dy of [0.4]) k.box(wx, 0.7, zf + 0.02, 1.3, 1.0 + dy, 0.1, 0x2a2e33, 'glass');
+      }
+      archWin(k, px, TOP - 3.3, zf, 2.2, 2.4, { trim: STONE, glass: GL, mx: 1, sill: false, surround: 0.28 });
+      for (const s of [-1, 1]) archWin(k, px + s * 2.5, TOP - 3.2, zf, 1.1, 2.1, { trim: STONE, glass: GL, mx: 0, sill: false, surround: 0.25 });
+
+      // entry porch: stone portal, voussoir arch, gable roof, steps
+      const pz = zf + 1.75;
+      k.box(px, 0, pz, 8.4, B, 3.9, RUBBLE, 'stone');
+      k.box(px, B, pz, 8.4, 4.0, 3.9, 0xffffff, 'brickRed');
+      k.box(px, B - 0.35, pz, 8.8, 0.35, 4.3, STONE, 'stone');
+      k.box(px, B + 3.9, pz, 8.8, 0.35, 4.3, STONE, 'stone');
+      k.at(px, pz + 1.95, 0, () => {
+        archWin(k, 0, 0.1, 0.0, 4.0, 5.4, { trim: STONE, glass: 0x3a2a1e, surround: 0.55, mx: 0, sill: false });
+        doorAt(k, -0.95, 0.1, 0.1, 1.8, 3.1, 0x4b3020, { glass: true, frame: STONE });
+        doorAt(k, 0.95, 0.1, 0.1, 1.8, 3.1, 0x4b3020, { glass: true, frame: STONE });
+        for (let i = 0; i < 9; i++) {
+          const a = (i / 8) * Math.PI;
+          k.box(Math.cos(a) * 3.1, 3.55 + Math.sin(a) * 2.9 - 0.25, 0.3, 0.55, 0.5, 0.4, i % 2 ? CREAM : STONE, 'stone', { ry: 0, rz: a - HALF });
+        }
+      });
+      k.at(px, pz, HALF, () => k.roof(0, B + 4.25, 0, 4.1, [[4.6, 0], [0, 2.3], [-4.6, 0]], SLATE, 'shingle', { trim: STONE, fill: 0xffffff, fillMat: 'brickRed', eaveOH: 0.4, gableOH: 0.25 }));
+      k.sign(px, B + 4.25 + 1.0, pz + 2.15 + 0.12, 4.3, 0.9, plaque, { thick: 0.04, back: STONE });
+      steps(k, px, zf + 3.7, 6.0, B, 7, 0xcfc4ab, 0.5);
+      for (const s of [-1, 1]) wingWall(k, px + s * 3.4, zf + 3.7 + 3.5, 3.6 + 0.0, B, STONE, 0.8);
+      for (const s of [-1, 1]) k.at(0, 0, 0, () => acornLamp(k, px + s * 3.4, zf + 4.2, 3.4), B);
+      k.sign(px + 6.8, B + 1.8, zf + 0.02, 2.6, 0.65, founded, { thick: 0.04, back: 0x2a2018 });
+
+      // side and rear elevations
+      for (const s of ['l', 'r'] as Side[]) onFace(k, s, W, D, (_len, f) => {
+        for (const wx of [-9, -4.5, 0, 4.5, 9]) {
+          if (s === 'l' && wx > 5) continue;
+          archWin(k, wx, B + 0.9, f, 1.7, 3.6, { trim: STONE, glass: GL, mx: 1, bars: [1.6] });
+          archWin(k, wx, s2 + 0.8, f, 1.5, 3.2, { trim: STONE, glass: GL, mx: 1, bars: [1.4] });
+        }
+      });
+      onFace(k, 'b', W, D, (len, f) => {
+        for (const wx of [-18, -13.5, -9, -4.5, 4.5, 9, 13.5, 18]) {
+          windowAt(k, wx, B + 0.9, f, 1.4, 2.8, { frame: CREAM, mx: 2, my: 3, glass: GL, arch: STONE });
+          windowAt(k, wx, s2 + 0.8, f, 1.4, 2.8, { frame: CREAM, mx: 2, my: 3, glass: GL, arch: STONE, ac: wx === 9 });
+        }
+        doorAt(k, 0, B, f, 1.9, 2.8, 0x4b3020, { glass: true, double: true, frame: CREAM });
+        k.box(0, 0, f + 1.0, 4.0, B, 2.0, RUBBLE, 'stone');
+        steps(k, 0, f + 2.0, 3.4, B, 5, 0xbfb29a, 0.4);
+        downspout(k, -len / 2 + 0.5, f + 0.1, TOP - 1);
+        downspout(k, len / 2 - 0.5, f + 0.1, TOP - 1);
+      });
+      void rng;
+
+      // clock tower
+      k.at(tx, tz, 0, () => {
+        const T = 8;
+        const sh = TOP + 0.2;
+        const cs = sh + 4.0;
+        k.box(0, 0, 0, T + 0.7, B, T + 0.7, RUBBLE, 'stone');
+        k.box(0, B - 0.35, 0, T + 1.0, 0.35, T + 1.0, STONE, 'stone');
+        k.box(0, B, 0, T, sh - B, T, 0xffffff, 'brickRed');
+        for (const y of [s2, sh - 0.4]) k.box(0, y - 0.2, 0, T + 0.3, 0.4, T + 0.3, STONE, 'stone');
+        for (let i = 0; i < 4; i++) k.at(0, 0, i * HALF, () => {
+          const f = T / 2;
+          archWin(k, 0, B + 0.7, f, 1.4, 3.6, { trim: STONE, glass: GL, mx: 0, sill: false });
+          archWin(k, 0, s2 + 0.7, f, 1.2, 2.8, { trim: STONE, glass: GL, mx: 0, sill: false });
+        });
+        k.box(0, sh, 0, T - 0.4, 4.0, T - 0.4, 0xffffff, 'brickRed');
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (let j = 0; j < 3; j++) k.box(sx * (T / 2 - 0.2), sh + j * 1.35 + 0.05, sz * (T / 2 - 0.2), 0.6 + (j % 2) * 0.2, 1.1, 0.6 + (j % 2) * 0.2, STONE, 'stone');
+        for (let i = 0; i < 4; i++) k.at(0, 0, i * HALF, () => {
+          const f = T / 2 - 0.2;
+          k.sign(0, sh + 2.0, f + 0.02, 3.1, 3.1, clock, { thick: 0.05 });
+          k.torus(0, sh + 2.0, f + 0.05, 1.62, 0.1, 4, 16, 0xb08a3a, 'metal');
+          k.box(0, sh + 3.55, f + 0.14, 1.2, 0.5, 0.2, STONE, 'stone');
+        });
+        k.box(0, cs, 0, T + 1.0, 0.5, T + 1.0, STONE, 'stone');
+        k.box(0, cs + 0.5, 0, T + 0.3, 0.3, T + 0.3, STONE, 'stone');
+        // belfry: four brick piers around dark louvred arches
+        const bf = cs + 0.8;
+        k.box(0, bf, 0, 5.4, 3.0, 5.4, 0x1c1a18);
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.box(sx * 3.2, bf, sz * 3.2, 1.6, 3.0, 1.6, 0xffffff, 'brickRed');
+        for (let i = 0; i < 4; i++) k.at(0, 0, i * HALF, () => archWin(k, 0, bf, 2.9, 4.6, 3.0, { trim: STONE, glass: 0x15130f, mx: 2, key: false, sill: false, surround: 0.25 }));
+        k.box(0, bf + 3.0, 0, T + 1.0, 0.5, T + 1.0, STONE, 'stone');
+        k.hipRoof(0, bf + 3.5, 0, T + 0.4, T + 0.4, 5.4, SLATE, 'shingle', 0.6);
+        k.cyl(0, bf + 8.9, 0, 0.08, 0.13, 1.6, 6, 0x2a2e33, 'metal');
+        k.sphere(0, bf + 9.6, 0, 0.3, 0xb08a3a, 'metal', 8, 6);
+        k.box(0, bf + 10.5, 0, 1.0, 0.08, 0.08, 0x2a2e33, 'metal');
+      });
+    });
+
+    // ---- grounds
+    lawn(k, 0, 15.2, 56, 12);
+    slab(k, px, 18.7, 5.0, 4.6, 0.06, 0xd6d3cb);
+    slab(k, 0, 19.7, 56, 2.0, 0.06, 0xcfcdc6);
+    pole(k, c.signs, 15.5, 14.5, 10.5);
+    maple(k, -8, 15.5, 7.5, 0x6a9a3a);
+    maple(k, 21, 16.2, 8.5, 0x5d8a36);
+    maple(k, -22, 18.2, 6.5, 0x73a043);
+    hedge(k, -12, 8.4, 9, 0.9, 0.8);
+    hedge(k, 12, 8.4, 9, 0.9, 0.8);
+    bench(k, 9, 16.8, 0);
+    bench(k, -2, 16.8, 0);
+    lampPost(k, 11, 20.3, 0, 6.5);
+    lampPost(k, -11, 20.3, 0, 6.5);
+    // miners' memorial: ore cart on a stone plinth
+    k.box(-16, 0, 15.6, 3.4, 0.5, 2.4, 0xb9b3a4, 'stone');
+    k.box(-16, 0.5, 15.6, 1.9, 0.9, 1.2, 0x5a4332, 'planks');
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.cyl(-16 + sx * 0.6, 0.55, 15.6 + sz * 0.62, 0.17, 0.17, 0.1, 8, 0x2b2d31, 'metal', { rx: HALF });
+    k.box(-16, 1.2, 15.6, 1.6, 0.35, 0.9, 0x3a3d41, 'gravel');
+    k.solid(-16, 15.6, 3.4, 2.4);
+  });
+}
+CIVIC.push({ id: 'townHall', name: 'Pine Hollow City Hall', w: 56, d: 42, front: 12, tags: ['civic', 'landmark', 'downtown'], build: townHall });
