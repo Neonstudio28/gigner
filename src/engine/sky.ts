@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
+import { fogUniforms, type AtmoPreset } from './atmosphere';
+import { surfaceUniforms } from '../world/materials';
 
 /** Equirect U of the sun disc in the Poly Haven "kloofendal_48d_partly_cloudy_puresky" HDRI. */
 const HDRI_SUN_U = 0.5947;
@@ -21,8 +23,15 @@ export class SkyRig {
   envIntensity = 0.62;
   skyIntensity = 1.08;
   exposure = 1.0;
-  hazeDensity = 0.00014;
+  hazeDensity = 0.0018;
+  fogFalloff = 0.011;
+  sunTint = new THREE.Color(0xffffff);
+  skyTint = new THREE.Color(0xffffff);
+  horizon = 0.16;
+  horizonMix = 0.85;
+  hemiIntensity = 0.28;
   shadowExtent = 0;
+  readonly domeUniforms = { uHorizonCol: { value: new THREE.Color(0xa9afc0) }, uHorizon: { value: 0.16 }, uHorizonMix: { value: 0.8 } };
   private fog: THREE.FogExp2;
   /** Sky dome sampling the equirect directly (avoids the equirect→cube background conversion). */
   readonly dome: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
@@ -49,6 +58,15 @@ export class SkyRig {
     const uv = geo.attributes.uv as THREE.BufferAttribute;
     for (let i = 0; i < uv.count; i++) uv.setX(i, 1 - uv.getX(i));
     this.dome = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false }));
+    // the HDRI texture is kept; only its lower band blends into the valley haze
+    this.dome.material.onBeforeCompile = (s) => {
+      Object.assign(s.uniforms, this.domeUniforms);
+      s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nvarying float vDomeY;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvDomeY = normalize(position).y;');
+      s.fragmentShader = s.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying float vDomeY;\nuniform vec3 uHorizonCol;\nuniform float uHorizon;\nuniform float uHorizonMix;')
+        .replace('#include <tonemapping_fragment>', 'gl_FragColor.rgb = mix(gl_FragColor.rgb, uHorizonCol, uHorizonMix * (1.0 - smoothstep(-0.03, uHorizon, vDomeY)));\n#include <tonemapping_fragment>');
+    };
+    this.dome.material.customProgramCacheKey = () => 'sky-dome-horizon';
     this.dome.name = 'sky-dome';
     this.dome.renderOrder = -1000;
     this.dome.frustumCulled = false;
@@ -86,14 +104,46 @@ export class SkyRig {
     const e = this.exposure;
     // warmer, dimmer sun as it approaches the horizon
     const low = THREE.MathUtils.smoothstep(this.elevation, 4, 28);
-    this.sun.color.setRGB(1, 0.86 + 0.1 * low, 0.72 + 0.2 * low);
+    this.sun.color.setRGB(1, 0.86 + 0.1 * low, 0.72 + 0.2 * low).multiply(this.sunTint);
     this.sun.intensity = this.sunIntensity * e * (0.35 + 0.65 * low);
-    this.hemi.intensity = 0.28 * e;
+    this.hemi.intensity = this.hemiIntensity * e;
     this.scene.environmentIntensity = this.envIntensity * e;
-    this.dome.material.color.setScalar(this.skyIntensity * e);
+    this.dome.material.color.copy(this.skyTint).multiplyScalar(this.skyIntensity * e);
     this.fog.density = this.hazeDensity;
+    fogUniforms.uFogHF.value = this.fogFalloff;
+    fogUniforms.uSunDir.value.copy(this.dir);
+    fogUniforms.uSunCol.value.copy(this.sun.color).lerp(new THREE.Color(1, 1, 1), 0.25);
+    this.domeUniforms.uHorizonCol.value.copy(this.fog.color).multiplyScalar(Math.max(0.35, e * 0.95));
+    this.domeUniforms.uHorizon.value = this.horizon;
+    this.domeUniforms.uHorizonMix.value = this.horizonMix;
     this.snapRight.crossVectors(new THREE.Vector3(0, 1, 0), this.dir).normalize();
     this.snapUp.crossVectors(this.dir, this.snapRight).normalize();
+  }
+
+  applyPreset(p: AtmoPreset) {
+    this.azimuth = p.sun.azimuth;
+    this.elevation = p.sun.elevation;
+    this.sunIntensity = p.sun.intensity;
+    this.sunTint.setHex(p.sun.tint);
+    this.envIntensity = p.env;
+    this.skyIntensity = p.sky.intensity;
+    this.skyTint.setHex(p.sky.tint);
+    this.horizon = p.sky.horizon;
+    this.horizonMix = p.sky.horizonMix;
+    this.hemiIntensity = p.hemi;
+    this.fog.color.setHex(p.fog.color);
+    this.hazeDensity = p.fog.density;
+    this.fogFalloff = p.fog.falloff;
+    fogUniforms.uFogHaze.value = p.fog.haze;
+    fogUniforms.uFogMax.value = p.fog.max;
+    fogUniforms.uInscatter.value = p.fog.inscatter;
+    surfaceUniforms.uWet.value = p.wet;
+    surfaceUniforms.uWindowGlow.value = p.windows;
+    this.exposure = p.exposure;
+    // softer, lighter shadows under cloud
+    this.sun.shadow.intensity = 0.55 + 0.35 * Math.min(1, p.sun.intensity / 3);
+    this.sun.shadow.radius = 2.2 + 3 * (1 - Math.min(1, p.sun.intensity / 3));
+    this.apply();
   }
 
   /** Fits the shadow frustum around `focus`, snapped to whole texels to avoid shimmering. */

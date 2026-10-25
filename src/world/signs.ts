@@ -312,7 +312,7 @@ const PAD = 8;
 /** Draws every sign once and shelf-packs it into shared atlas pages (one material per page). */
 export class SignBook {
   private pages: Page[] = [];
-  private cache = new Map<SignId, SignRef>();
+  private cache = new Map<string, SignRef>();
 
   constructor(private onPage: (index: number, tex: THREE.Texture) => void) {}
 
@@ -321,6 +321,17 @@ export class SignBook {
     if (!ref) {
       ref = this.place(SIGNS[id]());
       this.cache.set(id, ref);
+    }
+    return ref;
+  }
+
+  /** Signs owned by building modules: drawn once per key and packed into the shared atlas. */
+  custom(key: string, draw: () => HTMLCanvasElement): SignRef {
+    const k = `custom:${key}`;
+    let ref = this.cache.get(k);
+    if (!ref) {
+      ref = this.place(draw());
+      this.cache.set(k, ref);
     }
     return ref;
   }
