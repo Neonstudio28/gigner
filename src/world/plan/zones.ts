@@ -124,6 +124,7 @@ const POOLS = {
   suburb: () => pickFrom(['colonial', 'ranchPorch', 'capeCod', 'splitLevel', 'ranchGarage', 'modernTwoStory'], [2, 2, 2, 2, 3, 2]),
   newer: () => pickFrom(['modernTwoStory', 'ranchGarage', 'splitLevel', 'capeCod'], [3, 2, 1, 1]),
   estate: () => pickFrom(['lodgeEstate', 'colonialEstate', 'modernTwoStory'], [4, 3, 1]),
+  posh: () => pickFrom(['lodgeEstate', 'colonialEstate', 'modernTwoStory', 'craftsmanBungalow', 'victorianQueenAnne'], [5, 4, 2, 1, 1]),
   rural: () => pickFrom(['farmhouseGable', 'doubleWide', 'ranchPorch', 'logCabin', 'aframe'], [3, 2, 2, 2, 1]),
   cabin: () => pickFrom(['logCabin', 'aframe', 'lakeCottage'], [3, 2, 1]),
   lake: () => pickFrom(['lakeCottage', 'logCabin', 'aframe'], [3, 2, 2]),
@@ -579,11 +580,10 @@ export function neighbourhoods(pl: Placer) {
   street('Alder St W', POOLS.rowhouse(), { ...old, setback: 3, s1: sAtX(R('Alder St W'), -505) });
   street('Alder St E', POOLS.rowhouse(), { ...old, setback: 3 });
   for (const name of ['Maple St', '1st Ave W S', '1st Ave E S', '4th Ave W', '4th Ave E', '3rd Ave E']) street(name, POOLS.historic(), old);
-  street('Birch St', POOLS.historic(), { ...old, s1: sAtX(R('Birch St'), 505) });
   street('3rd Ave W', POOLS.historic(), { ...old, s0: sAtZ(R('3rd Ave W'), -95) });
-  street('5th Ave W', POOLS.historic(), { ...old, s1: sAtZ(R('5th Ave W'), 272) });
-  street('5th Ave E', POOLS.historic(), old);
-  for (const name of ['2nd Ave W S', '2nd Ave E S', 'Division St S']) street(name, POOLS.historic(), { ...old, s1: sAtZ(R(name), 272) });
+  street('5th Ave W', POOLS.historic(), { ...old, s1: sAtZ(R('5th Ave W'), 186) });
+  street('5th Ave E', POOLS.historic(), { ...old, s1: sAtZ(R('5th Ave E'), 186) });
+  for (const name of ['2nd Ave W S', '2nd Ave E S', 'Division St S']) street(name, POOLS.historic(), { ...old, s1: sAtZ(R(name), 186) });
 
   // ---- North Side: across the bridges, 1920s–60s houses on a small grid
   street('Riverside Dr', POOLS.northside(), { ...old, sides: [1] });
@@ -591,7 +591,7 @@ export function neighbourhoods(pl: Placer) {
   street('3rd Ave W', POOLS.northside(), { ...old, s1: sAtZ(R('3rd Ave W'), -185) });
   street('Larch St', POOLS.northside(), { ...old, sides: [-1], s0: sAtX(R('Larch St'), -440), bulb: 3 });
 
-  // ---- Church Hill: cottages up the hill, the cemetery and its chapel
+  // ---- the south hillside: the cemetery and chapel on Church Hill, the water tower on Cedar Ridge
   pl.force(D('cemetery'), PADS.cemetery.x, PADS.cemetery.z, HALF, 71);
   mark(pl, 'Pine Hollow Cemetery', PADS.cemetery.x, PADS.cemetery.z, 'civic');
   const ch = R('2nd Ave W S');
@@ -600,26 +600,28 @@ export function neighbourhoods(pl: Placer) {
   const cz = ce.z + ce.tz * 42;
   pl.force(L.church, cx, cz, Math.atan2(-ce.tx, -ce.tz), 72);
   mark(pl, 'Hillside Chapel', cx, cz, 'civic');
-  street('2nd Ave W S', POOLS.hillside(), { setback: 5, gap: 5, jitter: 2, maxSlope: 9, s0: sAtZ(ch, 278), bulb: 2 });
-  street('5th Ave W', POOLS.hillside(), { setback: 5, gap: 5, jitter: 2, maxSlope: 9, s0: sAtZ(R('5th Ave W'), 278), bulb: 3 });
-
-  // ---- Cedar Ridge: estates up Division St, 2nd Ave E and Ridgecrest Dr; the water tower on top
   const tw = PADS.tower;
   pl.k.at(0, 0, 0, () => waterTower(pl.k, tw.x, tw.z, { legH: 16, scale: 1.25 }), heightAt(tw.x, tw.z));
   pl.c.occ.add(tw.x, tw.z, 14, 14, 0, 1);
   mark(pl, 'Water Tower', tw.x, tw.z, 'civic');
-  gateSign(pl, R('Ridgecrest Dr'), 'cedarridge', 'CEDAR RIDGE', 'EST. 1978');
-  const estate = { setback: 9, gap: 12, jitter: 2.5, maxSlope: 5, car: 0.8 };
-  street('Division St S', POOLS.estate(), { ...estate, s0: sAtZ(R('Division St S'), 285), bulb: 3 });
-  street('2nd Ave E S', POOLS.estate(), { ...estate, s0: sAtZ(R('2nd Ave E S'), 285), bulb: 3 });
-  street('Ridgecrest Dr', POOLS.estate(), { ...estate, s0: 14 });
+  gateSign(pl, R('Division St S'), 'cedarridge', 'CEDAR RIDGE', 'EST. 1978', sAtZ(R('Division St S'), 205));
+  gateSign(pl, R('2nd Ave E S'), 'cedarridge', 'CEDAR RIDGE', 'EST. 1978', sAtZ(R('2nd Ave E S'), 205));
+  gateSign(pl, R('2nd Ave W S'), 'churchhill', 'CHURCH HILL', 'HISTORIC DISTRICT', sAtZ(ch, 205));
+
+  // estates on tight view lots: the avenues as they wind up the hill, then the courts off them
+  const posh = { setback: 7, gap: 4, jitter: 1.5, maxSlope: 6, car: 0.85 };
+  for (const name of ['Division St S', '2nd Ave E S', '2nd Ave W S']) street(name, POOLS.posh(), { ...posh, s0: sAtZ(R(name), 192), bulb: 4 });
+  street('Hillcrest Dr', POOLS.posh(), { ...posh, s1: sAtX(R('Hillcrest Dr'), 505) });
+  for (const name of ['Ridgecrest Dr', 'Laurel Ln']) street(name, POOLS.posh(), posh);
+  for (const name of ['Overlook Ct', 'Summit Ct', 'Madrona Ct', 'Aspen Ct', 'Sunrise Ct', 'Hilltop Ct', 'Chapel Ct']) street(name, POOLS.posh(), { ...posh, bulb: 5 });
+  street('5th Ave W', POOLS.hillside(), { setback: 5, gap: 5, jitter: 2, maxSlope: 9, s0: sAtZ(R('5th Ave W'), 192), bulb: 3 });
 
   // ---- West End: post-war suburb grown off Alder St, around the elementary school
   street('Alder St W', POOLS.suburb(), { setback: 7, gap: 5, jitter: 1.5, s0: sAtX(R('Alder St W'), -505), bulb: 4 });
   for (const name of ['Sunset Dr', 'Hemlock Ct']) street(name, POOLS.suburb(), { setback: 7, gap: 5, jitter: 1.5, bulb: 5 });
 
-  // ---- Eastgate: 1990s homes where Birch St curves past the high school
-  street('Birch St', POOLS.newer(), { setback: 7, gap: 5, jitter: 1.5, s0: sAtX(R('Birch St'), 510), bulb: 4 });
+  // ---- Eastgate: 1990s homes where Hillcrest Dr curves past the high school
+  street('Hillcrest Dr', POOLS.newer(), { setback: 7, gap: 5, jitter: 1.5, s0: sAtX(R('Hillcrest Dr'), 510), bulb: 4 });
   for (const name of ['Elm Ct', 'Tamarack Ct']) street(name, POOLS.newer(), { setback: 7, gap: 5, jitter: 1.5, bulb: 5 });
 
   // ---- Riverside Mobile Home Park, beside the river at the west end
@@ -649,11 +651,11 @@ function frontXZ(pl: Placer, r: Road, x: number, side: 1 | -1, def: BuildingDef,
   return [f.x, f.z, f.ry];
 }
 
-/** Stone entry pillars with a neighbourhood sign on both sides of a road's first metres. */
-function gateSign(pl: Placer, r: Road, key: string, title: string, sub: string) {
+/** Stone entry pillars with a neighbourhood sign on both sides of a road (near its start unless `at` is given). */
+function gateSign(pl: Placer, r: Road, key: string, title: string, sub: string, at?: number) {
   const { k, c } = pl;
   const ref = board(c, `gate.${key}`, title, sub, '#2f3a2f', '#f2e3c2', { font: 'Alfa Slab One', w: 768, h: 256 });
-  const s = Math.min(26, r.length * 0.25);
+  const s = at ?? Math.min(26, r.length * 0.25);
   for (const side of [1, -1] as const) {
     const f = pl.net.frontage(r, s, side, r.full + 2.2);
     if (c.occ.blocked(f.x, f.z, 1) || isWater(f.x, f.z)) continue;

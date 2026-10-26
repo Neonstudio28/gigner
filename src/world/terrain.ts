@@ -76,6 +76,7 @@ const floorRise = (x: number) => Math.max(0, -x - 500) * 0.011 + Math.max(0, x -
 /** Low hills south of town: Cedar Ridge (the view lots) and Church Hill (the old cemetery hill). */
 export const HILLS = [
   { name: 'Cedar Ridge', x: 80, z: 500, s: 250, h: 30 },
+  { name: 'Summit', x: 390, z: 470, s: 190, h: 20 },
   { name: 'Church Hill', x: -420, z: 440, s: 190, h: 20 },
 ];
 

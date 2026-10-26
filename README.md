@@ -16,7 +16,7 @@ The town itself is compact, about 1.6 km by 1 km. Forest closes in around its ed
 - **Old Highway 10** is Main Street through the middle of town. It links the two I-90 interchanges: **Exit 61** (Mill Rd) at the west end and **Exit 63** (Eastside Rd) at the east end.
 - **The South Fork river** (30–44 m wide) passes under I-90 west of town and runs past the mill. It flows through town between downtown and the North Side, with parks on both banks, then bends south-east under Old Hwy 10 into Spirit Lake.
 - **I-90** runs close along the north edge of town and crosses the river on its own bridge.
-- **The street grid** fills the middle of town. Some grid streets run on past its edge and bend into curving neighbourhood streets that end in cul-de-sacs: Alder St into the West End, Birch St into Eastgate, Division St and 2nd Ave E up Cedar Ridge, and 2nd Ave W and 5th Ave W up Church Hill.
+- **The street grid** fills the middle of town and stops at Maple St. Some grid streets run on past its edge and bend into curving neighbourhood streets that end in cul-de-sacs: Alder St into the West End, Division St and 2nd Ave E up Cedar Ridge, and 2nd Ave W and 5th Ave W up Church Hill. Hillcrest Dr follows the foot of the hill and links them all, and its east end runs through Eastgate.
 
 | District | What's there |
 |---|---|
@@ -25,12 +25,12 @@ The town itself is compact, about 1.6 km by 1 km. Forest closes in around its ed
 | **Civic Row · Alder St** | Fire Station 1, the ambulance (EMS) station, the Police Dept., the Sheriff & Jail, two churches, VFW and Elks halls, and a law firm. Across Alder St are the County Assessor, Clerk, DMV, Public Defender, District Attorney, Probation, Elections, City Water, Chamber of Commerce, Savings & Loan, a title company, a funeral home, the Masonic Lodge and a B&B. |
 | **Riverfront** | Riverfront Park (lawns, trail and bandstand) along River St, with the old depot (visitor center and caboose), Timber Ridge Brewing, the river outfitter and a boat launch. North Bank Park, with a picnic shelter, is across the water. |
 | **North Side** | 1920s–60s houses on a small grid across the Division St and 3rd Ave W bridges, ringed by Riverside Dr. |
-| **Old Town** | The alley-backed grid south of Main St (Maple and Birch Sts): Victorians, miner's cottages, Craftsman bungalows, foursquares and duplexes, with townhouse rows nearest downtown. Main St beyond downtown has the family clinic, dentist, daycare and realtor. |
-| **Church Hill** | Cottages and cabins up 2nd Ave W and 5th Ave W, Pine Hollow Cemetery and the Hillside Chapel. |
-| **Cedar Ridge** | The upscale district on the hill south of Old Town: lodge-style and colonial estates up Division St, 2nd Ave E and Ridgecrest Dr, with gate pillars and the water tower. |
+| **Old Town** | The alley-backed grid south of Main St, down to Maple St: Victorians, miner's cottages, Craftsman bungalows, foursquares and duplexes, with townhouse rows nearest downtown. Main St beyond downtown has the family clinic, dentist, daycare and realtor. |
+| **Church Hill** | The historic upscale hillside south-west of Old Town: close-set lodge-style and colonial estates and a few Queen Annes on Hillcrest Dr, 2nd Ave W, Laurel Ln, Sunrise Ct, Chapel Ct and Hilltop Ct, with hillside cottages up 5th Ave W. Pine Hollow Cemetery and the Hillside Chapel are here too. |
+| **Cedar Ridge** | The 1970s–80s upscale district on the hill south of Old Town: estates on Hillcrest Dr, Division St, 2nd Ave E and Ridgecrest Dr (which loops back down to Hillcrest), and on Madrona, Aspen, Overlook and Summit Cts, with gate pillars and the water tower. |
 | **West End** | A post-war suburb off the curving end of Alder St, with Sunset Dr and Hemlock Ct, plus West End Elementary and West End Park (ballfield and playground). |
 | **High School Campus** | Pine Hollow High School (Home of the Loggers), Logger Field with bleachers and lights, and Logger Ballpark. It sits at the east end of town on Old Hwy 10. |
-| **Eastgate** | A 1990s subdivision where Birch St curves past the high school, with Elm Ct and Tamarack Ct. |
+| **Eastgate** | A 1990s subdivision where Hillcrest Dr curves past the high school, with Elm Ct and Tamarack Ct. |
 | **Highway 10 West** | Shops near Exit 61, on both sides of the road: Gas 86, the Cascade Inn motel, Tex Outpost, Hollow Auto Repair, Big Timber Towing (impound lot), Cascade Tire & Lube and Valley Feed & Seed. |
 | **Highway 10 East** | Shops near Exit 63 and across the river bridge, on both sides of the road: Big Bun Burgers, Taco Shack, the Timberline Truck Stop, the Valley Thriftway supermarket, Valley Plaza, Bob's Used Cars, Rewind Video, Fire Station 2, Dairy Dream, Pizza Palace and Clucker's. Riverside Body Shop and Quick Lube are on Eastside Rd. |
 | **Silver Valley Medical Center** | A hospital with an ER, ambulance bay and rooftop helipad, at the east end of Main St. |
