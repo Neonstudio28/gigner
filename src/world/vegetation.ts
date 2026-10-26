@@ -450,7 +450,7 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
       const x = gx + rng.range(0, 13);
       const z = gz + rng.range(0, 13);
       if (valley(x, z).e > -8) continue;
-      const core = x > -370 && x < 370 && z > -285 && z < -110;
+      const core = x > -310 && x < 310 && z > -95 && z < 100;
       if (rng.next() > (core ? 0.01 : 0.07)) continue;
       if (input.occ.blocked(x, z, 2.5) || cleared(x, z)) continue;
       const roll = rng.next();

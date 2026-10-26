@@ -1034,7 +1034,7 @@ function office(id: string, title: string, sub: string, o: OfficeOpts = {}) {
  * ============================================================================================== */
 export const TOWN: BuildingDef[] = [
   def('hospital', 'Silver Valley Medical Center', 64, 56, ['civic', 'medical'], hospital),
-  elementary('mapleGroveElementary', 'Maple Grove Elementary', 'PINE HOLLOW SCHOOL DISTRICT 391'),
+  elementary('westEndElementary', 'West End Elementary', 'PINE HOLLOW SCHOOL DISTRICT 391'),
   def('highSchool', 'Pine Hollow High School', 92, 52, ['civic', 'school'], highSchool),
   def('footballField', 'Logger Field', 118, 76, ['civic', 'school'], (c, x, z, ry) => footballField(c, x, z, ry)),
   def('supermarket', 'Valley Thriftway', 60, 62, ['retail'], supermarket),
@@ -1056,7 +1056,8 @@ export const TOWN: BuildingDef[] = [
   def('brewery', 'Timber Ridge Brewing Co.', 32, 26, ['downtown', 'restaurant'], brewery),
   def('cemetery', 'Pine Hollow Cemetery', 74, 54, ['civic'], cemetery),
   def('mine', 'Sierra Silver Mine', 64, 44, ['industrial'], (c, x, z, ry) => mine(c, x, z, ry)),
-  ballpark('mapleGrovePark', 'Maple Grove Park'),
+  ballpark('westEndPark', 'West End Park'),
+  ballpark('loggerPark', 'Logger Ballpark'),
   civicHall('vfwHall', 'VFW Post 4421', 'VETERANS OF FOREIGN WARS', { bg: '#1f3d6b' }),
   civicHall('grangeHall', 'Silver Valley Grange', 'GRANGE HALL · NO. 116', { wall: 0xb8322a, mat: 'boards', bg: '#f4f1ea', fg: '#7a2c25' }),
   civicHall('elksLodge', 'Elks Lodge 1798', 'B.P.O.E. · MEMBERS & GUESTS', { wall: 0xffffff, mat: 'brickTan', bg: '#4a2a5a', fg: '#f2e3c2' }),

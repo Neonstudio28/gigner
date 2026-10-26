@@ -35,7 +35,7 @@ function ridged(x: number, z: number, oct = 5): number {
   return s;
 }
 
-export const LAKE = { x: 1060, z: 330, rx: 290, rz: 175, level: -0.7 };
+export const LAKE = { x: 1180, z: 330, rx: 250, rz: 150, level: -0.7 };
 /** Drivable/explorable radius. */
 export const MAP_RADIUS = 1850;
 const GRID_HALF = 2000;
@@ -73,18 +73,18 @@ export interface ValleyInfo {
 /** The floor rises gently upstream (west) and a little toward the east end of the valley. */
 const floorRise = (x: number) => Math.max(0, -x - 500) * 0.011 + Math.max(0, x - 1300) * 0.01;
 
-/** Low hills on the valley floor: Cedar Ridge (the view lots) and Church Hill (the old cemetery hill). */
+/** Low hills south of town: Cedar Ridge (the view lots) and Church Hill (the old cemetery hill). */
 export const HILLS = [
-  { name: 'Cedar Ridge', x: 330, z: 470, s: 230, h: 32 },
-  { name: 'Church Hill', x: -230, z: 430, s: 200, h: 22 },
+  { name: 'Cedar Ridge', x: 80, z: 500, s: 250, h: 30 },
+  { name: 'Church Hill', x: -420, z: 440, s: 190, h: 20 },
 ];
 
 /** Downtown stays level; elsewhere the floor has a little low-poly roll. */
 function floorRelief(x: number, z: number) {
   let h = 0;
   for (const b of HILLS) h += b.h * Math.exp(-((x - b.x) ** 2 + (z - b.z) ** 2) / (b.s * b.s));
-  const dx = Math.max(0, Math.abs(x) - 430);
-  const dz = Math.max(0, Math.abs(z + 190) - 120);
+  const dx = Math.max(0, Math.abs(x) - 560);
+  const dz = Math.max(0, Math.abs(z) - 200);
   const roll = Math.max(0, 1.3 * (fbm(x * 0.003 + 9, z * 0.003 - 4, 3) + 0.45));
   return h + roll * smoothstep(0, 160, Math.hypot(dx, dz));
 }
@@ -205,23 +205,29 @@ class RiverPath {
   }
 }
 
-/** South Fork: enters from the western canyon, runs past the mill and the riverfront, then bends south into Spirit Lake. */
+/**
+ * South Fork: comes down the north side of the valley, passes under I-90 west of town, runs past the
+ * mill and through town between downtown and the North Side, then bends south-east into Spirit Lake.
+ */
 export const RIVER_CTRL: [number, number][] = [
-  [-1880, -330],
-  [-1600, -352],
-  [-1300, -380],
-  [-1000, -386],
-  [-700, -370],
-  [-400, -352],
-  [-100, -346],
-  [200, -350],
-  [480, -345],
-  [700, -312],
-  [840, -222],
-  [900, -90],
-  [906, 40],
-  [930, 160],
-  [960, 240],
+  [-1880, -540],
+  [-1600, -525],
+  [-1350, -500],
+  [-1150, -455],
+  [-1000, -390],
+  [-880, -310],
+  [-760, -240],
+  [-600, -190],
+  [-400, -165],
+  [-150, -155],
+  [150, -158],
+  [400, -168],
+  [620, -160],
+  [800, -120],
+  [930, -40],
+  [1030, 70],
+  [1110, 190],
+  [1160, 260],
 ];
 export const river = new RiverPath(RIVER_CTRL);
 
@@ -316,6 +322,9 @@ export function forestDensity(x: number, z: number): number {
     d = (0.35 + 0.6 * clearing) * (1 - smoothstep(560, 700, h));
   } else {
     d = smoothstep(-110, 0, v.e) * 0.75 * (0.4 + 0.6 * clearing);
+    // the forest closes in around the edge of town (farms and lots are cleared by the layout)
+    const town = Math.hypot(x / 1000, z / 560);
+    d = Math.max(d, smoothstep(1.0, 1.45, town) * 0.6 * (0.35 + 0.65 * clearing));
     const r = river.query(x, z);
     if (r && r.dist > r.hw + 4 && r.dist < r.hw + 45) d = Math.max(d, 0.35 * clearing);
   }

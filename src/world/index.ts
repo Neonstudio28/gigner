@@ -185,7 +185,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
       landmarks: pl.landmarks,
     },
     shots: SHOTS,
-    spawn: new THREE.Vector3(-30, 1.7, -206),
+    spawn: new THREE.Vector3(-60, 1.7, 2.5),
     traffic,
     materials,
     signs,

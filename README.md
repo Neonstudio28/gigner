@@ -6,38 +6,39 @@ Pine Hollow is a 1990s timber-and-mining county seat in a broad Pacific Northwes
 
 ## The town
 
-The valley runs east–west. Its floor is wide (about 3.7 km by 1.3 km); forested foothills rise gently from the edges, and the big snow peaks stay on the distant ring.
-- **The South Fork river** (30–44 m wide) comes out of the western canyon, runs past the lumber mill and the downtown riverfront, then bends south into Spirit Lake.
-- **I-90** runs along the foot of the northern slopes. It rises onto short overpasses at three diamond interchanges: **Exit 60** (Mill Rd), **Exit 62** (Bridge St, straight to Courthouse Square) and **Exit 64** (Spirit Lake Rd).
-- **Old Highway 10** is the town's spine: it becomes **Main Street** through downtown and **Front Street** along the highway strip.
+The layout is modelled on small interstate towns of the inland Northwest.
+- **Cle Elum, WA:** old US-10 runs as First Street through the middle of town, with an interchange at each end.
+- **Kellogg, ID:** two I-90 exits are linked by the old-highway business route.
+- **Leavenworth, WA:** a central Front Street, with its own park and a waterfront park along the river.
+- **Sandpoint, ID:** a First Avenue main street where buildings run back to the alleys.
 
-The layout follows a classic county-seat plan:
-- a gridded downtown around a courthouse square;
-- an alley-backed residential grid;
-- curvilinear post-war subdivisions with loop roads and cul-de-sacs at the edge of town;
-- a highway strip near the interstate;
-- industry on the river flats;
-- farms and cabins out in the valley.
+The town itself is compact, about 1.6 km by 1 km. Forest closes in around its edges, and farms and cabins sit out in the valley.
+- **Old Highway 10** is Main Street through the middle of town. It links the two I-90 interchanges: **Exit 61** (Mill Rd) at the west end and **Exit 63** (Eastside Rd) at the east end.
+- **The South Fork river** (30–44 m wide) passes under I-90 west of town and runs past the mill. It flows through town between downtown and the North Side, with parks on both banks, then bends south-east under Old Hwy 10 into Spirit Lake.
+- **I-90** runs close along the north edge of town and crosses the river on its own bridge.
+- **The street grid** fills the middle of town. Some grid streets run on past its edge and bend into curving neighbourhood streets that end in cul-de-sacs: Alder St into the West End, Birch St into Eastgate, Division St and 2nd Ave E up Cedar Ridge, and 2nd Ave W and 5th Ave W up Church Hill.
 
 | District | What's there |
 |---|---|
-| **Courthouse Square** | The Pine County Courthouse in a park block with lawns, a gazebo, fountain, war memorial and flag. It faces Main St and the Bridge St axis from Exit 62. |
-| **Downtown · Main Street** | Two-storey brick blocks on 1st–4th Ave W/E with parking lanes, globe lamps and back alleys. Businesses include Hotel Cascade, the Liberty Theater, First Pine Bank, the Gazette, hardware, sporting goods, a pharmacy, bakery, diner and saloons. There are also jewelers, a music store, electronics, outfitters, a credit union, Mountain Bell, the Woodworkers Local 3-38 union hall, an arcade, a gym, a pet supply store, a thrift store, a taxidermist and an espresso bar. |
-| **Civic Center (Court St)** | One civic building per block: Fire Station 1, the ambulance (EMS) station, City Hall, the Police Dept., the Sheriff & Jail, the Carnegie Library, two churches, VFW and Elks halls, and a law firm. Across Court St are the County Assessor, Clerk, DMV, Chamber of Commerce, bail bonds, Public Defender, District Attorney, Probation, Pacific Power, the KPHR studios, a funeral home, the Masonic Lodge and a B&B. |
-| **Riverfront** | Riverwalk Park with a bandstand, the old depot (visitor center with a caboose), Timber Ridge Brewing, the river outfitter and a boat launch. |
-| **Old Town** | An alley-backed grid (Pine, Cedar, Alder and Hemlock Sts) of Victorians, miner's cottages, Craftsman bungalows, foursquares and duplexes, with townhouse rows nearest downtown. |
-| **Church Hill** | Hillside streets with cottages and cabins, Pine Hollow Cemetery and the Hillside Chapel. |
-| **Cedar Ridge** | The upscale district on the hill above Old Town: lodge-style and colonial estates on curving drives and cul-de-sacs, gate pillars and the water tower. |
-| **Eastside** | Pine Hollow High School (Home of the Loggers) and Logger Field, plus the family clinic, dentist, realtor, insurance agent and daycare on Pine St. |
-| **Front Street Strip** | Gas 86, Big Bun Burgers, Taco Shack, Rewind Video, Valley Plaza, Pizza Palace, Dairy Dream and Tex Outpost. Also on the strip: the Valley Thriftway supermarket, Hollow Auto Repair, Cascade Tire & Lube, Big Timber Towing (impound lot), Bob's Used Cars, Riverside Body Shop, Fire Station 2 and Valley Feed & Seed. The Timberline Truck Stop, the Cascade Inn motel and Clucker's sit near Exit 64. |
-| **Silver Valley Medical Center** | A hospital with an ER, ambulance bay and rooftop helipad. |
-| **Maple Grove** | A post-war suburb: a collector boulevard, Birch Loop and six cul-de-sacs of ranches, split-levels, Cape Cods, colonials and 1990s two-storeys. Maple Grove Elementary and Maple Grove Park (ballfield and playground) are here too. |
-| **Eastgate** | A newer 1990s subdivision next to the hospital. |
-| **Riverside Mobile Home Park** | Single- and double-wides on a loop lane between the strip and the river. |
-| **Spirit Lake** | Lakeshore Dr loops the lake past cabins with private docks, lakefront estates, Spirit Lake Lodge, the marina, a bait shop and the campground. |
-| **Industrial Flats** | Cascade Lumber mill (tepee burner, log decks), Public Works yard, Cascade Freight Lines, Valley Ready-Mix & Gravel, Ridge Machine & Welding, the lumber yard, the County Road Dept. and Substation 4 with its high-voltage lines. |
+| **Downtown · Main Street** | Six blocks of two-storey brick storefronts on both sides of Main St, plus shops on Division St and 1st/2nd Ave down to Alder St. Main St has parking lanes, globe lamps and a back alley. Businesses include Hotel Cascade, the Liberty Theater, the Gazette, hardware, sporting goods, a pharmacy, bakery, diner, saloons, jewelers, a music store, electronics, outfitters, a credit union, Mountain Bell, the Woodworkers union hall, an arcade, a gym, a thrift store, a taxidermist, an espresso bar and bail bonds. |
+| **Courthouse Square** | The Pine County Courthouse in the centre of town, between Main St and the river. The square has lawns, a gazebo, fountain, war memorial and flag. City Hall, the post office, First Pine Bank and the Carnegie Library face it across Main St. |
+| **Civic Row · Alder St** | Fire Station 1, the ambulance (EMS) station, the Police Dept., the Sheriff & Jail, two churches, VFW and Elks halls, and a law firm. Across Alder St are the County Assessor, Clerk, DMV, Public Defender, District Attorney, Probation, Elections, City Water, Chamber of Commerce, Savings & Loan, a title company, a funeral home, the Masonic Lodge and a B&B. |
+| **Riverfront** | Riverfront Park (lawns, trail and bandstand) along River St, with the old depot (visitor center and caboose), Timber Ridge Brewing, the river outfitter and a boat launch. North Bank Park, with a picnic shelter, is across the water. |
+| **North Side** | 1920s–60s houses on a small grid across the Division St and 3rd Ave W bridges, ringed by Riverside Dr. |
+| **Old Town** | The alley-backed grid south of Main St (Maple and Birch Sts): Victorians, miner's cottages, Craftsman bungalows, foursquares and duplexes, with townhouse rows nearest downtown. Main St beyond downtown has the family clinic, dentist, daycare and realtor. |
+| **Church Hill** | Cottages and cabins up 2nd Ave W and 5th Ave W, Pine Hollow Cemetery and the Hillside Chapel. |
+| **Cedar Ridge** | The upscale district on the hill south of Old Town: lodge-style and colonial estates up Division St, 2nd Ave E and Ridgecrest Dr, with gate pillars and the water tower. |
+| **West End** | A post-war suburb off the curving end of Alder St, with Sunset Dr and Hemlock Ct, plus West End Elementary and West End Park (ballfield and playground). |
+| **High School Campus** | Pine Hollow High School (Home of the Loggers), Logger Field with bleachers and lights, and Logger Ballpark. It sits at the east end of town on Old Hwy 10. |
+| **Eastgate** | A 1990s subdivision where Birch St curves past the high school, with Elm Ct and Tamarack Ct. |
+| **Highway 10 West** | Shops near Exit 61, on both sides of the road: Gas 86, the Cascade Inn motel, Tex Outpost, Hollow Auto Repair, Big Timber Towing (impound lot), Cascade Tire & Lube and Valley Feed & Seed. |
+| **Highway 10 East** | Shops near Exit 63 and across the river bridge, on both sides of the road: Big Bun Burgers, Taco Shack, the Timberline Truck Stop, the Valley Thriftway supermarket, Valley Plaza, Bob's Used Cars, Rewind Video, Fire Station 2, Dairy Dream, Pizza Palace and Clucker's. Riverside Body Shop and Quick Lube are on Eastside Rd. |
+| **Silver Valley Medical Center** | A hospital with an ER, ambulance bay and rooftop helipad, at the east end of Main St. |
+| **Riverside Mobile Home Park** | Single- and double-wides on a loop lane between Old Hwy 10 and the river at the west end. |
+| **Spirit Lake** | Lakeshore Dr loops the lake from Old Hwy 10 past cabins with private docks, lakefront estates, Spirit Lake Lodge, the marina, a bait shop and the campground. |
+| **Industrial Flats** | Between the river and I-90 at the west end: Cascade Lumber mill (tepee burner, log decks), the lumber yard, the County Road Dept., the Public Works yard, Cascade Freight Lines, Valley Ready-Mix & Gravel, Ridge Machine & Welding and Substation 4 with its high-voltage lines. |
 | **North Slope** | Sierra Silver Mine (headframe, hoist house, ore bins, portal) and the KPHR radio transmitter. |
-| **West Valley / East Valley** | Miller Dairy, Ridgeview Farm, the Grange hall, the Forest Service station, homesteads on Cougar Creek Rd and log cabins up Elk Ridge Rd in the west. Sunny Acres Orchard and Hansen Farm in the east. |
+| **West Valley / East Valley** | Miller Dairy, Ridgeview Farm, the Grange hall, the Forest Service station, homesteads on Cougar Creek Rd and cabins on Grouse Ln in the west. Sunny Acres Orchard and Hansen Farm in the east. |
 
 **Town map.** Press `M` while driving. The map is hill-shaded and shows district outlines and names, every named place (colour-coded by type), street names, I-90 shields and exits, a legend and a scale bar. The HUD shows the street and district you're in.
 
@@ -72,7 +73,7 @@ npm run build      # static build in dist/
 ```
 
 URL options:
-- `?shot=<id>`: main, courthouse, cityhall, bridge, strip, downtown, oldtown, cedarridge, lake, valley, maplegrove, hospital, trailer, river, school, industrial, mill, mine, interchange, cemetery, lodge, dairy.
+- `?shot=<id>`: main, courthouse, alder, riverfront, bridge, downtown, oldtown, cedarridge, lake, valley, northside, westend, school, hospital, east, west, trailer, industrial, mill, mine, interchange, cemetery, lodge, dairy.
 - `?atmo=pnwmist|overcastdrizzle|goldenhour|dusk|clearday`, `?quality=low|medium|high`, `?ui=0`, `?tour=1`, `?traffic=0`, `?ao=0`.
 - `?still=1` renders a few frames and then idles. Use it for headless or software-GL screenshots.
 

@@ -74,7 +74,7 @@ export class Traffic {
       }
       return new Route(pts);
     };
-    const town = ['Old Hwy 10 W', 'Main St', 'Front St', 'Old Hwy 10 E'];
+    const town = ['Old Hwy 10 W', 'Main St', 'Old Hwy 10 E'];
     this.routes = [mk(['I-90'], 3.4, false), mk(['I-90'], 7.0, false), mk(['I-90'], 3.4, true), mk(['I-90'], 7.0, true), mk(town, 1.95, false), mk(town, 1.95, true)];
     const counts = [5, 4, 5, 4, 8, 8];
     const types: VehicleType[] = ['sedan', 'pickup', 'van', 'wagon', 'coupe', 'suv', 'pickup', 'semi', 'sedan', 'sheriff', 'delivery', 'police', 'pickup', 'sedan'];
