@@ -57,6 +57,8 @@ export const SPECS: Record<RoadKind, RoadSpec> = {
 
 export interface RoadDef {
   name: string;
+  /** Name shown on maps (defaults to `name`; '' hides it, e.g. ramps and alleys). */
+  label?: string;
   kind: RoadKind;
   pts: [number, number][];
   /** Extra height above the graded terrain (viaducts) as a function of position. */
@@ -435,7 +437,14 @@ export class RoadNetwork {
   }
 
   mapData() {
-    return this.roads.map((r) => ({ pts: r.pts.filter((_, i) => i % 3 === 0 || i === r.pts.length - 1).map((p) => [p.x, p.z] as [number, number]), w: r.spec.hw * 2, kind: r.spec.drive, rank: r.spec.rank }));
+    return this.roads.map((r) => ({
+      pts: r.pts.filter((_, i) => i % 3 === 0 || i === r.pts.length - 1).map((p) => [p.x, p.z] as [number, number]),
+      w: r.spec.hw * 2,
+      kind: r.spec.drive,
+      rank: r.spec.rank,
+      label: r.def.label ?? r.def.name,
+      culdesac: r.def.culdesac ? { x: r.pts[r.pts.length - 1].x + r.pts[r.pts.length - 1].tx * 6, z: r.pts[r.pts.length - 1].z + r.pts[r.pts.length - 1].tz * 6, R: r.spec.hw + 8.6 } : null,
+    }));
   }
 
   // ---------------------------------------------------------------- mesh generation

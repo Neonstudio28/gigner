@@ -29,7 +29,7 @@ body.no-ui #hud, body.no-ui #hud-stats, body.no-ui .lil-gui { display: none !imp
 #drive-hud .loc { position: absolute; left: 252px; bottom: 40px; font-family: 'Rye', serif; font-size: 24px; }
 #drive-hud .surface { position: absolute; left: 254px; bottom: 22px; font-weight: 600; font-size: 13px; letter-spacing: 3px; color: #ffd24a; }
 #drive-hud .drive-keys { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); font-size: 12px; opacity: .8; letter-spacing: .5px; white-space: nowrap; }
-#drive-hud .bigmap { display: none; position: absolute; left: 50%; top: 50%; width: min(80vh, 80vw); height: min(80vh, 80vw); transform: translate(-50%, -50%);
+#drive-hud .bigmap { display: none; position: absolute; left: 50%; top: 50%; width: min(96vw, 210vh); height: auto; aspect-ratio: 2000 / 871; transform: translate(-50%, -50%);
   border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,.5); border: 3px solid rgba(255,255,255,.8); }
 #drive-hud .bigmap.show { display: block; }
 body.driving #hud, body.driving #hud-shot { display: none; }

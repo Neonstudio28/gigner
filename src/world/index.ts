@@ -26,12 +26,17 @@ export interface MapRoad {
   w: number;
   kind: string;
   rank: number;
+  /** Street name for map labels ('' = unlabelled). */
+  label: string;
+  culdesac: { x: number; z: number; R: number } | null;
 }
 
 export interface MapData {
   roads: MapRoad[];
   solids: Rect[];
   fields: { x: number; z: number; w: number; d: number }[];
+  /** Named places (civic buildings, businesses, parks, job sites). */
+  landmarks: { name: string; x: number; z: number; kind: string }[];
 }
 
 export interface RoadPoint {
@@ -117,18 +122,26 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   await progress(0.14, 'Paving roads, bridges and the I-90 viaduct');
   net.build(kit, solids);
   const pl = new Placer(ctx, net);
+  // a broken district must not take the whole town down
+  const zone = (label: string, fn: () => void) => {
+    try {
+      fn();
+    } catch (err) {
+      console.error(`[layout] ${label} failed`, err);
+    }
+  };
   await progress(0.2, 'Raising the courthouse, town hall and civic buildings');
-  civic(pl);
-  downtown(pl);
+  zone('civic', () => civic(pl));
+  zone('downtown', () => downtown(pl));
   await progress(0.28, 'Opening the highway strip');
-  strip(pl);
-  await progress(0.33, 'Building Old Town, Silver Heights and the lake cabins');
-  neighbourhoods(pl);
-  lakeside(pl);
+  zone('strip', () => strip(pl));
+  await progress(0.33, 'Building Old Town, Maple Grove and Cedar Ridge');
+  zone('neighbourhoods', () => neighbourhoods(pl));
+  zone('lakeside', () => lakeside(pl));
   await progress(0.4, 'Farms, mill, mine and the power grid');
-  industry(pl, padY);
-  furnishRoads(pl);
-  dressing(pl);
+  zone('industry', () => industry(pl, padY));
+  zone('furnish', () => furnishRoads(pl));
+  zone('dressing', () => dressing(pl));
   await progress(0.48, 'Merging static geometry');
   const statics = new THREE.Group();
   statics.name = 'town-static';
@@ -165,9 +178,14 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
     nearestRoad: (x, z, prefer) => net.nearestLane(x, z, prefer),
     isOccupied: (x, z, pad = 0) => occ.blocked(x, z, pad),
     roads: net,
-    map: { roads: net.mapData(), solids: solids.list.filter((r) => r.hw * r.hd > 3 && r.y1 === Infinity), fields: pl.cornFields.map((f) => ({ x: f.x, z: f.z, w: f.w, d: f.d })) },
+    map: {
+      roads: net.mapData(),
+      solids: solids.list.filter((r) => r.hw * r.hd > 3 && r.y1 === Infinity),
+      fields: pl.cornFields.map((f) => ({ x: f.x, z: f.z, w: f.w, d: f.d })),
+      landmarks: pl.landmarks,
+    },
     shots: SHOTS,
-    spawn: new THREE.Vector3(0, 1.7, -40),
+    spawn: new THREE.Vector3(-30, 1.7, -206),
     traffic,
     materials,
     signs,

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { prepare, type Col, type Occupancy } from './core/kit';
 import { Rng } from './core/rng';
-import { heightAt, forestDensity, valley, MAP_RADIUS } from './terrain';
+import { heightAt, forestDensity, valley, isWater, river, MAP_RADIUS } from './terrain';
 import { addWindSway } from './materials';
 import { P } from './palette';
 
@@ -387,6 +387,10 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
   };
 
   const placeTree = (kind: TreeKind, x: number, z: number, s: number) => {
+    // never in the lake or the river channel
+    if (isWater(x, z)) return;
+    const rv = river.query(x, z);
+    if (rv && rv.dist < rv.hw + 3) return;
     const y = heightAt(x, z) - 0.15;
     const ry = rng.range(0, Math.PI * 2);
     switch (kind) {
@@ -441,12 +445,12 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
   }
 
   // Sparse trees and bushes on the valley floor (yards, lot edges, field margins).
-  for (let gz = -420; gz < 640; gz += 13)
-    for (let gx = -1300; gx < 1300; gx += 13) {
+  for (let gz = -700; gz < 660; gz += 13)
+    for (let gx = -1800; gx < 1800; gx += 13) {
       const x = gx + rng.range(0, 13);
       const z = gz + rng.range(0, 13);
       if (valley(x, z).e > -8) continue;
-      const core = x > -320 && x < 320 && z > -125 && z < 95;
+      const core = x > -370 && x < 370 && z > -285 && z < -110;
       if (rng.next() > (core ? 0.01 : 0.07)) continue;
       if (input.occ.blocked(x, z, 2.5) || cleared(x, z)) continue;
       const roll = rng.next();

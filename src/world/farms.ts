@@ -7,10 +7,11 @@ import type { PlacedTree } from './vegetation';
 import type { Kit, Col } from './core/kit';
 import { P } from './palette';
 
+/** Farmyards: Miller Dairy and Ridgeview (hay) in the West Valley, Sunny Acres Orchard east of Spirit Lake. */
 export const FARMS = {
-  dairy: { x: -1450, z: 10, w: 140, d: 100 },
-  hay: { x: -1205, z: 70, w: 110, d: 150 },
-  orchard: { x: 1180, z: 165, w: 140, d: 150 },
+  dairy: { x: -1480, z: -130, w: 140, d: 100 },
+  hay: { x: -1250, z: -60, w: 110, d: 150 },
+  orchard: { x: 1560, z: 130, w: 140, d: 150 },
 };
 
 /** Flattens every farmyard; must run before anything samples heightAt. Returns pad heights. */

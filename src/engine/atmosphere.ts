@@ -188,22 +188,22 @@ export class Mist {
         if (v.e < 15 || v.e > 700 || forestDensity(x, z) < 0.35) continue;
         y = heightAt(x, z) + rng.range(10, 40);
         s = rng.range(110, 230);
-      } else if (kind < 0.9) {
+      } else if (kind < 0.85) {
         // low mist along the river
         const p = river.pts[rng.int(0, river.pts.length - 1)];
         x = p.x + rng.range(-25, 25);
         z = p.z + rng.range(-25, 25);
         y = p.water + rng.range(3, 8);
-        s = rng.range(55, 110);
-      } else {
-        // over the lake
+        s = rng.range(45, 90);
+      } else if (kind < 0.92) {
+        // thin wisps over the lake
         const a = rng.range(0, Math.PI * 2);
-        const r = Math.sqrt(rng.next()) * 0.95;
+        const r = Math.sqrt(rng.next()) * 0.9;
         x = LAKE.x + Math.cos(a) * LAKE.rx * r;
         z = LAKE.z + Math.sin(a) * LAKE.rz * r;
         y = LAKE.level + rng.range(3, 9);
-        s = rng.range(80, 150);
-      }
+        s = rng.range(55, 100);
+      } else continue;
       m.makeScale(s, s, s).setPosition(x, y, z);
       this.mesh.setMatrixAt(n++, m);
     }

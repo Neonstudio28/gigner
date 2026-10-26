@@ -28,6 +28,8 @@ export class Placer {
   readonly grassPatches: VegetationInput['grassPatches'] = [];
   readonly clearings: { x: number; z: number; w: number; d: number }[] = [];
   readonly animated: { obj: THREE.Object3D; update: (dt: number, t: number) => void }[] = [];
+  /** Named places for the town map (job sites, civic buildings, parks). */
+  readonly landmarks: { name: string; x: number; z: number; kind: string }[] = [];
   readonly rng: Rng;
   placed = 0;
   skipped: string[] = [];
@@ -52,21 +54,25 @@ export class Placer {
 
   /** Is the rotated footprint clear of roads, buildings, water and too-steep ground? */
   free(x: number, z: number, w: number, d: number, ry: number, maxSlope = 6) {
-    let lo = Infinity;
-    let hi = -Infinity;
     const nx = Math.max(2, Math.ceil(w / 3));
     const nz = Math.max(2, Math.ceil(d / 3));
-    for (let i = 0; i <= nx; i++)
-      for (let j = 0; j <= nz; j++) {
-        const [px, pz] = Placer.world(x, z, ry, -w / 2 + (w * i) / nx, -d / 2 + (d * j) / nz);
-        if (this.c.occ.blocked(px, pz, 0) || isWater(px, pz) || Math.hypot(px, pz) > 1820) return null;
-        const rv = river.query(px, pz);
-        if (rv && rv.dist < rv.hw + 9) return null;
-        const h = heightAt(px, pz);
-        lo = Math.min(lo, h);
-        hi = Math.max(hi, h);
-      }
-    if (hi - lo > maxSlope) return null;
+    const pts: (readonly [number, number])[] = [];
+    for (let i = 0; i <= nx; i++) for (let j = 0; j <= nz; j++) pts.push(Placer.world(x, z, ry, -w / 2 + (w * i) / nx, -d / 2 + (d * j) / nz));
+    // cheap rejections first (occupied, water, river banks, map edge), terrain heights only for free lots
+    for (const [px, pz] of pts) if (this.c.occ.blocked(px, pz, 0) || Math.hypot(px, pz) > 1820) return null;
+    for (const [px, pz] of pts) {
+      if (isWater(px, pz)) return null;
+      const rv = river.query(px, pz);
+      if (rv && rv.dist < rv.hw + 9) return null;
+    }
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const [px, pz] of pts) {
+      const h = heightAt(px, pz);
+      lo = Math.min(lo, h);
+      hi = Math.max(hi, h);
+      if (hi - lo > maxSlope) return null;
+    }
     return { lo, hi };
   }
 

@@ -18,6 +18,7 @@ const SETS: Record<string, () => Promise<BuildingDef[]>> = {
   houses: async () => (await import('../world/buildings/houses')).HOUSES,
   strip: async () => (await import('../world/buildings/strip90s')).STRIP,
   civic: async () => (await import('../world/buildings/civic2')).CIVIC,
+  town: async () => (await import('../world/buildings/town')).TOWN,
 };
 
 async function main() {
@@ -27,7 +28,7 @@ async function main() {
   await loadFonts();
   let defs = await (SETS[q.get('set') ?? 'houses'] ?? SETS.houses)();
   const only = q.get('only');
-  if (only) defs = defs.filter((d) => d.id === only);
+  if (only) defs = defs.filter((d) => only.split(',').includes(d.id));
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(1);
   renderer.setSize(innerWidth, innerHeight);

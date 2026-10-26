@@ -3,7 +3,7 @@ import { Ctx, windowAt, doorAt, storefront, awning, cornice, flatRoof, rooftop, 
 import { cafeTable, barberPole, planter } from '../props';
 import { P } from '../palette';
 import type { SignId } from '../signs';
-import type { Col } from '../core/kit';
+import type { Col, SignRef } from '../core/kit';
 
 export interface StoreOpts {
   x: number;
@@ -17,6 +17,8 @@ export interface StoreOpts {
   wallColor?: Col;
   trim?: Col;
   sign?: SignId;
+  /** Custom sign (atlas ref) used instead of `sign`. */
+  signRef?: SignRef;
   signW?: number;
   signH?: number;
   awning?: 'awningRed' | 'awningGreen' | 'awningBlue';
@@ -63,9 +65,9 @@ export function brickStore(c: Ctx, o: StoreOpts) {
       k.box(px, 0.4, zf + 0.12, 0.65, 0.35, 0.26, 0x8f8c87, 'concrete');
     }
     k.box(0, sfH + 0.4, zf + 0.06, o.w - 1.2, 1.2, 0.12, trim);
-    if (o.sign) {
+    if (o.sign || o.signRef) {
       const sh = o.signH ?? 0.95;
-      k.sign(0, sfH + 1.0, zf + 0.13, Math.min(o.signW ?? o.w * 0.78, o.w - 1.6), sh, c.signs.get(o.sign));
+      k.sign(0, sfH + 1.0, zf + 0.13, Math.min(o.signW ?? o.w * 0.78, o.w - 1.6), sh, o.signRef ?? c.signs.get(o.sign!));
     }
     if (o.awning) awning(k, 0, sfH + 0.32, zf, o.w - 1.5, 1.7, 0.75, o.awning);
     for (let f = 1; f < st; f++) {

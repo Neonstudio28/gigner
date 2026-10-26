@@ -1,26 +1,45 @@
 # Pine Hollow — Low-Poly Pacific Northwest Town (Three.js)
 
-Pine Hollow is a 1990s mining town in a forested Idaho valley, modelled on **Wallace, Idaho**. It is built entirely in **Three.js** in a stylised low-poly look and designed as a backdrop for a small-town role-play game: police, sheriff, fire, EMS, lawyers and detectives.
+Pine Hollow is a 1990s timber-and-mining county seat in a broad Pacific Northwest river valley. It is built entirely in **Three.js** in a stylised low-poly look and laid out as a backdrop for a role-play game where you can take any job in town: police, sheriff, fire, EMS, doctors, lawyers, judges, mechanics, tow drivers, truckers, loggers, miners, farmers, shopkeepers, teachers, reporters and more.
 
 ![Pine Hollow](docs/screenshots/pine-hollow-v3.jpg)
 
 ## The town
 
-The valley runs east–west between steep forested mountains. Individual peaks sit close to town; the distant ring of mountains stays on the horizon.
-- **The South Fork river** comes out of the western canyon, runs along the north edge of downtown and empties into Spirit Lake.
-- **I-90** is the only through road. It is a four-lane interstate on a viaduct above downtown (like Wallace's 1991 viaduct), with full interchanges at Exits 61 and 62.
+The valley runs east–west. Its floor is wide (about 3.7 km by 1.3 km); forested foothills rise gently from the edges, and the big snow peaks stay on the distant ring.
+- **The South Fork river** (30–44 m wide) comes out of the western canyon, runs past the lumber mill and the downtown riverfront, then bends south into Spirit Lake.
+- **I-90** runs along the foot of the northern slopes. It rises onto short overpasses at three diamond interchanges: **Exit 60** (Mill Rd), **Exit 62** (Bridge St, straight to Courthouse Square) and **Exit 64** (Spirit Lake Rd).
+- **Old Highway 10** is the town's spine: it becomes **Main Street** through downtown and **Front Street** along the highway strip.
+
+The layout follows a classic county-seat plan:
+- a gridded downtown around a courthouse square;
+- an alley-backed residential grid;
+- curvilinear post-war subdivisions with loop roads and cul-de-sacs at the edge of town;
+- a highway strip near the interstate;
+- industry on the river flats;
+- farms and cabins out in the valley.
 
 | District | What's there |
 |---|---|
-| **Historic downtown** | A compact Wallace-style grid: Bank St and Cedar St crossed by 2nd–8th St. It has brick storefronts, Don's Donuts, the Liberty Theater, Hotel Cascade, diners, pizza, a bakery, a laundromat and a tavern, with back alleys behind the shops. |
-| **Civic buildings** | Each sits on its own block: the Pine County Courthouse (Bank St), City Hall (Cedar St, same scale as the courthouse), Carnegie library, Catholic church, fire station, funeral home, Sheriff & Jail and a law office. The police station is on the strip. |
-| **River St & Heritage Park** | The Northern Pacific depot, a gazebo and a memorial by the river. |
-| **Old Town** | Victorian houses, miner's cottages, Craftsman bungalows and foursquares on curving streets that climb the south hill. A cul-de-sac sits on Hill St, and the water tower overlooks the town. |
-| **Front Street strip** | The 1990s I-90 business strip: Big Bun Burgers, Taco Shack, Pizza Palace, Clucker's, Dairy Dream, Rewind Video, a strip mall (arcade, laundromat, electronics, takeout, salon), Bowl-O-Rama, Thrifty Mart, a car wash, a truck stop, Cascade Motors, two motels, the Starlite Drive-In, gas stations and the police station. |
-| **Silver Heights** | A post-war suburb: a curving loop with six cul-de-sacs, Cape Cods, ranches, split-levels and duplexes, plus the elementary school. |
-| **East side** | Silver Valley Medical Center (ER, ambulances, helipad), Riverside Mobile Home Park and the Elm Crescent suburb. |
-| **Spirit Lake** | Lake Rd loops around the shore past log cabins with private docks to the Spirit Lake Marina. |
-| **Out of town** | Cascade Lumber mill (tepee burner, log decks), Sierra Silver mine (timber headframe), a high-voltage line with Substation 4, four farms (Miller Dairy, Ridgeview, Sunny Acres Orchard, Hansen) and the high school with its football field. |
+| **Courthouse Square** | The Pine County Courthouse in a park block with lawns, a gazebo, fountain, war memorial and flag. It faces Main St and the Bridge St axis from Exit 62. |
+| **Downtown · Main Street** | Two-storey brick blocks on 1st–4th Ave W/E with parking lanes, globe lamps and back alleys. Businesses include Hotel Cascade, the Liberty Theater, First Pine Bank, the Gazette, hardware, sporting goods, a pharmacy, bakery, diner and saloons. There are also jewelers, a music store, electronics, outfitters, a credit union, Mountain Bell, the Woodworkers Local 3-38 union hall, an arcade, a gym, a pet supply store, a thrift store, a taxidermist and an espresso bar. |
+| **Civic Center (Court St)** | One civic building per block: Fire Station 1, the ambulance (EMS) station, City Hall, the Police Dept., the Sheriff & Jail, the Carnegie Library, two churches, VFW and Elks halls, and a law firm. Across Court St are the County Assessor, Clerk, DMV, Chamber of Commerce, bail bonds, Public Defender, District Attorney, Probation, Pacific Power, the KPHR studios, a funeral home, the Masonic Lodge and a B&B. |
+| **Riverfront** | Riverwalk Park with a bandstand, the old depot (visitor center with a caboose), Timber Ridge Brewing, the river outfitter and a boat launch. |
+| **Old Town** | An alley-backed grid (Pine, Cedar, Alder and Hemlock Sts) of Victorians, miner's cottages, Craftsman bungalows, foursquares and duplexes, with townhouse rows nearest downtown. |
+| **Church Hill** | Hillside streets with cottages and cabins, Pine Hollow Cemetery and the Hillside Chapel. |
+| **Cedar Ridge** | The upscale district on the hill above Old Town: lodge-style and colonial estates on curving drives and cul-de-sacs, gate pillars and the water tower. |
+| **Eastside** | Pine Hollow High School (Home of the Loggers) and Logger Field, plus the family clinic, dentist, realtor, insurance agent and daycare on Pine St. |
+| **Front Street Strip** | Gas 86, Big Bun Burgers, Taco Shack, Rewind Video, Valley Plaza, Pizza Palace, Dairy Dream and Tex Outpost. Also on the strip: the Valley Thriftway supermarket, Hollow Auto Repair, Cascade Tire & Lube, Big Timber Towing (impound lot), Bob's Used Cars, Riverside Body Shop, Fire Station 2 and Valley Feed & Seed. The Timberline Truck Stop, the Cascade Inn motel and Clucker's sit near Exit 64. |
+| **Silver Valley Medical Center** | A hospital with an ER, ambulance bay and rooftop helipad. |
+| **Maple Grove** | A post-war suburb: a collector boulevard, Birch Loop and six cul-de-sacs of ranches, split-levels, Cape Cods, colonials and 1990s two-storeys. Maple Grove Elementary and Maple Grove Park (ballfield and playground) are here too. |
+| **Eastgate** | A newer 1990s subdivision next to the hospital. |
+| **Riverside Mobile Home Park** | Single- and double-wides on a loop lane between the strip and the river. |
+| **Spirit Lake** | Lakeshore Dr loops the lake past cabins with private docks, lakefront estates, Spirit Lake Lodge, the marina, a bait shop and the campground. |
+| **Industrial Flats** | Cascade Lumber mill (tepee burner, log decks), Public Works yard, Cascade Freight Lines, Valley Ready-Mix & Gravel, Ridge Machine & Welding, the lumber yard, the County Road Dept. and Substation 4 with its high-voltage lines. |
+| **North Slope** | Sierra Silver Mine (headframe, hoist house, ore bins, portal) and the KPHR radio transmitter. |
+| **West Valley / East Valley** | Miller Dairy, Ridgeview Farm, the Grange hall, the Forest Service station, homesteads on Cougar Creek Rd and log cabins up Elk Ridge Rd in the west. Sunny Acres Orchard and Hansen Farm in the east. |
+
+**Town map.** Press `M` while driving. The map is hill-shaded and shows district outlines and names, every named place (colour-coded by type), street names, I-90 shields and exits, a legend and a scale bar. The HUD shows the street and district you're in.
 
 **Road types.** Each has its own cross-section and markings:
 - **Interstate:** barrier, lane lines and guardrails.
@@ -48,12 +67,12 @@ Presets: **PNW Mist** (default), **Overcast Drizzle**, **Golden Hour**, **Dusk**
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173  (building gallery: /gallery.html?set=houses|strip|civic)
+npm run dev        # http://localhost:5173  (building gallery: /gallery.html?set=houses|strip|civic|town&only=id1,id2)
 npm run build      # static build in dist/
 ```
 
 URL options:
-- `?shot=<id>`: bank, courthouse, townhall, viaduct, strip, downtown, suburb, oldtown, lake, valley, hospital, trailer, river, mill, mine, pylons, dairy, hansen, interchange, canyon.
+- `?shot=<id>`: main, courthouse, cityhall, bridge, strip, downtown, oldtown, cedarridge, lake, valley, maplegrove, hospital, trailer, river, school, industrial, mill, mine, interchange, cemetery, lodge, dairy.
 - `?atmo=pnwmist|overcastdrizzle|goldenhour|dusk|clearday`, `?quality=low|medium|high`, `?ui=0`, `?tour=1`, `?traffic=0`, `?ao=0`.
 - `?still=1` renders a few frames and then idles. Use it for headless or software-GL screenshots.
 
@@ -90,8 +109,17 @@ world.update(dt, elapsedSeconds, camera.position, playerPosition);
 
 - **`src/world/terrain.ts`:** the valley floor, steep walls, close peaks, the river (carved channel and water ribbon) and the lake. Heights come from a pipeline: natural → flattened pads → graded roads → river channel.
 - **`src/world/roads/network.ts`:** Catmull-Rom spline roads with typed cross-sections and terrain-following profiles. It also handles viaducts and ramps, junction height matching and trimming, cul-de-sac bulbs, bridges, piers, parapets, guardrails, stop lines, spatial queries and lanes for traffic.
-- **`src/world/plan/`:** the town plan (`roads.ts`) and the zone builders (`zones.ts`). `placer.ts` places buildings along road frontage and around cul-de-sacs, with free-space and slope checks, foundations, driveways, mailboxes and parked cars.
-- **`src/world/buildings/`:** procedural building catalogs: `houses.ts` (17 home styles, seed-varied), `strip90s.ts` (1990s highway businesses), `civic2.ts` (courthouse, city hall, hospital, schools, depot, mine and more), plus the earlier downtown and commercial builders.
+- **`src/world/plan/`:** the town plan.
+  - `roads.ts`: every street, the downtown/Old Town grid and the I-90 diamond interchanges.
+  - `zones.ts`: the district builders and the flattened job-site pads.
+  - `districts.ts`: named district outlines for the HUD and the map.
+  - `placer.ts`: places buildings along road frontage and around cul-de-sacs, with free-space and slope checks, foundations, driveways, mailboxes and parked cars.
+- **`src/world/buildings/`:** procedural building catalogs.
+  - `houses.ts`: 20 seed-varied home styles, from Victorians, cottages and bungalows to split-levels, ranches with garages, 1990s two-storeys, townhouse rows, duplexes, log cabins, lake cottages, farmhouses, single- and double-wide mobile homes, and lodge and colonial estates.
+  - `town.ts`: services and workplaces, including the hospital, schools and football field, supermarket, garages, tow yard, public works, freight depot, truck stop, ready-mix plant, mine, radio station, lodge, campground, depot, brewery, cemetery, park, halls and offices.
+  - `strip90s.ts`: 1990s highway businesses.
+  - `civic2.ts`: the courthouse.
+  - The earlier downtown and commercial builders.
 - **`src/engine/atmosphere.ts`:** height fog, mist, presets. `post.ts` holds the N8AO → bloom → ACES → grade → vignette → grain stack. `sky.ts` matches the sun to the HDRI.
 - **Performance:**
   - One shared material (texture array, per-vertex PBR) and a sign atlas keep static geometry to a few hundred draw calls.

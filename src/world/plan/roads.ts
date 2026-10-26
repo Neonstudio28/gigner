@@ -1,157 +1,181 @@
-import { RoadNetwork, type RoadDef } from '../roads/network';
+import { RoadNetwork, type RoadDef, type RoadKind } from '../roads/network';
 import { smoothstep } from '../core/rng';
 
-/** Interstate viaduct sections (x ranges): the two interchanges, the river crossing and downtown (Wallace's 1991 viaduct). */
-const VIADUCT: [number, number][] = [
-  [-1150, -860],
-  [-790, -650],
-  [-470, 400],
-  [860, 1150],
+/**
+ * Pine Hollow town plan. Coordinates in metres: x east, z south; the courthouse square is at (0, -165).
+ *
+ * Layout (north to south): I-90 along the foot of the northern slopes with three diamond interchanges,
+ * the South Fork river, the riverfront, the Main Street grid around Courthouse Square, Old Town's
+ * alley-backed residential grid, then the hillside streets of Church Hill and Cedar Ridge. Maple Grove
+ * (post-war curvilinear suburb) lies west, the highway strip and Spirit Lake east, farms at both ends.
+ */
+
+// ---------------------------------------------------------------- I-90
+const I90: [number, number][] = [
+  [-1845, -480],
+  [-1600, -525],
+  [-1300, -560],
+  [-900, -575],
+  [-450, -578],
+  [0, -575],
+  [450, -578],
+  [900, -575],
+  [1250, -560],
+  [1550, -525],
+  [1845, -480],
 ];
-const DECK = 8.5;
+
+/** I-90 centre line z at x (piecewise linear; the spline passes through these points). */
+export function i90z(x: number) {
+  if (x <= I90[0][0]) return I90[0][1];
+  for (let i = 0; i < I90.length - 1; i++) {
+    const [ax, az] = I90[i];
+    const [bx, bz] = I90[i + 1];
+    if (x <= bx) return az + ((x - ax) / (bx - ax)) * (bz - az);
+  }
+  return I90[I90.length - 1][1];
+}
+
+/** Interchange crossroads: I-90 rises onto a short overpass so the crossroad passes underneath. */
+export const EXITS = [
+  { n: 60, x: -900, road: 'Mill Rd', to: 'Mill Rd · Maple Grove' },
+  { n: 62, x: 0, road: 'Bridge St', to: 'Downtown Pine Hollow' },
+  { n: 64, x: 1250, road: 'Spirit Lake Rd', to: 'Spirit Lake · Hospital' },
+];
+const DECK = 7.5;
 const interstateElev = (x: number) => {
   let e = 0;
-  for (const [a, b] of VIADUCT) e = Math.max(e, smoothstep(a - 150, a, x) * (1 - smoothstep(b, b + 150, x)));
+  for (const ex of EXITS) e = Math.max(e, smoothstep(ex.x - 160, ex.x - 60, x) * (1 - smoothstep(ex.x + 60, ex.x + 160, x)));
   return e * DECK;
 };
 
-/** Every road in Pine Hollow. Coordinates in metres: x east, z south; downtown is at the origin. */
+/** Four ramps of a diamond interchange at crossroad x0 (EB = south side, WB = north side). */
+function diamond(n: number, x0: number): RoadDef[] {
+  const P = (dx: number, off: number): [number, number] => [x0 + dx, i90z(x0 + dx) + off];
+  const ramp = (name: string, pts: [number, number][]): RoadDef => ({ name: `Exit ${n} ${name}`, kind: 'ramp', link: true, pts, label: '' });
+  return [
+    ramp('EB off', [P(-235, 8.5), P(-170, 11), P(-100, 22), P(-50, 40), P(-4, 62)]),
+    ramp('EB on', [P(4, 70), P(50, 44), P(110, 22), P(170, 11), P(235, 8.5)]),
+    ramp('WB off', [P(235, -8.5), P(170, -11), P(100, -22), P(50, -40), P(4, -62)]),
+    ramp('WB on', [P(-4, -70), P(-50, -44), P(-110, -22), P(-170, -11), P(-235, -8.5)]),
+  ];
+}
+
+// ---------------------------------------------------------------- downtown / Old Town grid
+/** Avenue centre lines (x). 1st Ave W/E bound Courthouse Square. */
+export const AVENUES: [string, number][] = [
+  ['4th Ave W', -360],
+  ['3rd Ave W', -260],
+  ['2nd Ave W', -160],
+  ['1st Ave W', -70],
+  ['1st Ave E', 70],
+  ['2nd Ave E', 160],
+  ['3rd Ave E', 260],
+  ['4th Ave E', 360],
+];
+/** Street centre lines (z), north to south. */
+export const STREETS = { river: -270, main: -210, court: -120, pine: -40, cedar: 40, alder: 115, hemlock: 190 };
+const Z = STREETS;
+
+function avenues(): RoadDef[] {
+  const out: RoadDef[] = [];
+  for (const [name, x] of AVENUES) {
+    if (Math.abs(x) > 300) {
+      // 4th Aves: residential all the way; 4th Ave W runs on up Church Hill to a turnaround
+      const south = x < 0 ? 300 : Z.hemlock;
+      out.push({ name, kind: 'residential', pts: [[x, Z.river], [x, Z.main], [x, Z.court], [x, Z.pine], [x, Z.cedar], [x, Z.alder], [x, Z.hemlock], ...(x < 0 ? ([[x, 250], [x, south]] as [number, number][]) : [])], culdesac: x < 0 });
+      continue;
+    }
+    // downtown section (wide sidewalks, parking) then the tree-lined Old Town section
+    out.push({ name, kind: 'downtown', pts: [[x, Z.river], [x, Z.main], [x, Z.court]] });
+    out.push({ name: `${name} S`, label: name, kind: 'residential', pts: [[x, Z.court], [x, Z.pine], [x, Z.cedar], [x, Z.alder], [x, Z.hemlock]] });
+  }
+  return out;
+}
+
+const street = (name: string, kind: RoadKind, z: number, x0: number, x1: number): RoadDef => ({ name, kind, pts: [[x0, z], [x1, z]] });
+const alley = (name: string, z: number, x0: number, x1: number): RoadDef => ({ name, kind: 'alley', pts: [[x0, z], [x1, z]], label: '' });
+
+/** Every road in Pine Hollow. */
 export const ROADS: RoadDef[] = [
   // ---------------------------------------------------------------- I-90 and its interchanges
+  { name: 'I-90', kind: 'interstate', pts: I90, elev: (x) => interstateElev(x), noBridge: true },
+  ...EXITS.flatMap((e) => diamond(e.n, e.x)),
+
+  // ---------------------------------------------------------------- Old Highway 10: west → Main St → Front St strip → east
+  { name: 'Old Hwy 10 W', label: 'Old Highway 10', kind: 'arterial', pts: [[-1845, -232], [-1600, -240], [-1350, -248], [-1100, -252], [-900, -255], [-700, -247], [-560, -232], [-470, -216], [-420, -210]] },
+  street('Main St', 'downtown', Z.main, -420, 420),
+  { name: 'Front St', kind: 'strip', pts: [[420, -210], [560, -211], [700, -203], [860, -188], [1000, -186], [1180, -190]] },
+  { name: 'Old Hwy 10 E', label: 'Old Highway 10', kind: 'arterial', pts: [[1180, -190], [1250, -192], [1400, -200], [1600, -222], [1845, -262]] },
+
+  // ---------------------------------------------------------------- interchange crossroads
+  { name: 'Mill Rd', kind: 'rural', pts: [[-900, -255], [-900, -330], [-900, -420], [-900, -520], [-900, -575], [-900, -640], [-900, -688], [-900, -704]] },
+  { name: 'Bridge St', kind: 'arterial', pts: [[0, Z.main], [0, Z.river], [0, -346], [0, -440], [0, -575], [0, -640], [0, -688], [0, -704]] },
+  { name: 'Spirit Lake Rd', kind: 'rural', pts: [[1250, -690], [1250, -560], [1250, -400], [1250, -192], [1256, -90], [1290, 20], [1350, 110]] },
+
+  // ---------------------------------------------------------------- north side: industry, mine, radio
+  { name: 'Industrial Way', kind: 'rural', pts: [[-955, -460], [-900, -458], [-800, -455], [-650, -456], [-480, -458], [-420, -460]], culdesac: true },
+  { name: 'Mine Rd', kind: 'dirt', pts: [[-900, -688], [-830, -692], [-760, -695], [-690, -692]], culdesac: true },
+  { name: 'Lookout Rd', kind: 'gravel', pts: [[0, -688], [50, -700], [120, -712], [190, -722]], culdesac: true },
+
+  // ---------------------------------------------------------------- downtown grid around Courthouse Square
+  { name: 'River St', kind: 'residential', pts: [[-500, -221.3], [-450, -262], [-400, -270], [400, -270], [450, -262], [500, -210.6]] },
+  street('Court St', 'downtown', Z.court, -360, 360),
+  alley('Main Alley W', -165, -356, -74),
+  alley('Main Alley E', -165, 74, 356),
+  ...avenues(),
+
+  // ---------------------------------------------------------------- Old Town (alley-backed residential grid)
+  street('Pine St', 'residential', Z.pine, -360, 662),
+  street('Cedar St', 'residential', Z.cedar, -360, 672),
+  street('Alder St', 'residential', Z.alder, -360, 360),
+  street('Hemlock St', 'residential', Z.hemlock, -360, 694),
+  alley('Pine Alley', 0, -356, 356),
+  alley('Cedar Alley', 77.5, -356, 356),
+  alley('Alder Alley', 152.5, -356, 356),
+
+  // ---------------------------------------------------------------- Church Hill (hillside streets and the cemetery)
+  { name: 'Hillside Dr', kind: 'residential', pts: [[-70, Z.hemlock], [-75, 235], [-120, 280], [-200, 305], [-290, 298], [-360, 262]] },
+  { name: 'Church Hill Rd', kind: 'residential', pts: [[-200, 305], [-212, 355], [-228, 400]], culdesac: true },
+
+  // ---------------------------------------------------------------- Cedar Ridge (view lots on the hill above Old Town)
+  { name: 'Ridgecrest Dr', kind: 'suburban', pts: [[260, Z.hemlock], [268, 240], [300, 292], [370, 332], [450, 326], [500, 278], [508, 228], [500, Z.hemlock]] },
+  { name: 'Summit Ct', kind: 'suburban', pts: [[370, 332], [368, 385], [350, 425]], culdesac: true },
+  { name: 'Vista Ct', kind: 'suburban', pts: [[300, 292], [250, 322], [225, 370]], culdesac: true },
+  { name: 'Madrona Ln', kind: 'suburban', pts: [[500, 278], [555, 315], [585, 370]], culdesac: true },
+
+  // ---------------------------------------------------------------- Maple Grove (post-war suburb: collector, loop, cul-de-sacs)
+  { name: 'Maple Grove Blvd', kind: 'suburban', pts: [[-360, Z.pine], [-480, -42], [-600, -62], [-720, -102], [-820, -152], [-880, -205], [-900, -255]] },
+  { name: 'Birch Loop', kind: 'suburban', pts: [[-560, -55.3], [-562, 20], [-600, 95], [-680, 128], [-760, 110], [-802, 40], [-795, -40], [-780, -132]] },
+  { name: 'Aspen Ct', kind: 'suburban', pts: [[-600, 95], [-612, 160], [-600, 225]], culdesac: true },
+  { name: 'Larch Ct', kind: 'suburban', pts: [[-760, 110], [-800, 168], [-835, 215]], culdesac: true },
+  { name: 'Juniper Ct', kind: 'suburban', pts: [[-562, 20], [-515, 38], [-492, 70]], culdesac: true },
+  { name: 'Ponderosa Way', kind: 'suburban', pts: [[-802, 40], [-880, 62], [-950, 105], [-995, 170]], culdesac: true },
+  { name: 'Fir Ct', kind: 'suburban', pts: [[-880, 62], [-905, 0], [-935, -55]], culdesac: true },
+  { name: 'Spruce Ct', kind: 'suburban', pts: [[-680, -88.7], [-672, -140], [-655, -182]], culdesac: true },
+
+  // ---------------------------------------------------------------- east side: strip, mobile home park, Eastgate, hospital
+  { name: 'Riverside Ln', kind: 'lane', pts: [[660, -60], [740, -62], [805, -30], [815, 30], [780, 78], [720, 92], [681, 96]] },
+  { name: 'Eastgate Dr', kind: 'suburban', pts: [[1256, -90], [1190, -80], [1130, -40], [1105, 25], [1125, 80]], culdesac: true },
+  { name: 'Elm Ct', kind: 'suburban', pts: [[1130, -40], [1070, -20], [1020, 15]], culdesac: true },
+  { name: 'Tamarack Ct', kind: 'suburban', pts: [[1190, -80], [1202, -10], [1192, 48]], culdesac: true },
+
+  // ---------------------------------------------------------------- Spirit Lake (Lakeshore Dr loops the south shore back to Front St)
   {
-    name: 'I-90',
-    kind: 'interstate',
-    pts: [
-      [-1845, -190],
-      [-1500, -185],
-      [-1200, -195],
-      [-1000, -210],
-      [-820, -238],
-      [-700, -275],
-      [-560, -320],
-      [-400, -300],
-      [-200, -250],
-      [0, -210],
-      [200, -212],
-      [400, -205],
-      [600, -185],
-      [800, -165],
-      [1000, -150],
-      [1250, -160],
-      [1500, -180],
-      [1845, -200],
-    ],
-    elev: (x) => interstateElev(x),
-    noBridge: true,
-  },
-  { name: 'Exit 61 EB off', kind: 'ramp', link: true, pts: [[-1235, -184.5], [-1170, -181], [-1100, -172], [-1050, -160], [-1007, -150]] },
-  { name: 'Exit 61 EB on', kind: 'ramp', link: true, pts: [[-999, -141], [-950, -160], [-890, -190], [-840, -215], [-800, -236]] },
-  { name: 'Exit 61 WB off', kind: 'ramp', link: true, pts: [[-780, -256], [-850, -256], [-920, -262], [-998, -268]] },
-  { name: 'Exit 61 WB on', kind: 'ramp', link: true, pts: [[-1006, -283], [-1060, -262], [-1130, -232], [-1190, -212], [-1240, -202]] },
-  { name: 'Exit 62 EB off', kind: 'ramp', link: true, pts: [[830, -151], [890, -146], [950, -133], [1000, -115], [1038, -100]] },
-  { name: 'Exit 62 EB on', kind: 'ramp', link: true, pts: [[1046, -92], [1090, -108], [1150, -130], [1210, -146], [1260, -153]] },
-  { name: 'Exit 62 WB off', kind: 'ramp', link: true, pts: [[1270, -171], [1200, -178], [1130, -188], [1075, -200], [1046, -205]] },
-  { name: 'Exit 62 WB on', kind: 'ramp', link: true, pts: [[1044, -215], [990, -200], [930, -182], [870, -172], [830, -171]] },
-  { name: 'Mill Rd', kind: 'rural', pts: [[-1000, -117], [-1004, -165], [-1006, -210], [-1002, -270], [-993, -352], [-985, -410], [-980, -432]] },
-  { name: 'Silver Crown Rd', kind: 'rural', pts: [[1040, -3], [1042, -60], [1043, -150], [1045, -230], [1060, -290]] },
-
-  // ---------------------------------------------------------------- Old US-10 business route: west → Bank St → Front St strip → east
-  {
-    name: 'Old US-10 W',
-    kind: 'arterial',
-    pts: [
-      [-1845, -80],
-      [-1500, -95],
-      [-1250, -110],
-      [-1050, -118],
-      [-900, -112],
-      [-760, -98],
-      [-600, -85],
-      [-460, -68],
-      [-360, -55],
-      [-300, -50],
-    ],
-  },
-  { name: 'Bank St', kind: 'downtown', pts: [[-300, -50], [300, -50]] },
-  { name: 'Front St', kind: 'strip', pts: [[300, -50], [400, -55], [520, -52], [640, -40], [760, -25], [880, -10], [1000, 0]] },
-  { name: 'Old US-10 E', kind: 'arterial', pts: [[1000, 0], [1150, -8], [1300, -20], [1500, -40], [1845, -60]] },
-
-  // ---------------------------------------------------------------- historic downtown (Wallace-style compact grid)
-  {
-    name: 'River St',
-    kind: 'residential',
-    pts: [
-      [-382, -62],
-      [-345, -95],
-      [-300, -112],
-      [-200, -118],
-      [-60, -112],
-      [80, -108],
-      [220, -98],
-      [318, -84],
-      [372, -57],
-    ],
-  },
-  { name: 'Cedar St', kind: 'downtown', pts: [[-300, 15], [300, 15]] },
-  { name: 'Pine St', kind: 'residential', pts: [[-300, 85], [-150, 90], [0, 86], [150, 88], [300, 80]] },
-  { name: '2nd St', kind: 'residential', pts: [[-255, -115], [-255, -50], [-255, 15], [-255, 86.5]] },
-  { name: '3rd St', kind: 'downtown', pts: [[-170, -117], [-170, -50], [-170, 15], [-170, 89.4]] },
-  { name: '4th St', kind: 'downtown', pts: [[-85, -113], [-85, -50], [-85, 15], [-85, 88.6]] },
-  { name: '5th St', kind: 'downtown', pts: [[0, -110], [0, -50], [0, 15], [0, 86]] },
-  { name: '6th St', kind: 'downtown', pts: [[85, -107.5], [85, -50], [85, 15], [85, 87.3]] },
-  { name: '7th St', kind: 'downtown', pts: [[170, -102], [170, -50], [170, 15], [170, 87.2]] },
-  { name: '8th St', kind: 'residential', pts: [[255, -93], [255, -50], [255, 15], [255, 82.5]] },
-  { name: 'Bank Alley', kind: 'alley', pts: [[-255, -17.5], [255, -17.5]] },
-
-  // ---------------------------------------------------------------- Old Town hillside (curvy streets climbing the south slope)
-  { name: 'Placer Creek Rd', kind: 'rural', pts: [[85, 87.3], [95, 150], [115, 220], [140, 300], [165, 380], [200, 450]], culdesac: true },
-  { name: 'Buena Vista Ave', kind: 'residential', pts: [[-255, 86.5], [-282, 140], [-252, 200], [-170, 236], [-80, 246], [0, 232], [60, 205], [93, 160]] },
-  { name: 'King St', kind: 'residential', pts: [[-170, 89.4], [-160, 140], [-100, 172], [-30, 166], [-4, 125], [0, 86]] },
-  { name: 'Hill St', kind: 'residential', pts: [[-170, 236], [-192, 285], [-150, 318], [-90, 318]], culdesac: true },
-  { name: 'Mullan Ave', kind: 'residential', pts: [[-300, 85], [-380, 80], [-470, 62], [-568, 40]] },
-
-  // ---------------------------------------------------------------- Silver Heights (post-war suburb: curvilinear loop + cul-de-sacs)
-  { name: 'Silver Heights Dr', kind: 'suburban', pts: [[-520, -78], [-540, 0], [-600, 80], [-700, 130], [-800, 120], [-860, 60], [-852, -20], [-822, -102]] },
-  { name: 'Aspen Ct', kind: 'suburban', pts: [[-600, 80], [-560, 118], [-505, 140]], culdesac: true },
-  { name: 'Birch Ct', kind: 'suburban', pts: [[-700, 130], [-700, 190], [-688, 238]], culdesac: true },
-  { name: 'Cedar Ct', kind: 'suburban', pts: [[-800, 120], [-845, 168], [-880, 205]], culdesac: true },
-  { name: 'Larch Ct', kind: 'suburban', pts: [[-540, 0], [-490, 18], [-450, 22]], culdesac: true },
-  { name: 'Juniper Ct', kind: 'suburban', pts: [[-852, -20], [-800, -38], [-752, -45]], culdesac: true },
-  { name: 'Ponderosa Way', kind: 'suburban', pts: [[-860, 60], [-930, 90], [-990, 140], [-1020, 200]], culdesac: true },
-  { name: 'School Rd', kind: 'residential', pts: [[-560, -84], [-556, -118], [-545, -146]] },
-
-  // ---------------------------------------------------------------- east side: hospital, trailer park, Elm Crescent, lake
-  { name: 'Hospital Dr', kind: 'residential', pts: [[800, -21], [802, 40], [800, 76]] },
-  { name: 'Riverside Ln', kind: 'lane', pts: [[560, -50], [566, 30], [600, 95], [650, 110], [668, 40], [660, -38]] },
-  {
-    name: 'Lake Rd',
+    name: 'Lakeshore Dr',
     kind: 'rural',
-    pts: [
-      [880, -10],
-      [960, 60],
-      [1060, 180],
-      [1090, 320],
-      [1040, 470],
-      [930, 570],
-      [790, 615],
-      [640, 615],
-      [520, 575],
-      [420, 505],
-      [385, 410],
-      [395, 330],
-    ],
-    culdesac: true,
+    pts: [[1350, 110], [1405, 200], [1422, 300], [1398, 410], [1325, 495], [1205, 560], [1060, 580], [915, 562], [800, 502], [728, 400], [702, 280], [690, 150], [672, 40], [660, -60], [652, -130], [650, -206]],
   },
-  { name: 'Elm Crescent', kind: 'suburban', pts: [[960, 60], [920, 110], [880, 170], [870, 235]], culdesac: true },
-  { name: 'Spruce Ct', kind: 'suburban', pts: [[920, 110], [975, 150], [1000, 215]], culdesac: true },
-  { name: 'Orchard Ln', kind: 'gravel', pts: [[1060, 180], [1095, 132], [1128, 117]] },
 
-  // ---------------------------------------------------------------- rural roads to farms, mill, mine and substation
-  { name: 'Dairy Rd', kind: 'gravel', pts: [[-1450, -101], [-1452, -60], [-1450, -14]] },
-  { name: 'Ridgeview Rd', kind: 'gravel', pts: [[-1200, -112], [-1203, -40], [-1262, 0], [-1268, 60], [-1240, 102]] },
-  { name: 'Mine Rd', kind: 'dirt', pts: [[-980, -432], [-900, -434], [-820, -428], [-780, -440], [-792, -460], [-830, -472]], culdesac: true },
-  { name: 'Substation Rd', kind: 'gravel', pts: [[-985, -410], [-1050, -440], [-1120, -462], [-1160, -470]] },
-  { name: 'Hansen Rd', kind: 'gravel', pts: [[1330, -22], [1332, -70], [1325, -102]] },
+  // ---------------------------------------------------------------- rural west: farms, homesteads, forest cabins
+  { name: 'Miller Dairy Rd', kind: 'gravel', pts: [[-1481, -243.8], [-1481, -205], [-1481, -176]] },
+  { name: 'Ridgeview Ln', kind: 'gravel', pts: [[-1250, -249.6], [-1250, -200], [-1248, -155]] },
+  { name: 'Cougar Creek Rd', kind: 'gravel', pts: [[-1100, -252], [-1105, -160], [-1140, -60], [-1180, 50], [-1160, 170], [-1110, 280], [-1060, 360]], culdesac: true },
+  { name: 'Elk Ridge Rd', kind: 'dirt', pts: [[-1180, 50], [-1290, 110], [-1400, 180], [-1490, 235]], culdesac: true },
+
+  // ---------------------------------------------------------------- rural east: orchard, Hansen farm
+  { name: 'Orchard Rd', kind: 'gravel', pts: [[1482, -209], [1484, -120], [1484, 0], [1482, 100], [1480, 200]], culdesac: true },
+  { name: 'Hansen Rd', kind: 'gravel', pts: [[1640, -228.5], [1642, -280], [1636, -357]] },
 ];
 
 export function buildNetwork(): RoadNetwork {

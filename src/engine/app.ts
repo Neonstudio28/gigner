@@ -64,6 +64,8 @@ export async function startApp(container: HTMLElement) {
 
   const world = await createTownWorld({ traffic: params.get('traffic') !== '0', onProgress: (f, t) => setProgress(0.05 + f * 0.85, t) });
   scene.add(world.root);
+  // dev-only handle for inspecting the generated town from the browser console
+  if (import.meta.env.DEV) (window as unknown as { pineHollow: typeof world }).pineHollow = world;
 
   const director = new CameraDirector(camera, renderer.domElement, world.shots, world.heightAt);
   const startShot = Math.max(0, world.shots.findIndex((s) => s.id === params.get('shot')));

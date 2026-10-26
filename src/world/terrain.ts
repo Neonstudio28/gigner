@@ -35,7 +35,7 @@ function ridged(x: number, z: number, oct = 5): number {
   return s;
 }
 
-export const LAKE = { x: 700, z: 420, rx: 300, rz: 165, level: -0.7 };
+export const LAKE = { x: 1060, z: 330, rx: 290, rz: 175, level: -0.7 };
 /** Drivable/explorable radius. */
 export const MAP_RADIUS = 1850;
 const GRID_HALF = 2000;
@@ -43,12 +43,12 @@ const GRID_SEG = 320;
 const RING_IN = 1880;
 const RING_OUT = 15000;
 
-// ------------------------------------------------------------------ valley (Wallace-style canyon town)
-// Valley centre line and the half-widths of its flat floor to the north and south, sampled along x.
-const VX = [-2600, -1800, -1200, -700, -300, 0, 300, 700, 1200, 1800, 2600];
-const VZ = [-240, -200, -120, -40, -10, 0, 15, 110, 80, 0, -40];
-const VN = [170, 180, 380, 360, 290, 215, 230, 300, 380, 240, 200];
-const VS = [170, 180, 300, 330, 300, 250, 260, 520, 420, 240, 200];
+// ------------------------------------------------------------------ valley (broad Pacific Northwest river valley)
+// North and south edges of the valley floor, sampled along x. The mountains start beyond these and
+// rise gently at first, so the town has room to breathe and the peaks sit back on the skyline.
+const VX = [-2600, -1900, -1500, -1100, -600, 0, 600, 1100, 1500, 1900, 2600];
+const VN = [-520, -600, -680, -700, -700, -700, -700, -700, -680, -560, -520];
+const VS = [-60, -40, 260, 520, 600, 610, 640, 660, 420, 60, 40];
 
 function knot(arr: number[], x: number): number {
   if (x <= VX[0]) return arr[0];
@@ -59,8 +59,8 @@ function knot(arr: number[], x: number): number {
   return lerp(arr[i], arr[i + 1], t * t * (3 - 2 * t));
 }
 
-/** Placer-Creek style side canyon opening south of downtown. */
-const canyon = (x: number) => 165 * Math.exp(-(((x - 110) / 75) ** 2));
+/** Centre line of the valley floor. */
+const centreZ = (x: number) => (knot(VN, x) + knot(VS, x)) / 2;
 
 export interface ValleyInfo {
   zc: number;
@@ -70,14 +70,31 @@ export interface ValleyInfo {
   floorY: number;
 }
 
-/** The floor rises gently to the west (upstream) so the river has somewhere to come from. */
-const floorRise = (x: number) => Math.max(0, -x - 600) * 0.012;
+/** The floor rises gently upstream (west) and a little toward the east end of the valley. */
+const floorRise = (x: number) => Math.max(0, -x - 500) * 0.011 + Math.max(0, x - 1300) * 0.01;
+
+/** Low hills on the valley floor: Cedar Ridge (the view lots) and Church Hill (the old cemetery hill). */
+export const HILLS = [
+  { name: 'Cedar Ridge', x: 330, z: 470, s: 230, h: 32 },
+  { name: 'Church Hill', x: -230, z: 430, s: 200, h: 22 },
+];
+
+/** Downtown stays level; elsewhere the floor has a little low-poly roll. */
+function floorRelief(x: number, z: number) {
+  let h = 0;
+  for (const b of HILLS) h += b.h * Math.exp(-((x - b.x) ** 2 + (z - b.z) ** 2) / (b.s * b.s));
+  const dx = Math.max(0, Math.abs(x) - 430);
+  const dz = Math.max(0, Math.abs(z + 190) - 120);
+  const roll = Math.max(0, 1.3 * (fbm(x * 0.003 + 9, z * 0.003 - 4, 3) + 0.45));
+  return h + roll * smoothstep(0, 160, Math.hypot(dx, dz));
+}
 
 export function valley(x: number, z: number): ValleyInfo {
-  const zc = knot(VZ, x);
+  const zN = knot(VN, x);
+  const zS = knot(VS, x);
+  const zc = (zN + zS) / 2;
   const north = z < zc;
-  const hw = north ? knot(VN, x) : knot(VS, x) + canyon(x);
-  return { zc, north, e: Math.abs(z - zc) - hw, floorY: floorRise(x) };
+  return { zc, north, e: north ? zN - z : z - zS, floorY: floorRise(x) };
 }
 
 interface Peak {
@@ -87,30 +104,31 @@ interface Peak {
   h: number;
   r: number;
 }
-/** Individual mountains close to town (in addition to the distant ring). */
+/** Forested summits on the foothills around the valley; the big snow peaks stay on the distant ring. */
 export const PEAKS: Peak[] = [
-  { name: 'Mt. Hollow', x: -1450, z: -820, h: 880, r: 720 },
-  { name: 'Sunset Peak', x: -220, z: -880, h: 720, r: 620 },
-  { name: 'Silver Crown', x: 980, z: -920, h: 780, r: 660 },
-  { name: 'Placer Butte', x: -520, z: 840, h: 800, r: 660 },
-  { name: 'Lookout Mtn', x: 1330, z: 940, h: 840, r: 660 },
-  { name: 'Granite Ridge', x: -1420, z: 640, h: 700, r: 600 },
+  { name: 'Mt. Hollow', x: -1250, z: -1500, h: 420, r: 700 },
+  { name: 'Sunset Peak', x: -150, z: -1600, h: 360, r: 650 },
+  { name: 'Silver Crown', x: 950, z: -1500, h: 400, r: 680 },
+  { name: 'Placer Butte', x: -800, z: 1450, h: 380, r: 650 },
+  { name: 'Lookout Mtn', x: 650, z: 1500, h: 400, r: 650 },
+  { name: 'Granite Ridge', x: -1700, z: 900, h: 340, r: 600 },
+  { name: 'Bear Paw', x: 1650, z: 1000, h: 360, r: 600 },
 ];
 
 function lakeEllipse(x: number, z: number) {
   return Math.hypot((x - LAKE.x) / LAKE.rx, (z - LAKE.z) / LAKE.rz) + nC(x * 0.006, z * 0.006) * 0.08;
 }
 
-/** Natural terrain: valley floor, steep forested walls, close peaks and the lake basin (no roads/river). */
+/** Natural terrain: valley floor, forested foothills, the peaks behind them and the lake basin (no roads/river). */
 export function rawHeight(x: number, z: number): number {
   const v = valley(x, z);
-  let h = v.floorY;
+  let h = v.floorY + floorRelief(x, z);
   if (v.e > 0) {
-    const H = v.north ? 470 + 110 * nA(x * 0.0011, 3.3) : (400 + 90 * nA(x * 0.0012, -7.1)) * (1 - 0.35 * Math.exp(-(((x - 110) / 120) ** 2)));
-    const t = 1 - Math.exp(-v.e / 220);
-    h += H * Math.pow(t, 1.5);
-    const detail = fbm(x * 0.0042, z * 0.0042, 4) * 38 + (ridged(x * 0.0016 + 4, z * 0.0016 - 2, 4) - 0.35) * 70;
-    h += detail * smoothstep(0, 90, v.e);
+    const H = v.north ? 320 + 70 * nA(x * 0.0011, 3.3) : 290 + 60 * nA(x * 0.0012, -7.1);
+    const t = 1 - Math.exp(-v.e / 380);
+    h += H * Math.pow(t, 1.3);
+    const detail = fbm(x * 0.0042, z * 0.0042, 4) * 30 + (ridged(x * 0.0016 + 4, z * 0.0016 - 2, 4) - 0.35) * 52;
+    h += detail * smoothstep(0, 120, v.e);
     let pk = 0;
     for (const p of PEAKS) {
       const d = Math.hypot(x - p.x, z - p.z);
@@ -151,7 +169,7 @@ class RiverPath {
       let base = 0;
       for (const o of [-18, -9, 0, 9, 18]) base += rawHeight(p.x + o, p.z) / 5;
       water = Math.min(water, base - 1.3);
-      this.pts.push({ x: p.x, z: p.z, s, hw: lerp(8, 12.5, i / n), water });
+      this.pts.push({ x: p.x, z: p.z, s, hw: lerp(15, 22, i / n), water });
     }
     for (let i = 0; i < this.pts.length - 1; i++) {
       const a = this.pts[i];
@@ -187,27 +205,23 @@ class RiverPath {
   }
 }
 
-/** South Fork: enters from the western canyon, runs along the north edge of downtown and into the lake. */
+/** South Fork: enters from the western canyon, runs past the mill and the riverfront, then bends south into Spirit Lake. */
 export const RIVER_CTRL: [number, number][] = [
-  [-1860, -300],
-  [-1600, -322],
-  [-1380, -360],
-  [-1180, -382],
-  [-1050, -372],
-  [-930, -330],
-  [-800, -292],
-  [-690, -262],
-  [-560, -235],
-  [-400, -205],
-  [-200, -172],
-  [0, -152],
-  [180, -142],
-  [330, -120],
-  [440, -72],
-  [500, 30],
-  [506, 160],
-  [480, 262],
-  [505, 360],
+  [-1880, -330],
+  [-1600, -352],
+  [-1300, -380],
+  [-1000, -386],
+  [-700, -370],
+  [-400, -352],
+  [-100, -346],
+  [200, -350],
+  [480, -345],
+  [700, -312],
+  [840, -222],
+  [900, -90],
+  [906, 40],
+  [930, 160],
+  [960, 240],
 ];
 export const river = new RiverPath(RIVER_CTRL);
 
@@ -276,7 +290,7 @@ export function farHeight(x: number, z: number): number {
 function mountainExtra(x: number, z: number): number {
   const r = Math.hypot(x, z);
   const env = smoothstep(3600, 6400, r);
-  const pass = 1 - 0.8 * Math.exp(-Math.pow((z - knot(VZ, x)) / (300 + r * 0.06), 2));
+  const pass = 1 - 0.8 * Math.exp(-Math.pow((z - centreZ(x)) / (300 + r * 0.06), 2));
   const peaks = Math.pow(ridged(x * 0.00024 + 3.1, z * 0.00024 - 1.7, 4), 1.5) * 1120 + fbm(x * 0.0009, z * 0.0009, 3) * 130;
   const VOL = { x: 2900, z: -7300, h: 1550, r: 3700 };
   const dv = Math.hypot(x - VOL.x, z - VOL.z);
