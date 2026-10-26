@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { Batcher, Kit, Occupancy, SurfaceMap, type Rect } from './core/kit';
 import { Rng } from './core/rng';
-import { createLayers } from './textures';
+import { createLayers, loadPhotoSet } from './textures';
 import { MaterialLib, windUniform } from './materials';
 import { SignBook } from './signs';
-import { createTerrain, heightAt, isWater, MAP_RADIUS } from './terrain';
+import { createTerrain, groundHeight, isWater, MAP_RADIUS } from './terrain';
 import { createVegetation, type Vegetation, type TreeIndex } from './vegetation';
 import { Traffic } from './traffic';
 import { loadFonts } from './fonts';
@@ -82,7 +82,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   await progress(0.02, 'Loading Google Fonts for signage');
   await loadFonts();
   await progress(0.05, 'Painting textures');
-  const materials = new MaterialLib(createLayers());
+  const materials = new MaterialLib(createLayers(await loadPhotoSet(import.meta.env.BASE_URL)));
   const signs = new SignBook((i, tex) => materials.addSignPage(i, tex));
 
   const root = new THREE.Group();
@@ -155,8 +155,9 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   traffic.enabled = opts.traffic ?? true;
   root.add(terrain, statics, dynamic, vegetation.group, traffic.group);
 
+  // the drawn ground mesh (not the analytic terrain), so cars ride exactly on what is on screen
   const groundAt = (x: number, z: number, nearY?: number) => {
-    const t = heightAt(x, z);
+    const t = groundHeight(x, z);
     const r = net.surfaceY(x, z, nearY);
     const s = surf.at(x, z);
     const c = [t, r, s].filter((v) => v > -1e9);
@@ -167,7 +168,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
 
   return {
     root,
-    heightAt,
+    heightAt: groundHeight,
     groundAt,
     solidAt: (x, z, y) => {
       if (solids.blocked(x, z, 0, y) || (trees as TreeIndex).hit(x, z) || Math.hypot(x, z) > MAP_RADIUS) return true;

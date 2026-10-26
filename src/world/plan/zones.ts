@@ -228,6 +228,10 @@ export const PADS = {
   sunnysideField: { x: -245, z: -652, w: 88, d: 88 },
   valleyViewApts: { x: 600, z: -536, w: 74, d: 58 },
   cascadeCourtApts: { x: -1100, z: 54, w: 74, d: 58 },
+  distCenter: { x: 642, z: -346, w: 80, d: 78 },
+  coldStorage: { x: 717, z: -342, w: 56, d: 70 },
+  selfStorage: { x: 634, z: -258, w: 72, d: 62 },
+  feedWarehouse: { x: 714, z: -261, w: 46, d: 60 },
 };
 const PAD_FALL: Partial<Record<keyof typeof PADS, number>> = { mine: 24, tower: 24, radio: 24, cemetery: 20, lodge: 18, hospital: 20 };
 
@@ -613,7 +617,7 @@ export function neighbourhoods(pl: Placer) {
   front(pl, R('5th Ave E'), sAtZ(R('5th Ave E'), 120), 1, office, 2, 77, 'Hollow Valley Insurance', 'business');
 
   // ---- Old Town: rowhouses beside downtown, then the alley-backed historic grid south of Main
-  street('Alder St W', POOLS.rowhouse(), { ...old, setback: 3, s1: sAtX(R('Alder St W'), -505) });
+  street('Alder St W', POOLS.rowhouse(), { ...old, setback: 3, s1: sAtX(R('Alder St W'), -520) });
   street('Alder St E', POOLS.rowhouse(), { ...old, setback: 3 });
   for (const name of ['Maple St', '1st Ave W S', '1st Ave E S', '4th Ave W', '4th Ave E', '3rd Ave E']) street(name, POOLS.historic(), old);
   street('3rd Ave W', POOLS.historic(), { ...old, s0: sAtZ(R('3rd Ave W'), -95) });
@@ -653,7 +657,7 @@ export function neighbourhoods(pl: Placer) {
   street('5th Ave W', POOLS.hillside(), { setback: 5, gap: 5, jitter: 2, maxSlope: 9, s0: sAtZ(R('5th Ave W'), 192), bulb: 3 });
 
   // ---- West End: post-war suburb grown off Alder St, around the elementary school
-  street('Alder St W', POOLS.suburb(), { setback: 7, gap: 5, jitter: 1.5, s0: sAtX(R('Alder St W'), -505), bulb: 4 });
+  street('Alder St W', POOLS.suburb(), { setback: 7, gap: 5, jitter: 1.5, s0: sAtX(R('Alder St W'), -520), bulb: 4 });
   for (const name of ['Sunset Dr', 'Hemlock Ct']) street(name, POOLS.suburb(), { setback: 7, gap: 5, jitter: 1.5, bulb: 5 });
 
   // ---- Eastgate: 1990s homes where Hillcrest Dr curves past the high school
@@ -893,6 +897,18 @@ export function industry(pl: Placer, padY: Record<string, number>) {
   mark(pl, 'Cascade Freight Lines', PADS.freight.x, PADS.freight.z, 'industrial');
   mark(pl, 'Valley Ready-Mix & Gravel', PADS.readyMix.x, PADS.readyMix.z, 'industrial');
   stripRow(pl, net.byName('Industrial Way'), 1, -626, -562, [[D('ridgeMachine'), 'Ridge Machine & Welding']], 6, 'industrial');
+
+  // ---- Eastside warehouse district: distribution, cold storage, feed and self-storage on Warehouse Rd
+  for (const [id, label, ry] of [
+    ['distCenter', 'Cascade Distribution Center', 0],
+    ['coldStorage', 'Valley Cold Storage', 0],
+    ['selfStorage', 'Pine Hollow Self Storage', PI],
+    ['feedWarehouse', 'Timberline Feed & Grain', PI],
+  ] as [keyof typeof PADS, string, number][]) {
+    const p = PADS[id];
+    pl.force(D(id), p.x, p.z, ry, 111);
+    mark(pl, label, p.x, p.z, 'industrial');
+  }
 
   // ---- substation and high-voltage lines over the north slopes
   const sp = PADS.substation;

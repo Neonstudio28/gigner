@@ -208,6 +208,68 @@ function stucco(): HTMLCanvasElement {
   return c;
 }
 
+// ---------------------------------------------------------------- photo surfaces (Poly Haven, CC0)
+
+/** Photo textures that replace the procedural asphalt, gravel and concrete layers when available. */
+export interface PhotoSet {
+  asphalt?: HTMLCanvasElement;
+  gravel?: HTMLCanvasElement;
+  concrete?: HTMLCanvasElement;
+}
+
+/**
+ * Turns a tileable photo into a neutral detail layer: the low-frequency blotches are divided out
+ * (blurred on a 3×3 wrap so the seams stay clean) and the mean is set to `level`, so the vertex
+ * colour still decides the hue and brightness of each road, shoulder and sidewalk.
+ */
+function neutralize(img: CanvasImageSource, level: number, contrast: number): HTMLCanvasElement {
+  const [wrap, wg] = makeCanvas(S * 3, S * 3);
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) wg.drawImage(img, i * S, j * S, S, S);
+  const [blur, bg] = makeCanvas(S * 3, S * 3);
+  bg.filter = 'blur(28px)';
+  bg.drawImage(wrap, 0, 0);
+  const src = wg.getImageData(S, S, S, S).data;
+  const low = bg.getImageData(S, S, S, S).data;
+  const [c, g] = makeCanvas(S, S);
+  const out = g.createImageData(S, S);
+  for (let i = 0; i < src.length; i += 4) {
+    // per-pixel luminance detail relative to the local average, kept grey so the vertex colour tints it
+    const l = (0.299 * src[i] + 0.587 * src[i + 1] + 0.114 * src[i + 2]) / Math.max(8, 0.299 * low[i] + 0.587 * low[i + 1] + 0.114 * low[i + 2]);
+    const v = Math.max(0, Math.min(255, level * (1 + (l - 1) * contrast)));
+    out.data[i] = out.data[i + 1] = out.data[i + 2] = v;
+    out.data[i + 3] = 255;
+  }
+  g.putImageData(out, 0, 0);
+  return c;
+}
+
+/** Loads the CC0 road photos from public/assets/textures (missing files fall back to procedural layers). */
+export async function loadPhotoSet(base: string): Promise<PhotoSet> {
+  const load = (file: string) =>
+    new Promise<HTMLImageElement | null>((res) => {
+      const im = new Image();
+      im.onload = () => res(im);
+      im.onerror = () => res(null);
+      im.src = `${base}assets/textures/${file}`;
+    });
+  const [asp, grv, con] = await Promise.all([load('asphalt_01_512.jpg'), load('gravel_road_512.jpg'), load('brushed_concrete_512.jpg')]);
+  const out: PhotoSet = {};
+  if (asp) out.asphalt = neutralize(asp, 228, 1.35);
+  if (grv) out.gravel = neutralize(grv, 226, 1.25);
+  if (con) {
+    // scored sidewalk slabs every 1.5 m (the layer tiles every 3 m)
+    const c = neutralize(con, 236, 1.1);
+    const g = c.getContext('2d')!;
+    for (let i = 0; i < 2; i++) {
+      g.fillStyle = 'rgba(70,70,70,0.55)';
+      g.fillRect(i * (S / 2), 0, 3, S);
+      g.fillRect(0, i * (S / 2), S, 3);
+    }
+    out.concrete = c;
+  }
+  return out;
+}
+
 function concrete(): HTMLCanvasElement {
   const [c, g] = makeCanvas(S, S);
   const rng = new Rng(23);
@@ -222,12 +284,16 @@ function concrete(): HTMLCanvasElement {
   return c;
 }
 
-function asphalt(): HTMLCanvasElement {
+/** Asphalt with patches and sealed cracks drawn over the photo (or a speckled base without one). */
+function asphalt(photo?: HTMLCanvasElement): HTMLCanvasElement {
   const [c, g] = makeCanvas(S, S);
   const rng = new Rng(29);
-  g.fillStyle = grey(232);
-  g.fillRect(0, 0, S, S);
-  speckle(g, S, S, rng, 14000, 0.06);
+  if (photo) g.drawImage(photo, 0, 0);
+  else {
+    g.fillStyle = grey(232);
+    g.fillRect(0, 0, S, S);
+    speckle(g, S, S, rng, 14000, 0.06);
+  }
   for (let i = 0; i < 10; i++) {
     const x = rng.range(0, S);
     const y = rng.range(0, S);
@@ -338,8 +404,8 @@ export interface LayerDef {
   metal: number;
 }
 
-/** Every tiling surface used by the town, packed later into one texture array. */
-export function createLayers(): LayerDef[] {
+/** Every tiling surface used by the town, packed later into one texture array (photo layers when loaded). */
+export function createLayers(photos: PhotoSet = {}): LayerDef[] {
   const L = (name: string, canvas: HTMLCanvasElement, tile: number, rough = 0.9, metal = 0): LayerDef => ({ name, canvas, tile, rough, metal });
   return [
     L('brickRed', brick('#a4473a', '#cfc6bb', 3), 2.6, 0.92),
@@ -353,8 +419,8 @@ export function createLayers(): LayerDef[] {
     L('roofMetal', roofMetal(), 3.2, 0.5, 0.3),
     L('shingle', shingle(), 2.0, 0.95),
     L('cinder', cinder(), 2.4, 0.92),
-    L('concrete', concrete(), 3.0, 0.95),
-    L('asphalt', asphalt(), 10, 0.95),
+    L('concrete', photos.concrete ?? concrete(), 3.0, 0.95),
+    L('asphalt', asphalt(photos.asphalt), photos.asphalt ? 5 : 10, 0.95),
     L('planks', planks(), 2.0, 0.9),
     L('rollup', rollup(), 2.0, 0.55, 0.3),
     L('awningRed', stripes('#9b2335', '#f4f0e6'), 1.0, 0.8),
@@ -363,7 +429,7 @@ export function createLayers(): LayerDef[] {
     L('stone', stone(), 3.0, 0.88),
     L('corrugated', corrugated(), 2.0, 0.45, 0.45),
     L('stucco', stucco(), 3.0, 0.95),
-    L('gravel', gravel(), 4.0, 0.97),
+    L('gravel', photos.gravel ?? gravel(), 4.0, 0.97),
     L('field', field(), 6.0, 0.98),
   ];
 }

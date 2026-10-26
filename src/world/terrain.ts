@@ -292,6 +292,74 @@ export function heightAt(x: number, z: number): number {
   return h;
 }
 
+// ------------------------------------------------------------------ road-aware near-terrain mesh
+let roadTop: ((x: number, z: number, nearY: number) => number) | null = null;
+let roadClose: ((x: number, z: number, margin: number) => boolean) | null = null;
+
+/** Registered by the road network: top of the road/sidewalk surface at a point, and a proximity test. */
+export function setRoadSurfaceHooks(top: (x: number, z: number, nearY: number) => number, close: (x: number, z: number, margin: number) => boolean) {
+  roadTop = top;
+  roadClose = close;
+}
+
+/** Keeps the ground just under any at-grade road, shoulder or sidewalk so it never pokes through. */
+function underRoads(x: number, z: number, h: number) {
+  if (!roadTop) return h;
+  const y = roadTop(x, z, h);
+  return y > -1e9 && y - h < 2.5 ? Math.min(h, y - 0.12) : h;
+}
+
+const STEP = (GRID_HALF * 2) / GRID_SEG;
+/** Near-terrain cells beside roads are split SUB×SUB (≈4 m) so the ground follows the road grading. */
+const SUB = 3;
+
+/** Height on one grid cell split along the same diagonal the mesh uses (u, v in 0..1). */
+function cellHeight(a: number, b: number, c: number, d: number, u: number, v: number, even: boolean) {
+  if (even) return u + v <= 1 ? a + (b - a) * u + (c - a) * v : d + (c - d) * (1 - u) + (b - d) * (1 - v);
+  return v >= u ? a + (d - c) * u + (c - a) * v : a + (b - a) * u + (d - b) * v;
+}
+
+/** Exact heights of the drawn near-terrain triangles, so vehicles, trees and props sit on what you see. */
+class TerrainSampler {
+  ready = false;
+  private h: Float32Array = new Float32Array(0);
+  private rough: Uint8Array = new Uint8Array(0);
+  private fine = new Map<number, Float32Array>();
+  init(h: Float32Array, rough: Uint8Array, fine: Map<number, Float32Array>) {
+    this.h = h;
+    this.rough = rough;
+    this.fine = fine;
+    this.ready = true;
+  }
+  height(x: number, z: number): number {
+    const fx = (x + GRID_HALF) / STEP;
+    const fz = (z + GRID_HALF) / STEP;
+    const i = Math.floor(fx);
+    const j = Math.floor(fz);
+    if (!this.ready || i < 0 || j < 0 || i >= GRID_SEG || j >= GRID_SEG) return heightAt(x, z);
+    const key = j * GRID_SEG + i;
+    const f = this.fine.get(key);
+    if (f) {
+      const gx = (fx - i) * SUB;
+      const gz = (fz - j) * SUB;
+      const a = Math.min(SUB - 1, Math.floor(gx));
+      const b = Math.min(SUB - 1, Math.floor(gz));
+      const n = SUB + 1;
+      return cellHeight(f[b * n + a], f[b * n + a + 1], f[(b + 1) * n + a], f[(b + 1) * n + a + 1], gx - a, gz - b, (i * SUB + a + j * SUB + b) % 2 === 0);
+    }
+    // jittered mountain-wall cells: the analytic height is close enough there
+    if (this.rough[key]) return heightAt(x, z);
+    const c = GRID_SEG + 1;
+    return cellHeight(this.h[j * c + i], this.h[j * c + i + 1], this.h[(j + 1) * c + i], this.h[(j + 1) * c + i + 1], fx - i, fz - j, (i + j) % 2 === 0);
+  }
+}
+const sampler = new TerrainSampler();
+
+/** Height of the ground mesh as drawn (falls back to the analytic terrain before the mesh exists). */
+export function groundHeight(x: number, z: number): number {
+  return sampler.height(x, z);
+}
+
 /** Height anywhere, including the distant mountain ring (for pylons beyond the near grid). */
 export function farHeight(x: number, z: number): number {
   return Math.hypot(x, z) < RING_IN ? heightAt(x, z) : ringHeight(x, z);
@@ -378,66 +446,102 @@ export function groundColor(cx: number, cy: number, cz: number, ny: number, out:
   return out.lerp(COL.forest, smoothstep(0.15, 0.8, fd)).lerp(COL.forestDark, clamp(fd * n, 0, 0.5));
 }
 
-/** Builds a flat-shaded, per-face coloured mesh from a height-sampled vertex grid. */
-function facetMesh(verts: Float32Array, cols: number, rows: number, wrap: boolean, sink?: (x: number, z: number) => number): THREE.BufferGeometry {
-  const quadsX = wrap ? cols : cols - 1;
-  const triCount = quadsX * (rows - 1) * 2;
-  const pos = new Float32Array(triCount * 9);
-  const col = new Float32Array(triCount * 9);
-  const a = new THREE.Vector3();
-  const b = new THREE.Vector3();
-  const c = new THREE.Vector3();
-  const d = new THREE.Vector3();
-  const e1 = new THREE.Vector3();
-  const e2 = new THREE.Vector3();
-  const tmp = new THREE.Color();
-  let p = 0;
-  const V = (i: number, j: number, out: THREE.Vector3) => {
-    const k = (j * cols + (i % cols)) * 3;
-    return out.set(verts[k], verts[k + 1], verts[k + 2]);
-  };
-  const tri = (A: THREE.Vector3, B0: THREE.Vector3, C0: THREE.Vector3) => {
+/** Writes flat-shaded, per-face coloured triangles (wound to face up) into preallocated arrays. */
+class FacetWriter {
+  readonly pos: Float32Array;
+  readonly col: Float32Array;
+  p = 0;
+  private e1 = new THREE.Vector3();
+  private e2 = new THREE.Vector3();
+  private tmp = new THREE.Color();
+  constructor(
+    maxTris: number,
+    private sink?: (x: number, z: number) => number,
+  ) {
+    this.pos = new Float32Array(maxTris * 9);
+    this.col = new Float32Array(maxTris * 9);
+  }
+  tri(A: THREE.Vector3, B0: THREE.Vector3, C0: THREE.Vector3) {
     let B = B0;
     let Cc = C0;
-    e1.subVectors(B, A);
-    e2.subVectors(Cc, A);
-    const nrm = e1.cross(e2).normalize();
+    const nrm = this.e1.subVectors(B, A).cross(this.e2.subVectors(Cc, A)).normalize();
     if (nrm.y < 0) {
       nrm.negate();
       B = C0;
       Cc = B0;
     }
-    groundColor((A.x + B.x + Cc.x) / 3, (A.y + B.y + Cc.y) / 3, (A.z + B.z + Cc.z) / 3, nrm.y, tmp);
+    groundColor((A.x + B.x + Cc.x) / 3, (A.y + B.y + Cc.y) / 3, (A.z + B.z + Cc.z) / 3, nrm.y, this.tmp);
     for (const v of [A, B, Cc]) {
-      pos[p] = v.x;
-      pos[p + 1] = v.y - (sink ? sink(v.x, v.z) : 0);
-      pos[p + 2] = v.z;
-      col[p] = tmp.r;
-      col[p + 1] = tmp.g;
-      col[p + 2] = tmp.b;
-      p += 3;
+      const p = this.p;
+      this.pos[p] = v.x;
+      this.pos[p + 1] = v.y - (this.sink ? this.sink(v.x, v.z) : 0);
+      this.pos[p + 2] = v.z;
+      this.col[p] = this.tmp.r;
+      this.col[p + 1] = this.tmp.g;
+      this.col[p + 2] = this.tmp.b;
+      this.p += 3;
     }
+  }
+  geometry(): THREE.BufferGeometry {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(this.pos.slice(0, this.p), 3));
+    g.setAttribute('color', new THREE.BufferAttribute(this.col.slice(0, this.p), 3));
+    g.computeVertexNormals();
+    g.computeBoundingSphere();
+    return g;
+  }
+}
+
+/** Builds a flat-shaded, per-face coloured mesh from a height-sampled vertex grid (skipping refined cells). */
+function facetMesh(verts: Float32Array, cols: number, rows: number, wrap: boolean, sink?: (x: number, z: number) => number, skip?: (i: number, j: number) => boolean): THREE.BufferGeometry {
+  const quadsX = wrap ? cols : cols - 1;
+  const w = new FacetWriter(quadsX * (rows - 1) * 2, sink);
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  const d = new THREE.Vector3();
+  const V = (i: number, j: number, out: THREE.Vector3) => {
+    const k = (j * cols + (i % cols)) * 3;
+    return out.set(verts[k], verts[k + 1], verts[k + 2]);
   };
   for (let j = 0; j < rows - 1; j++)
     for (let i = 0; i < quadsX; i++) {
+      if (skip?.(i, j)) continue;
       V(i, j, a);
       V(i + 1, j, b);
       V(i, j + 1, c);
       V(i + 1, j + 1, d);
       if ((i + j) % 2 === 0) {
-        tri(a, c, b);
-        tri(b, c, d);
+        w.tri(a, c, b);
+        w.tri(b, c, d);
       } else {
-        tri(a, c, d);
-        tri(a, d, b);
+        w.tri(a, c, d);
+        w.tri(a, d, b);
       }
     }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return w.geometry();
+}
+
+/** Re-winds a non-indexed triangle soup so every face points up (+Y), then computes normals. */
+function upFacing(g: THREE.BufferGeometry) {
+  const attrs = Object.values(g.attributes) as THREE.BufferAttribute[];
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  for (let t = 0; t < pos.count; t += 3) {
+    const ax = pos.getX(t);
+    const az = pos.getZ(t);
+    const ny = (pos.getZ(t + 1) - az) * (pos.getX(t + 2) - ax) - (pos.getX(t + 1) - ax) * (pos.getZ(t + 2) - az);
+    if (ny >= 0) continue;
+    for (const at of attrs)
+      for (let c = 0; c < at.itemSize; c++) {
+        const arr = at.array as Float32Array;
+        const i1 = (t + 1) * at.itemSize + c;
+        const i2 = (t + 2) * at.itemSize + c;
+        const tmp = arr[i1];
+        arr[i1] = arr[i2];
+        arr[i2] = tmp;
+      }
+  }
   g.computeVertexNormals();
-  g.computeBoundingSphere();
-  return g;
 }
 
 export function createTerrain(): THREE.Group {
@@ -448,7 +552,11 @@ export function createTerrain(): THREE.Group {
 
   const cols = GRID_SEG + 1;
   const grid = new Float32Array(cols * cols * 3);
+  const gh = new Float32Array(cols * cols);
+  const jittered = new Uint8Array(cols * cols);
   const jitter = new Rng(99);
+  /** Ground height at a mesh vertex: graded terrain, kept just below any at-grade road surface. */
+  const vh = (x: number, z: number) => underRoads(x, z, heightAt(x, z)) - (valley(x, z).e < 0 ? 0.02 : 0);
   for (let j = 0; j < cols; j++)
     for (let i = 0; i < cols; i++) {
       let x = -GRID_HALF + (i / GRID_SEG) * GRID_HALF * 2;
@@ -460,18 +568,96 @@ export function createTerrain(): THREE.Group {
       if (v.e > 45 && i > 0 && j > 0 && i < GRID_SEG && j < GRID_SEG && !pads.some((p) => Math.abs(x - p.x) < p.hw + p.fall && Math.abs(z - p.z) < p.hd + p.fall)) {
         x += jx;
         z += jz;
+        jittered[j * cols + i] = 1;
       }
       const k = (j * cols + i) * 3;
+      const y = vh(x, z);
       grid[k] = x;
-      grid[k + 1] = heightAt(x, z) - (v.e < 0 ? 0.02 : 0);
+      grid[k + 1] = y;
       grid[k + 2] = z;
+      gh[j * cols + i] = y;
     }
+
+  // cells beside roads are refined so the ground follows cuts, fills, curbs and junctions closely
+  const rough = new Uint8Array(GRID_SEG * GRID_SEG);
+  const refined = new Uint8Array(GRID_SEG * GRID_SEG);
+  for (let j = 0; j < GRID_SEG; j++)
+    for (let i = 0; i < GRID_SEG; i++) {
+      const key = j * GRID_SEG + i;
+      rough[key] = jittered[j * cols + i] | jittered[j * cols + i + 1] | jittered[(j + 1) * cols + i] | jittered[(j + 1) * cols + i + 1];
+      const cx = -GRID_HALF + (i + 0.5) * STEP;
+      const cz = -GRID_HALF + (j + 0.5) * STEP;
+      if (!rough[key] && Math.hypot(cx, cz) < RING_IN - 30 && roadClose?.(cx, cz, 15)) refined[key] = 1;
+    }
+  const isRefined = (i: number, j: number) => i >= 0 && j >= 0 && i < GRID_SEG && j < GRID_SEG && refined[j * GRID_SEG + i] === 1;
+  const fine = new Map<number, Float32Array>();
+  const n = SUB + 1;
+  let fineCells = 0;
+  for (let j = 0; j < GRID_SEG; j++)
+    for (let i = 0; i < GRID_SEG; i++) if (refined[j * GRID_SEG + i]) fineCells++;
+  const fw = new FacetWriter(fineCells * SUB * SUB * 2);
+  const A = new THREE.Vector3();
+  const B = new THREE.Vector3();
+  const C = new THREE.Vector3();
+  const D = new THREE.Vector3();
+  for (let j = 0; j < GRID_SEG; j++)
+    for (let i = 0; i < GRID_SEG; i++) {
+      if (!refined[j * GRID_SEG + i]) continue;
+      const x0 = -GRID_HALF + i * STEP;
+      const z0 = -GRID_HALF + j * STEP;
+      const h00 = gh[j * cols + i];
+      const h10 = gh[j * cols + i + 1];
+      const h01 = gh[(j + 1) * cols + i];
+      const h11 = gh[(j + 1) * cols + i + 1];
+      const f = new Float32Array(n * n);
+      for (let b = 0; b <= SUB; b++)
+        for (let a = 0; a <= SUB; a++) {
+          const u = a / SUB;
+          const v = b / SUB;
+          const x = x0 + u * STEP;
+          const z = z0 + v * STEP;
+          let h: number;
+          const ea = a === 0 || a === SUB;
+          const eb = b === 0 || b === SUB;
+          if (ea && eb) h = a === 0 ? (b === 0 ? h00 : h01) : b === 0 ? h10 : h11;
+          // a shared edge stays a straight line unless the neighbour is refined too (no cracks)
+          else if (a === 0) h = isRefined(i - 1, j) ? vh(x, z) : lerp(h00, h01, v);
+          else if (a === SUB) h = isRefined(i + 1, j) ? vh(x, z) : lerp(h10, h11, v);
+          else if (b === 0) h = isRefined(i, j - 1) ? vh(x, z) : lerp(h00, h10, u);
+          else if (b === SUB) h = isRefined(i, j + 1) ? vh(x, z) : lerp(h01, h11, u);
+          else h = vh(x, z);
+          f[b * n + a] = h;
+        }
+      fine.set(j * GRID_SEG + i, f);
+      for (let b = 0; b < SUB; b++)
+        for (let a = 0; a < SUB; a++) {
+          const P = (aa: number, bb: number, out: THREE.Vector3) => out.set(x0 + (aa / SUB) * STEP, f[bb * n + aa], z0 + (bb / SUB) * STEP);
+          P(a, b, A);
+          P(a + 1, b, B);
+          P(a, b + 1, C);
+          P(a + 1, b + 1, D);
+          if ((i * SUB + a + j * SUB + b) % 2 === 0) {
+            fw.tri(A, C, B);
+            fw.tri(B, C, D);
+          } else {
+            fw.tri(A, C, D);
+            fw.tri(A, D, B);
+          }
+        }
+    }
+  sampler.init(gh, rough, fine);
+
   const sink = (x: number, z: number) => smoothstep(RING_IN + 40, RING_IN + 110, Math.hypot(x, z)) * 260;
-  const ground = new THREE.Mesh(facetMesh(grid, cols, cols, false, sink), mat);
+  const ground = new THREE.Mesh(facetMesh(grid, cols, cols, false, sink, (i, j) => refined[j * GRID_SEG + i] === 1), mat);
   ground.receiveShadow = true;
   ground.name = 'ground';
   ground.matrixAutoUpdate = false;
   group.add(ground);
+  const near = new THREE.Mesh(fw.geometry(), mat);
+  near.receiveShadow = true;
+  near.name = 'ground-near-roads';
+  near.matrixAutoUpdate = false;
+  group.add(near);
 
   const ang = 320;
   const rad = 96;
@@ -496,28 +682,52 @@ export function createTerrain(): THREE.Group {
   mountains.matrixAutoUpdate = false;
   group.add(mountains);
 
-  // lake surface (turquoise glacial water, like the reference footage)
-  const lakeShape = new THREE.Shape();
-  for (let i = 0; i <= 64; i++) {
-    const a = (i / 64) * Math.PI * 2;
-    const x = Math.cos(a) * LAKE.rx * 1.03;
-    const z = Math.sin(a) * LAKE.rz * 1.03;
-    if (i === 0) lakeShape.moveTo(x, z);
-    else lakeShape.lineTo(x, z);
-  }
-  const lakeGeo = new THREE.ShapeGeometry(lakeShape);
-  lakeGeo.rotateX(-Math.PI / 2);
+  // water surfaces carry per-vertex depth (for colour, clarity and shore foam) and flow (river current);
+  // the shading itself is the water material installed by the engine (see engine/water.ts)
   const waterMat = new THREE.MeshStandardMaterial({ color: 0x2f7f86, roughness: 0.06, metalness: 0.3, envMapIntensity: 1.25 });
   waterMat.name = 'water';
+
+  // lake: rings from the middle out past the shoreline, depth from the basin profile
+  const lp: number[] = [];
+  const ld: number[] = [];
+  const lf: number[] = [];
+  const RINGS = 26;
+  const SEGS = 120;
+  const lakeV = (ri: number, si: number) => {
+    const t = ri / RINGS;
+    const a = (si / SEGS) * Math.PI * 2;
+    const x = LAKE.x + Math.cos(a) * LAKE.rx * 1.04 * t;
+    const z = LAKE.z + Math.sin(a) * LAKE.rz * 1.04 * t;
+    const le = lakeEllipse(x, z);
+    return { x, z, d: le < 1 ? 0.4 + (1 - le) * 5.5 : Math.max(0, 0.4 - (le - 1) * 8) };
+  };
+  for (let ri = 0; ri < RINGS; ri++)
+    for (let si = 0; si < SEGS; si++) {
+      const q = [lakeV(ri, si), lakeV(ri + 1, si), lakeV(ri, si + 1), lakeV(ri + 1, si + 1)];
+      for (const k of ri === 0 ? [0, 3, 1] : [0, 2, 1, 1, 2, 3]) {
+        lp.push(q[k].x - LAKE.x, 0, q[k].z - LAKE.z);
+        ld.push(q[k].d);
+        lf.push(0, 0);
+      }
+    }
+  const lakeGeo = new THREE.BufferGeometry();
+  lakeGeo.setAttribute('position', new THREE.Float32BufferAttribute(lp, 3));
+  lakeGeo.setAttribute('wdepth', new THREE.Float32BufferAttribute(ld, 1));
+  lakeGeo.setAttribute('flow', new THREE.Float32BufferAttribute(lf, 2));
+  upFacing(lakeGeo);
   const water = new THREE.Mesh(lakeGeo, waterMat);
   water.position.set(LAKE.x, LAKE.level, LAKE.z);
   water.receiveShadow = true;
   water.name = 'lake';
   group.add(water);
 
-  // river surface ribbon
+  // river: five lanes across so depth can fall away to the banks; flow follows the channel downstream
   const pts = river.pts;
-  const pos: number[] = [];
+  const rpos: number[] = [];
+  const rdep: number[] = [];
+  const rflow: number[] = [];
+  const LANES = [-1, -0.55, 0, 0.55, 1];
+  const SPEED = 1.3;
   for (let i = 0; i < pts.length - 1; i++) {
     const a = pts[i];
     const b = pts[i + 1];
@@ -526,31 +736,25 @@ export function createTerrain(): THREE.Group {
     const L = Math.hypot(tx, tz);
     const nx = -tz / L;
     const nz = tx / L;
-    const wa = a.hw + 1.5;
-    const wb = b.hw + 1.5;
-    const A1 = [a.x + nx * wa, a.water, a.z + nz * wa];
-    const A2 = [a.x - nx * wa, a.water, a.z - nz * wa];
-    const B1 = [b.x + nx * wb, b.water, b.z + nz * wb];
-    const B2 = [b.x - nx * wb, b.water, b.z - nz * wb];
-    pos.push(...A1, ...B1, ...A2, ...A2, ...B1, ...B2);
+    const V = (p: typeof a, u: number) => {
+      const w = p.hw + 1.5;
+      return { x: p.x + nx * w * u, y: p.water, z: p.z + nz * w * u, d: Math.max(0, 1.9 * (1 - u * u) - 0.15), f: [(tx / L) * SPEED * (1 - 0.6 * u * u), (tz / L) * SPEED * (1 - 0.6 * u * u)] };
+    };
+    for (let l = 0; l < LANES.length - 1; l++) {
+      const q = [V(a, LANES[l]), V(b, LANES[l]), V(a, LANES[l + 1]), V(b, LANES[l + 1])];
+      for (const k of [0, 1, 2, 2, 1, 3]) {
+        rpos.push(q[k].x, q[k].y, q[k].z);
+        rdep.push(q[k].d);
+        rflow.push(q[k].f[0], q[k].f[1]);
+      }
+    }
   }
   const rg = new THREE.BufferGeometry();
-  rg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  rg.computeVertexNormals();
-  if ((rg.attributes.normal as THREE.BufferAttribute).getY(0) < 0) {
-    rg.index = null;
-    const p = rg.attributes.position.array as Float32Array;
-    for (let i = 0; i < p.length; i += 9)
-      for (let c = 0; c < 3; c++) {
-        const t = p[i + 3 + c];
-        p[i + 3 + c] = p[i + 6 + c];
-        p[i + 6 + c] = t;
-      }
-    rg.computeVertexNormals();
-  }
-  const riverMat = new THREE.MeshStandardMaterial({ color: 0x2f6f73, roughness: 0.12, metalness: 0.25, envMapIntensity: 1.1 });
-  riverMat.name = 'river';
-  const riverMesh = new THREE.Mesh(rg, riverMat);
+  rg.setAttribute('position', new THREE.Float32BufferAttribute(rpos, 3));
+  rg.setAttribute('wdepth', new THREE.Float32BufferAttribute(rdep, 1));
+  rg.setAttribute('flow', new THREE.Float32BufferAttribute(rflow, 2));
+  upFacing(rg);
+  const riverMesh = new THREE.Mesh(rg, waterMat);
   riverMesh.name = 'river';
   riverMesh.receiveShadow = true;
   group.add(riverMesh);

@@ -231,6 +231,8 @@ export interface AtmoPreset {
   bloom: number;
   exposure: number;
   grain: number;
+  /** Volumetric cloud layer: coverage 0..1, density, base and top altitude (m above the valley). */
+  clouds: { coverage: number; density: number; base: number; top: number };
 }
 
 export const PRESETS: AtmoPreset[] = [
@@ -248,6 +250,7 @@ export const PRESETS: AtmoPreset[] = [
     bloom: 0.42,
     exposure: 1.0,
     grain: 0.05,
+    clouds: { coverage: 0.6, density: 1.0, base: 1700, top: 3300 },
   },
   {
     name: 'Overcast Drizzle',
@@ -263,6 +266,7 @@ export const PRESETS: AtmoPreset[] = [
     bloom: 0.35,
     exposure: 1.05,
     grain: 0.07,
+    clouds: { coverage: 0.93, density: 1.35, base: 1600, top: 3400 },
   },
   {
     name: 'Golden Hour',
@@ -278,6 +282,7 @@ export const PRESETS: AtmoPreset[] = [
     bloom: 0.55,
     exposure: 1.0,
     grain: 0.04,
+    clouds: { coverage: 0.42, density: 0.85, base: 1900, top: 3800 },
   },
   {
     name: 'Dusk',
@@ -293,6 +298,7 @@ export const PRESETS: AtmoPreset[] = [
     bloom: 0.75,
     exposure: 1.35,
     grain: 0.06,
+    clouds: { coverage: 0.5, density: 0.9, base: 1900, top: 3700 },
   },
   {
     name: 'Clear Day',
@@ -308,5 +314,6 @@ export const PRESETS: AtmoPreset[] = [
     bloom: 0.42,
     exposure: 1.0,
     grain: 0,
+    clouds: { coverage: 0.3, density: 0.85, base: 1900, top: 3700 },
   },
 ];

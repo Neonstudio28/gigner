@@ -1,0 +1,4 @@
+Road and pavement textures from Poly Haven (https://polyhaven.com), CC0 1.0 public domain:
+- asphalt_01_512.jpg        <- "Asphalt 01" diffuse, resized to 512 px
+- gravel_road_512.jpg       <- "Gravel Road" diffuse, resized to 512 px
+- brushed_concrete_512.jpg  <- "Brushed Concrete" diffuse, resized to 512 px

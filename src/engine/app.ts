@@ -7,6 +7,10 @@ import { DriveMode, DRIVABLE } from './drive';
 import { DriveHUD } from './hud';
 import { createTownWorld } from '../world';
 import { applyAtmosphereTo, Mist, PRESETS } from './atmosphere';
+import { PhysicalSky } from './physicalSky';
+import { WaterFX } from './water';
+import { isWater } from '../world/terrain';
+import { surfaceUniforms } from '../world/materials';
 
 export interface AppHandle {
   ready: boolean;
@@ -58,8 +62,11 @@ export async function startApp(container: HTMLElement) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.4, 21000);
 
-  setProgress(0.01, 'Loading Poly Haven sky');
+  setProgress(0.01, 'Baking cloud noise and the atmosphere');
   const sky = new SkyRig(scene, quality);
+  // physically based sky with volumetric clouds (?sky=hdri brings back the Poly Haven HDRI dome)
+  const physical = params.get('sky') === 'hdri' ? null : new PhysicalSky(renderer, scene, quality);
+  sky.physical = physical;
   await sky.load(import.meta.env.BASE_URL);
 
   const world = await createTownWorld({ traffic: params.get('traffic') !== '0', onProgress: (f, t) => setProgress(0.05 + f * 0.85, t) });
@@ -97,6 +104,9 @@ export async function startApp(container: HTMLElement) {
   };
 
   const post = new PostFX(renderer, scene, camera, quality);
+  // river and lake: ripple simulation + physically based water (before the atmosphere patch so it gets fog)
+  const water = new WaterFX(renderer);
+  water.attach(world.root);
   if (params.get('ao') === '0') post.ao.enabled = false;
 
   // Pacific Northwest atmosphere (height fog, mist banks, wet roads, grade) — the HDRI sky is kept
@@ -155,7 +165,9 @@ export async function startApp(container: HTMLElement) {
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
     post.setSize(w, h);
+    physical?.setSize(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
   };
+  physical?.setSize(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio());
   window.addEventListener('resize', onResize);
 
   const focus = new THREE.Vector3();
@@ -203,7 +215,9 @@ export async function startApp(container: HTMLElement) {
     }
     world.update(dt, elapsed, camera.position, drive.active ? drive.pos : null);
     mist.update(elapsed);
+    water.update(dt, elapsed, focus, surfaceUniforms.uWet.value, isWater, drive.active ? drive.pos : null);
     renderer.info.reset();
+    physical?.render(camera, dt);
     post.render(dt);
     calls = renderer.info.render.calls;
     tris = renderer.info.render.triangles;
@@ -225,6 +239,25 @@ export async function startApp(container: HTMLElement) {
       document.body.dataset.ready = '1';
     }
   };
+
+  // dev-only: render one frame on demand (captures while the tab is in the background)
+  if (import.meta.env.DEV)
+    (window as unknown as { pineApp: unknown }).pineApp = {
+      renderer,
+      scene,
+      camera,
+      setPreset,
+      frame: (dt = 1 / 60) => {
+        elapsed += dt;
+        director.focus(focus);
+        world.update(dt, elapsed, camera.position, null);
+        water.update(dt, elapsed, focus, surfaceUniforms.uWet.value, isWater, null);
+        sky.updateShadows(focus, 160);
+        physical?.render(camera, dt);
+        post.render(dt);
+        return renderer.domElement;
+      },
+    };
 
   const handle: AppHandle = {
     ready: false,

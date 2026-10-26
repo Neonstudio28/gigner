@@ -16,7 +16,7 @@ The town itself is compact, about 1.6 km by 1 km. Forest closes in around its ed
 - **Old Highway 10** is Main Street through the middle of town. It links the two I-90 interchanges: **Exit 61** (Mill Rd) at the west end and **Exit 63** (Eastside Rd) at the east end.
 - **The South Fork river** (30–44 m wide) passes under I-90 west of town and runs past the mill. It flows through town between downtown and the North Side, with parks on both banks, then bends south-east under Old Hwy 10 into Spirit Lake.
 - **I-90** runs close along the north edge of town and crosses the river on its own bridge. Between the exits it rises onto a short overpass so Sunnyside Rd (Division St continued) can pass under it to the North Slope.
-- **The street grid** fills the middle of town and stops at Maple St. Some grid streets run on past its edge and bend into curving neighbourhood streets that end in cul-de-sacs: Alder St into the West End, Division St and 2nd Ave E up Cedar Ridge, and 2nd Ave W and 5th Ave W up Church Hill. Hillcrest Dr follows the foot of the hill and links them all, and its east end runs through Eastgate.
+- **The street grid** fills the middle of town but is not a box: the downtown core is square, while River St follows the bank and rounds off both ends, the outer avenues (4th and 5th) splay outward toward the hills, the inner avenues wander a little past the civic row, and Maple St rises and falls along the foot of the hills instead of closing the grid with a straight edge. Some grid streets run on past its edge and bend into curving neighbourhood streets that end in cul-de-sacs: Alder St into the West End, Division St and 2nd Ave E up Cedar Ridge, and 2nd Ave W and 5th Ave W up Church Hill. Hillcrest Dr follows the foot of the hill and links them all, and its east end runs through Eastgate.
 
 | District | What's there |
 |---|---|
@@ -38,26 +38,32 @@ The town itself is compact, about 1.6 km by 1 km. Forest closes in around its ed
 | **Riverside Mobile Home Park** | Single- and double-wides on a loop lane between Old Hwy 10 and the river at the west end. |
 | **Mill Town** | The oldest working-class housing: Cascade Lumber's 1923 company houses on tight lots along Sawmill Ave, Mill Row, Shingle St and the highway, beside the Mill Spur. Hip-roof workers' cottages, minimal traditionals, duplexes, fourplexes and single-wides fill the gaps, many behind chain-link. The income-restricted Cascade Court Apartments are across Old Hwy 10. |
 | **Spirit Lake** | Lakeshore Dr loops the lake from Old Hwy 10 past cabins with private docks, lakefront estates, Spirit Lake Lodge, the marina, a bait shop and the campground. |
+| **Eastside Warehouses** | Warehouse Rd off Eastside Rd, between the river and the Exit 63 ramps: Cascade Distribution Center (truck docks with trailers backed in), Valley Cold Storage (reefer trailers, rooftop condensers), Timberline Feed & Grain Warehouse and Pine Hollow Self Storage (rows of roll-up units behind a fence and keypad gate). |
 | **Industrial Flats** | Between the river and I-90 at the west end: Cascade Lumber mill (tepee burner, log decks), the lumber yard, the County Road Dept., the Public Works yard, Cascade Freight Lines, Valley Ready-Mix & Gravel, Ridge Machine & Welding and Substation 4 with its high-voltage lines. |
 | **North Slope** | Above Sunnyside: the high-voltage line along the forest edge, Sierra Silver Mine (headframe, hoist house, ore bins, portal) and the KPHR radio transmitter. |
 | **West Valley / East Valley** | Miller Dairy, Ridgeview Farm, the Grange hall, the Forest Service station, homesteads on Cougar Creek Rd and cabins on Grouse Ln in the west. Sunny Acres Orchard and Hansen Farm in the east. |
 
 **Town map.** Press `M` while driving. The map is hill-shaded and shows district outlines and names, every named place (colour-coded by type), street names, I-90 shields and exits, a legend and a scale bar. The HUD shows the street and district you're in.
 
-**Road types.** Each has its own cross-section and markings:
-- **Interstate:** barrier, lane lines and guardrails.
-- **Ramps.**
-- **Old highway:** double yellow line and gravel shoulders.
-- **Strip:** centre turn lane.
-- **Downtown:** parking lanes and wide sidewalks.
-- **Residential:** grass park strip and sidewalks.
-- **Suburban:** wider grass strip.
-- **Rural, gravel and dirt:** dirt has a grassy crown.
-- **Alleys.**
+**Road types.** Roads follow the FHWA functional classes (Interstate → arterials → collectors → local streets), each with its own cross-section and markings:
+- **Interstate (I-90):** 12 ft lanes, wide shoulders, centre barrier and guardrails; ramps at the two diamond interchanges.
+- **Principal arterial (Old Hwy 10):** a rural two-lane highway with a double yellow line and paved shoulders, a five-lane strip with a centre turn lane near the exits, and downtown Main Street with parking lanes and wide sidewalks.
+- **Rural collectors (Mill Rd, Eastside Rd, Lakeshore Dr):** centre line, edge lines and gravel shoulders.
+- **Urban collectors (Hillcrest Dr, Highland Dr, Sunnyside Rd, River St, Riverside Dr, Alder St west, Division St north, 3rd Ave W):** two 12 ft lanes, bike/parking lanes behind white edge lines, a double yellow line, curbs, planting strips and sidewalks.
+- **Local streets:** residential (no centre line, parking, park strip and sidewalks) and suburban courts.
+- **Gravel and dirt roads** (dirt has a grassy crown) and **alleys**.
 
-Bridges carry roads over the river. The terrain is graded to meet every road.
+**Junctions.** Every T-junction and crossing has curb returns: the side street's asphalt flares into a rounded corner, and the curb, planting strip and sidewalk wrap round it. Roads are cut exactly at the edge of the road they meet, the through road keeps its markings, and stop signs, lamps and hydrants stay off the junction. Bridges carry roads over the river.
 
-**Atmosphere.** The look is grey-green Pacific Northwest, not a bright postcard. The Poly Haven HDRI sky is kept, with its horizon blended into the haze. On top of it:
+**Terrain and collision.** The ground is graded to meet every road, and terrain cells beside roads are split to about 4 m so the ground follows cuts, fills and curbs; it is always kept just under the road surface so it never pokes through. Vehicles ride on the drawn ground mesh, not an invisible approximation of it, so there are no bumps where nothing is visible, and they drive on carriageways, curb returns, sidewalks and bridge decks.
+
+**Textures.** Asphalt, gravel road and sidewalk concrete are CC0 photo textures from Poly Haven, high-pass filtered to a neutral grey so each road's colour still comes through; sidewalks are scored into 1.5 m slabs.
+
+**Sky and water.**
+- **Physical sky** (after leoawen/volumetric_cloud_atmosphere_scattering): single-scattering atmosphere with Rayleigh, Mie and ozone, a sun disc, and raymarched volumetric clouds built from baked 3D Perlin-Worley and Worley noise, lit with Beer + powder and a two-lobe phase function. It renders at half resolution with temporal reprojection, and the same shader feeds the environment map, so reflections and ambient light match the sky. Each preset sets its own cloud cover (fair-weather cumulus on a clear day, a solid deck for drizzle). `?sky=hdri` brings back the old Poly Haven HDRI dome.
+- **Water** (after jeantimex/threejs-water): a heightfield ripple simulation follows the camera across the river and lake (raindrops in wet weather, the odd rising fish), and the surface is physically based: Fresnel reflection of the sky, flow-aligned waves on the river, wind ripples on the lake, colour and clarity from the water depth, and foam along the shore.
+
+**Atmosphere.** The look is grey-green Pacific Northwest, not a bright postcard. On top of the sky:
 - exponential height fog that pools in the valley, with sun in-scattering;
 - drifting mist banks over the forest, river and lake;
 - rain-darkened glossy roads with puddles;
@@ -124,7 +130,7 @@ world.update(dt, elapsedSeconds, camera.position, playerPosition);
   - `strip90s.ts`: 1990s highway businesses.
   - `civic2.ts`: the courthouse.
   - The earlier downtown and commercial builders.
-- **`src/engine/atmosphere.ts`:** height fog, mist, presets. `post.ts` holds the N8AO → bloom → ACES → grade → vignette → grain stack. `sky.ts` matches the sun to the HDRI.
+- **`src/engine/atmosphere.ts`:** height fog, mist, presets. `post.ts` holds the N8AO → bloom → ACES → grade → vignette → grain stack. `sky.ts` drives the sun, fog and shadows; `physicalSky.ts` is the atmosphere and cloud renderer; `water.ts` the ripple simulation and water material.
 - **Performance:**
   - One shared material (texture array, per-vertex PBR) and a sign atlas keep static geometry to a few hundred draw calls.
   - Vegetation uses two-level chunked LOD.
@@ -134,7 +140,10 @@ world.update(dt, elapsedSeconds, camera.position, playerPosition);
 
 | Asset / library | Source | License |
 |---|---|---|
-| Sky HDRI “Kloofendal 48d Partly Cloudy (Pure Sky)” — Greg Zaal, Jarod Guest | polyhaven.com | CC0 |
+| Sky HDRI “Kloofendal 48d Partly Cloudy (Pure Sky)” — Greg Zaal, Jarod Guest (optional `?sky=hdri`) | polyhaven.com | CC0 |
+| Road textures “Asphalt 01”, “Gravel Road”, “Brushed Concrete” (resized to 512 px) | polyhaven.com | CC0 |
+| Atmosphere and volumetric cloud techniques | github.com/leoawen/volumetric_cloud_atmosphere_scattering | MIT |
+| Water ripple simulation and surface optics (after Evan Wallace's WebGL Water) | github.com/jeantimex/threejs-water | MIT |
 | Fonts: Alfa Slab One, Oswald, Lobster, Rye, Bebas Neue | Google Fonts via Fontsource | OFL-1.1 |
 | three.js | github.com/mrdoob/three.js | MIT |
 | postprocessing | github.com/pmndrs/postprocessing | Zlib |

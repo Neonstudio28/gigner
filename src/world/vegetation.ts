@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { prepare, type Col, type Occupancy } from './core/kit';
 import { Rng } from './core/rng';
-import { heightAt, forestDensity, valley, isWater, river, MAP_RADIUS } from './terrain';
+import { groundHeight, forestDensity, valley, isWater, river, MAP_RADIUS } from './terrain';
 import { addWindSway } from './materials';
 import { P } from './palette';
 
@@ -391,7 +391,7 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
     if (isWater(x, z)) return;
     const rv = river.query(x, z);
     if (rv && rv.dist < rv.hw + 3) return;
-    const y = heightAt(x, z) - 0.15;
+    const y = groundHeight(x, z) - 0.15;
     const ry = rng.range(0, Math.PI * 2);
     switch (kind) {
       case 'fir':
@@ -462,7 +462,7 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
       const x = gp.x + rng.range(-gp.w / 2, gp.w / 2);
       const z = gp.z + rng.range(-gp.d / 2, gp.d / 2);
       if (input.occ.blocked(x, z, 0.3)) continue;
-      add(rng.pick(['grass0', 'grass1']), x, heightAt(x, z), z, rng.range(0, 6), rng.range(0.6, 1.1));
+      add(rng.pick(['grass0', 'grass1']), x, groundHeight(x, z), z, rng.range(0, 6), rng.range(0.6, 1.1));
     }
   for (let i = 0; i < 16000; i++) {
     const a = rng.range(0, Math.PI * 2);
@@ -472,7 +472,7 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
     if (input.occ.blocked(x, z, 0.6)) continue;
     if (forestDensity(x, z) > 0.6 && rng.chance(0.6)) continue;
     if (valley(x, z).e < 0 && Math.abs(x) < 1100 && rng.chance(0.7)) continue;
-    add(rng.pick(['grass0', 'grass1']), x, heightAt(x, z), z, rng.range(0, 6), rng.range(0.7, 1.4));
+    add(rng.pick(['grass0', 'grass1']), x, groundHeight(x, z), z, rng.range(0, 6), rng.range(0.7, 1.4));
   }
 
   for (const f of input.cornFields) {
@@ -484,7 +484,7 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
         const lz = v + rng.range(-0.1, 0.1);
         const x = f.x + lx * c + lz * s;
         const z = f.z - lx * s + lz * c;
-        add('corn0', x, heightAt(x, z), z, f.ry + Math.PI / 2 + rng.range(-0.2, 0.2), rng.range(0.85, 1.1));
+        add('corn0', x, groundHeight(x, z), z, f.ry + Math.PI / 2 + rng.range(-0.2, 0.2), rng.range(0.85, 1.1));
       }
   }
 

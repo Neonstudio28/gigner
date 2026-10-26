@@ -259,7 +259,7 @@ export function furnishRoads(pl: Placer) {
       for (let s = 8; s < r.length - 6; s += 18)
         for (const side of [1, -1] as const) {
           const f = net.frontage(r, s + (side > 0 ? 0 : 9), side, sp.hw + 0.9);
-          if (net.near(f.x, f.z).some((h) => h.road !== r && !r.chained.has(h.road) && Math.abs(h.lat) < h.road.spec.hw + 1.5)) continue;
+          if (net.inJunction(r, f.x, f.z, f.y)) continue;
           globeLamp(k, f.x, f.z, f.y + 0.16);
         }
     } else if (r.kind === 'strip' || r.kind === 'arterial' || r.kind === 'suburban' || r.kind === 'ramp') {
@@ -267,7 +267,7 @@ export function furnishRoads(pl: Placer) {
       for (let s = 20; s < r.length - 15; s += step) {
         const side: 1 | -1 = (Math.floor(s / step) % 2 ? 1 : -1) as 1 | -1;
         const f = net.frontage(r, s, side, sp.hw + (sp.curb ? 0.9 : (sp.shoulder?.w ?? 0) + 0.8));
-        if (f.p.elevated || isWater(f.x, f.z)) continue;
+        if (f.p.elevated || isWater(f.x, f.z) || net.inJunction(r, f.x, f.z, f.y)) continue;
         k.at(0, 0, 0, () => pr.streetLight(k, f.x, f.z, f.ry, 8), f.y + (sp.curb ? 0.16 : 0));
       }
     }
@@ -275,7 +275,9 @@ export function furnishRoads(pl: Placer) {
     for (const end of [0, 1] as const) {
       const on = end ? r.endOn : r.startOn;
       if (!on || r.def.link || on.road.spec.rank <= sp.rank || r.kind === 'alley') continue;
-      const back = on.road.full + 1.2;
+      const ep = end ? r.pts[r.pts.length - 1] : r.pts[0];
+      // behind the crosswalk line, and behind the curb return where there is one
+      const back = Math.max(on.road.full + 1.2, on.road.spec.hw + net.returnLength(r, ep.x, ep.z) + 1.0);
       const s0 = end ? r.length - back : back;
       const p = r.at(s0);
       const dir = end ? 1 : -1;
@@ -292,6 +294,7 @@ export function furnishRoads(pl: Placer) {
     if (sp.curb && r.kind !== 'alley')
       for (let s = 30; s < r.length - 20; s += 95) {
         const f = net.frontage(r, s, -1, sp.hw + 0.7);
+        if (net.inJunction(r, f.x, f.z, f.y)) continue;
         k.at(0, 0, 0, () => pr.hydrant(k, f.x, f.z), f.y + 0.16);
       }
     // parallel-parked cars downtown and along older streets

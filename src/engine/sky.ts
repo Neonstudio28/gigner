@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { fogUniforms, type AtmoPreset } from './atmosphere';
 import { surfaceUniforms } from '../world/materials';
+import type { PhysicalSky, CloudSettings } from './physicalSky';
 
 /** Equirect U of the sun disc in the Poly Haven "kloofendal_48d_partly_cloudy_puresky" HDRI. */
 const HDRI_SUN_U = 0.5947;
@@ -31,6 +32,9 @@ export class SkyRig {
   horizonMix = 0.85;
   hemiIntensity = 0.28;
   shadowExtent = 0;
+  /** Physically based sky + volumetric clouds; when set, the HDRI dome is not used. */
+  physical: PhysicalSky | null = null;
+  clouds: CloudSettings = { coverage: 0.35, density: 0.9, base: 1800, top: 3600 };
   readonly domeUniforms = { uHorizonCol: { value: new THREE.Color(0xa9afc0) }, uHorizon: { value: 0.16 }, uHorizonMix: { value: 0.8 } };
   private fog: THREE.FogExp2;
   /** Sky dome sampling the equirect directly (avoids the equirect→cube background conversion). */
@@ -79,6 +83,11 @@ export class SkyRig {
   }
 
   async load(base: string) {
+    if (this.physical) {
+      this.dome.visible = false;
+      this.apply();
+      return;
+    }
     const hdr = await new HDRLoader().loadAsync(`${base}assets/sky/sky_ibl_1k.hdr`);
     hdr.mapping = THREE.EquirectangularReflectionMapping;
     const bg = await new THREE.TextureLoader().loadAsync(`${base}assets/sky/sky_4k.jpg`);
@@ -100,12 +109,20 @@ export class SkyRig {
     const hdriPhi = (HDRI_SUN_U - 0.5) * Math.PI * 2;
     const rot = hdriPhi - Math.atan2(this.dir.z, this.dir.x);
     this.dome.rotation.set(0, rot, 0);
-    this.scene.environmentRotation.set(0, rot, 0);
+    if (!this.physical) this.scene.environmentRotation.set(0, rot, 0);
     const e = this.exposure;
     // warmer, dimmer sun as it approaches the horizon
     const low = THREE.MathUtils.smoothstep(this.elevation, 4, 28);
-    this.sun.color.setRGB(1, 0.86 + 0.1 * low, 0.72 + 0.2 * low).multiply(this.sunTint);
-    this.sun.intensity = this.sunIntensity * e * (0.35 + 0.65 * low);
+    if (this.physical) {
+      // the atmosphere decides the sun's colour and strength (reddened and dimmed through more air when low)
+      this.physical.set(this.dir, this.clouds, this.fog.color, this.horizon, this.horizonMix, this.skyIntensity * e, this.sunIntensity * e);
+      this.sun.color.copy(this.physical.sunColor).multiply(this.sunTint);
+      this.sun.intensity = this.sunIntensity * e;
+      this.hemi.color.copy(this.physical.skyTop).multiplyScalar(1 / Math.max(0.05, Math.max(this.physical.skyTop.r, this.physical.skyTop.g, this.physical.skyTop.b)));
+    } else {
+      this.sun.color.setRGB(1, 0.86 + 0.1 * low, 0.72 + 0.2 * low).multiply(this.sunTint);
+      this.sun.intensity = this.sunIntensity * e * (0.35 + 0.65 * low);
+    }
     this.hemi.intensity = this.hemiIntensity * e;
     this.scene.environmentIntensity = this.envIntensity * e;
     this.dome.material.color.copy(this.skyTint).multiplyScalar(this.skyIntensity * e);
@@ -140,6 +157,7 @@ export class SkyRig {
     surfaceUniforms.uWet.value = p.wet;
     surfaceUniforms.uWindowGlow.value = p.windows;
     this.exposure = p.exposure;
+    this.clouds = { ...p.clouds };
     // softer, lighter shadows under cloud
     this.sun.shadow.intensity = 0.55 + 0.35 * Math.min(1, p.sun.intensity / 3);
     this.sun.shadow.radius = 2.2 + 3 * (1 - Math.min(1, p.sun.intensity / 3));

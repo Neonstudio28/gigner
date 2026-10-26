@@ -1188,6 +1188,120 @@ function apartments(id: string, title: string, sub: string, o: AptOpts) {
 }
 
 /* ================================================================================================
+ * Warehouses and storage (godowns): steel distribution buildings with truck docks, mini-storage
+ * ============================================================================================== */
+interface WarehouseOpts {
+  /** Building footprint (the site adds a 34 m truck court in front). */
+  w: number;
+  d: number;
+  H: number;
+  wall: Col;
+  mat?: string;
+  roof: Col;
+  bg: string;
+  fg: string;
+  /** White insulated panels, rooftop condensers and reefer trailers. */
+  cold?: boolean;
+  trailers?: number;
+}
+
+/** Steel warehouse: low gable roof, raised truck docks along the front, office at one end, trailers at the doors. */
+function warehouseSite(id: string, title: string, sub: string, o: WarehouseOpts) {
+  const W = o.w + 8;
+  const D = o.d + 34;
+  return def(id, title, W, D, ['industrial', 'warehouse'], (c, x, z, ry, seed) => {
+    const { kit: k } = c;
+    const rng = new Rng(seed);
+    c.occ.add(x, z, W, D, ry, 1, false);
+    const sign = board(c, `${id}.sign`, title.toUpperCase(), sub, o.bg, o.fg, { h: 200 });
+    const mat = o.mat ?? 'corrugated';
+    k.at(x, z, ry, () => {
+      const bz = -D / 2 + o.d / 2 + 1;
+      const fz = bz + o.d / 2;
+      k.solid(0, bz, o.w, o.d);
+      k.box(0, 0, bz, o.w + 0.2, 0.3, o.d + 0.2, 0x8f8c87, 'concrete');
+      k.box(0, 0.3, bz, o.w, o.H, o.d, o.wall, mat);
+      k.box(0, 0.3, bz, o.w + 0.1, 1.0, o.d + 0.1, 0x9a978f, 'concrete');
+      k.roof(0, o.H + 0.3, bz, o.w, [[o.d / 2, 0], [0, o.d * 0.08], [-o.d / 2, 0]], o.roof, 'roofMetal', { eaveOH: 0.4, gableOH: 0.3, fill: o.wall, fillMat: mat });
+      if (o.cold) for (let i = 0; i < 4; i++) k.box(-o.w / 2 + 8 + i * 9, o.H + 0.3 + o.d * 0.04, bz - 4, 3.2, 1.4, 2.2, 0xc9ccd0, 'metal');
+      // office block at the +x end of the front
+      const ox = o.w / 2 - 8;
+      flatBlock(k, rng, ox, fz + 3, 14, 6, 4.4, 0xe4e1d8, 'stucco', 1);
+      storefront(k, ox - 5, ox - 1, 0.4, fz + 6, 2.8, { frame: 0x3a3d41 });
+      winRow(k, ox, ox + 6, 2, 1.2, fz + 6, 1.8, 1.4, 0x3a3d41, { mx: 2 });
+      k.sign(-o.w / 6, o.H - 1.6, fz + 0.06, Math.min(22, o.w * 0.45), 2.4, sign, {});
+      // dock wall and doors (floor 1.2 m above the truck court), bumpers and dock lights
+      const dockEnd = ox - 9;
+      const n = Math.max(2, Math.floor((dockEnd + o.w / 2 - 4) / 4.6));
+      k.box((dockEnd - o.w / 2) / 2, 0, fz + 0.3, dockEnd + o.w / 2, 1.2, 0.6, 0xb5b2ab, 'concrete');
+      const docks: number[] = [];
+      for (let i = 0; i < n; i++) {
+        const dx = -o.w / 2 + 4 + i * 4.6;
+        docks.push(dx);
+        k.box(dx, 1.2, fz + 0.62, 3.4, 3.5, 0.08, 0x5a5e62, 'metal');
+        k.box(dx, 1.25, fz + 0.66, 3.0, 3.2, 0.06, o.cold ? 0xe9e8e4 : 0xd9dadc, 'rollup');
+        for (const s of [-1, 1]) k.box(dx + s * 1.55, 0.75, fz + 0.75, 0.28, 0.4, 0.3, 0x1b1b1d, 'rubber');
+        k.box(dx + 2.0, 4.6, fz + 0.75, 0.25, 0.2, 0.3, 0xffe9b0, 'light');
+      }
+      // truck court, trailers backed up to some doors, car lot by the office
+      pave(k, 0, fz + 17, W, 34);
+      const used = new Set<number>();
+      for (let t = 0; t < (o.trailers ?? 3); t++) {
+        const i = rng.int(0, docks.length - 1);
+        if (used.has(i)) continue;
+        used.add(i);
+        // tractor faces away from the dock; the 15 m trailer runs back to the door
+        parkSemi(c, docks[i], fz + 0.9 + 14.9, -HALF, rng.pick([0xf2f1ec, 0xc8262c, 0x2c4a8c, 0x2f6b4a, 0xe8a91c]));
+        if (o.cold) k.box(docks[i], 1.4, fz + 0.9 + 0.9, 2.3, 1.6, 0.5, 0xd9d6cc, 'metal');
+      }
+      stalls(k, ox - 4, 3, 5, fz + 26, fz + 32);
+      parkRow(c, rng, ox - 4, 3, 5, fz + 28.5, 1, 0.7);
+      for (const lx of [-o.w / 2 + 2, 0, o.w / 2 - 2]) lamp(k, lx, fz + 33, Math.PI);
+      securityFence(k, [[-W / 2 + 0.5, fz + 8], [-W / 2 + 0.5, -D / 2 + 0.5], [W / 2 - 0.5, -D / 2 + 0.5], [W / 2 - 0.5, fz + 8]]);
+    });
+  });
+}
+
+/** Mini-storage: rows of roll-up units inside a fence, an office and keypad gate at the front. */
+function selfStorage(id: string, title: string, sub: string) {
+  const W = 70;
+  const D = 60;
+  return def(id, title, W, D, ['industrial', 'storage'], (c, x, z, ry, seed) => {
+    const { kit: k } = c;
+    const rng = new Rng(seed);
+    c.occ.add(x, z, W, D, ry, 1, false);
+    const sign = board(c, `${id}.sign`, title.toUpperCase(), sub, '#c8562a', '#ffffff', { h: 220 });
+    k.at(x, z, ry, () => {
+      pave(k, 0, 0, W, D);
+      // four rows of units, doors on both long sides
+      const rowL = 50;
+      for (let r = 0; r < 4; r++) {
+        const rz = -22 + r * 13;
+        const rx = 6;
+        k.solid(rx, rz, rowL, 6);
+        k.box(rx, 0, rz, rowL + 0.1, 0.25, 6.1, 0x9a978f, 'concrete');
+        k.box(rx, 0.25, rz, rowL, 2.9, 6, 0xe9e6dc, 'corrugated');
+        k.roof(rx, 3.15, rz, rowL, [[3, 0], [0, 0.45], [-3, 0]], 0x8a8e92, 'roofMetal', { eaveOH: 0.5, gableOH: 0.3, fill: 0xe9e6dc, fillMat: 'corrugated' });
+        for (const s of [-1, 1])
+          for (let u = 0; u < 15; u++) {
+            const ux = rx - rowL / 2 + 1.7 + u * 3.33;
+            k.box(ux, 0.25, rz + s * 3.03, 2.6, 2.35, 0.06, 0xd86a2c, 'rollup');
+          }
+      }
+      // office and gate at the front left, fence round the lot
+      flatBlock(k, rng, -27, 22, 12, 8, 3.6, 0xe4dccb, 'stucco', 1);
+      storefront(k, -31, -27, 0.4, 26, 2.6, { frame: 0x3a3d41 });
+      k.sign(-27, 3.0, 26.06, 10, 1.1, sign, {});
+      k.box(-16, 0, 27, 0.25, 1.3, 0.25, 0x4b4f54, 'metal');
+      k.box(-16, 1.0, 27.15, 0.35, 0.45, 0.12, 0x2b2d31, 'metal');
+      securityFence(k, [[-W / 2 + 0.5, 28], [-W / 2 + 0.5, -D / 2 + 0.5], [W / 2 - 0.5, -D / 2 + 0.5], [W / 2 - 0.5, 29.5], [-12, 29.5]]);
+      for (let i = 0; i < 3; i++) park(c, rng.pick(['pickup', 'van', 'suv'] as const), -10 + i * 14, -15.5 + rng.int(0, 2) * 13, 0, rng.pick(CAR_COLORS));
+      for (const lx of [-20, 20]) lamp(k, lx, 0, 0, 7);
+    });
+  });
+}
+
+/* ================================================================================================
  * Catalogue
  * ============================================================================================== */
 export const TOWN: BuildingDef[] = [
@@ -1218,6 +1332,10 @@ export const TOWN: BuildingDef[] = [
   ballpark('westEndPark', 'West End Park'),
   ballpark('loggerPark', 'Logger Ballpark'),
   ballpark('sunnysideField', 'Sunnyside Field'),
+  warehouseSite('distCenter', 'Cascade Distribution Center', 'FREIGHT · CROSS-DOCK · WAREHOUSING', { w: 70, d: 42, H: 9, wall: 0xc9ccd0, roof: 0x8a8e92, bg: '#1f3d6b', fg: '#ffffff', trailers: 4 }),
+  warehouseSite('coldStorage', 'Valley Cold Storage', 'FROZEN · CHILLED · FRUIT PACKING', { w: 46, d: 34, H: 8, wall: 0xf2f1ec, mat: 'paint', roof: 0xd9d6cc, bg: '#2c6b8a', fg: '#ffffff', cold: true, trailers: 3 }),
+  warehouseSite('feedWarehouse', 'Timberline Feed & Grain Warehouse', 'BULK FEED · SEED · FENCING', { w: 36, d: 24, H: 7, wall: 0x8a3a2e, mat: 'boards', roof: 0x4a4c52, bg: '#3d2f28', fg: '#f2e3c2', trailers: 1 }),
+  selfStorage('selfStorage', 'Pine Hollow Self Storage', '24 HR ACCESS · RV & BOAT · U-HAUL'),
   apartments('valleyViewApts', 'Valley View Apartments', '1 & 2 BEDROOMS · NOW LEASING', {
     wall: 0x8a6a4a, mat: 'boards', trim: 0xe9e0c8, roof: 0x3b3d42, door: 0xc9a227, hip: true, pool: true, bg: '#5a3a24', fg: '#f2e3c2',
   }),
