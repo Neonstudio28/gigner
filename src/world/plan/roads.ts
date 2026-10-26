@@ -48,9 +48,11 @@ export const EXITS = [
   { n: 63, x: 760, road: 'Eastside Rd', to: 'Downtown · Spirit Lake · Hospital' },
 ];
 const DECK = 7.5;
+/** Crossroads that pass under I-90: the two interchanges and Sunnyside Rd up to the North Slope. */
+const UNDERPASSES = [...EXITS.map((e) => e.x), 0];
 const interstateElev = (x: number) => {
   let e = 0;
-  for (const ex of EXITS) e = Math.max(e, smoothstep(ex.x - 160, ex.x - 60, x) * (1 - smoothstep(ex.x + 60, ex.x + 160, x)));
+  for (const ux of UNDERPASSES) e = Math.max(e, smoothstep(ux - 160, ux - 60, x) * (1 - smoothstep(ux + 60, ux + 160, x)));
   return e * DECK;
 };
 
@@ -176,9 +178,29 @@ export const ROADS: RoadDef[] = [
   alley('North Alley 1', -287.5, -395, 395),
   alley('North Alley 2', -367.5, -395, 395),
 
+  // ---------------------------------------------------------------- Sunnyside: the North Slope above I-90
+  // Sunnyside Rd carries Division St on under I-90 and up the slope. Highland Dr follows the hill between the two
+  // interchange crossroads, Valley View Dr loops below it, and the courts climb toward the trees.
+  { name: 'Sunnyside Rd', kind: 'residential', pts: [[0, Z.larch], [0, -445], [0, -485], [0, -542], [0, -600], [-12, -645], [-30, -688]], culdesac: true },
+  {
+    name: 'Highland Dr',
+    kind: 'residential',
+    pts: [[-760, -578], [-640, -572], [-520, -585], [-380, -596], [-240, -590], [-120, -597], [0, -600], [120, -597], [240, -590], [380, -596], [520, -585], [640, -572], [760, -578]],
+  },
+  { name: 'Valley View Dr', kind: 'suburban', pts: [[-520, -585], [-430, -552], [-300, -540], [-140, -538], [0, -542], [140, -538], [300, -540], [430, -552], [520, -585]] },
+  { name: 'Crestview Ct', kind: 'suburban', pts: [[120, -597], [128, -640], [110, -685]], culdesac: true },
+  { name: 'Meadowlark Ln', kind: 'suburban', pts: [[240, -590], [255, -640], [330, -668], [420, -655], [440, -625], [380, -596]] },
+  { name: 'Sunflower Ct', kind: 'suburban', pts: [[640, -572], [652, -615], [684, -648]], culdesac: true },
+  { name: 'Juniper Ct', kind: 'suburban', pts: [[-380, -596], [-398, -640], [-440, -668]], culdesac: true },
+  { name: 'Bitterroot Ct', kind: 'suburban', pts: [[-705, -575], [-712, -612], [-728, -640]], culdesac: true },
+
   // ---------------------------------------------------------------- west end: industry, mobile homes, the West End suburb
   { name: 'Industrial Way', kind: 'rural', pts: [[-760, -370], [-680, -366], [-620, -362], [-560, -357]] },
   { name: 'Mill Spur', kind: 'gravel', pts: [[-1000, 7], [-1000, -90], [-1000, -190]] },
+  // Mill Town: the sawmill's 1920s company houses on a three-street grid beside the spur
+  { name: 'Sawmill Ave', kind: 'residential', pts: [[-1140, 12.6], [-1140, -60], [-1140, -125], [-1140, -168]], culdesac: true },
+  { name: 'Mill Row', kind: 'residential', pts: [[-1000, -60], [-1140, -60], [-1280, -60]], culdesac: true },
+  { name: 'Shingle St', kind: 'residential', pts: [[-1000, -125], [-1140, -125], [-1280, -125]], culdesac: true },
   { name: 'Riverside Ln', kind: 'lane', pts: [[-735, 0], [-735, -70], [-710, -140], [-660, -150], [-640, -90], [-650, 0]] },
   { name: 'Sunset Dr', kind: 'suburban', pts: [[-780, 110], [-760, 180], [-745, 255], [-705, 300]], culdesac: true },
   { name: 'Hemlock Ct', kind: 'suburban', pts: [[-840, 170], [-905, 190], [-950, 235]], culdesac: true },

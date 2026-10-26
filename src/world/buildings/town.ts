@@ -1030,11 +1030,170 @@ function office(id: string, title: string, sub: string, o: OfficeOpts = {}) {
 }
 
 /* ================================================================================================
+ * Apartments on the edge of town: two-storey motel-style walk-ups around a parking lot
+ * ============================================================================================== */
+interface AptOpts {
+  wall: Col;
+  mat: string;
+  trim: Col;
+  roof: Col;
+  door: Col;
+  /** Low hipped roof (1970s) or a plain gable (1990s). */
+  hip?: boolean;
+  pool?: boolean;
+  bg: string;
+  fg: string;
+}
+
+/** Walk-up block L long and 11 deep, front (+Z) gallery on posts, open stairs past both ends (each adds 5.8 m). */
+function walkup(c: Ctx, rng: Rng, L: number, o: AptOpts) {
+  const k = c.kit;
+  const D = 11;
+  const F = 0.3;
+  const H = 2.75;
+  const top = F + 2 * H;
+  const zf = D / 2;
+  const gz = zf + 1.0;
+  const CON = 0xc6c3bc;
+  k.solid(0, 0, L, D);
+  k.box(0, 0, 0, L + 0.1, F, D + 0.1, 0x8f8c87, 'concrete');
+  k.box(0, F, 0, L, 2 * H, D, o.wall, o.mat);
+  k.box(0, F + H - 0.1, 0, L + 0.08, 0.2, D + 0.08, o.trim);
+  if (o.hip) k.hipRoof(0, top, 0, L, D, 2.0, o.roof, 'shingle', 0.7);
+  else k.roof(0, top, 0, L, [[zf, 0], [0, 2.4], [-zf, 0]], o.roof, 'shingle', { trim: o.trim, fill: o.wall, fillMat: o.mat, eaveOH: 0.6, gableOH: 0.4, ridge: o.roof });
+
+  // gallery: walkway slab, posts to the eave, canopy, railing
+  k.box(0, 0, gz, L, 0.12, 2.1, CON, 'concrete', { cast: false });
+  k.box(0, F + H - 0.05, gz, L, 0.22, 2.0, CON, 'concrete');
+  k.box(0, top - 0.14, gz, L + 0.2, 0.14, 2.2, o.roof);
+  const nPost = Math.max(2, Math.round(L / 4));
+  for (let i = 0; i <= nPost; i++) {
+    const px = -L / 2 + 0.2 + ((L - 0.4) * i) / nPost;
+    k.box(px, 0, zf + 1.9, 0.18, top - 0.14, 0.18, o.trim);
+    k.solid(px, zf + 1.9, 0.3, 0.3);
+  }
+  k.box(0, F + H + 0.95, zf + 1.95, L, 0.08, 0.08, o.trim);
+  const nBal = Math.round(L / 0.5);
+  for (let i = 0; i <= nBal; i++) k.box(-L / 2 + (L * i) / nBal, F + H + 0.17, zf + 1.95, 0.04, 0.8, 0.04, o.trim);
+
+  // open stairs running down past each end of the gallery
+  for (const s of [-1, 1]) {
+    const xl = s * (L / 2 + 0.7);
+    k.box(xl, F + H - 0.05, gz, 1.4, 0.22, 2.0, CON, 'concrete');
+    for (const zz of [gz - 0.9, gz + 0.9]) k.box(xl + s * 0.6, 0, zz, 0.15, F + H - 0.05, 0.15, o.trim);
+    const xt = s * (L / 2 + 1.4);
+    const xb = s * (L / 2 + 5.6);
+    k.beam({ x: xt, y: F + H - 0.05, z: gz }, { x: xb, y: 0.05, z: gz }, 1.1, 0.18, CON, 'concrete');
+    const n = 14;
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n;
+      k.box(xt + (xb - xt) * t, (F + H) * (1 - t) - 0.02, gz, 0.3, 0.06, 1.1, CON, 'concrete');
+    }
+    for (const zz of [gz - 0.6, gz + 0.6]) k.beam({ x: xt, y: F + H + 0.9, z: zz }, { x: xb, y: 0.95, z: zz }, 0.05, 0.05, o.trim, 'metal');
+    k.solid((xt + xb) / 2, gz, 4.2, 1.3);
+  }
+
+  // units: door and window per flat on each floor, AC units, bits of life on the gallery
+  const n = Math.max(2, Math.round(L / 8));
+  const U = L / n;
+  for (let i = 0; i < n; i++) {
+    const xi = -L / 2 + U * (i + 0.5);
+    for (const fl of [0, 1]) {
+      const y = F + fl * H;
+      doorAt(k, xi - U * 0.25, y, zf, 0.92, 2.1, o.door, { frame: o.trim });
+      windowAt(k, xi + U * 0.15, y + 0.9, zf, 1.8, 1.25, { frame: o.trim, mx: 2 });
+      if (rng.chance(0.4)) {
+        k.box(xi + U * 0.15, y + 0.95, zf + 0.25, 0.7, 0.42, 0.45, 0xd9d6cc);
+        k.box(xi + U * 0.15, y + 1.0, zf + 0.48, 0.55, 0.28, 0.02, 0x8f9194);
+      }
+      if (rng.chance(0.3)) bench(k, xi + U * 0.33, gz + 0.3, 0);
+      if (fl === 0 && rng.chance(0.25)) k.cyl(xi - U * 0.42, 0.12, gz, 0.25, 0.2, 0.4, 7, 0x8a4a2a);
+    }
+    k.at(xi, -zf, Math.PI, () => {
+      for (const fl of [0, 1]) windowAt(k, 0, F + fl * H + 0.9, 0, 2.2, 1.25, { frame: o.trim, mx: 2 });
+    });
+  }
+  for (const s of [-1, 1]) k.at(s * (L / 2), 0, (s * Math.PI) / 2, () => {
+    for (const fl of [0, 1]) windowAt(k, -2.2, F + fl * H + 0.9, 0, 1.1, 1.2, { frame: o.trim, mx: 2 });
+  });
+}
+
+/** Garden-apartment complex: a long walk-up at the back, a short one down the left side, lot, office and laundry. */
+function apartments(id: string, title: string, sub: string, o: AptOpts) {
+  return def(id, title, 72, 56, ['residential', 'apartments'], (c, x, z, ry, seed) => {
+    const { kit: k } = c;
+    const rng = new Rng(seed);
+    c.occ.add(x, z, 72, 56, ry, 1, false);
+    const sign = board(c, `${id}.sign`, title.toUpperCase(), sub, o.bg, o.fg, { h: 220 });
+    const office = board(c, `${id}.office`, 'OFFICE · LAUNDRY', '', o.bg, o.fg, { h: 120 });
+    k.at(x, z, ry, () => {
+      k.at(0, -20.5, 0, () => walkup(c, rng, 40, o));
+      k.at(-29.5, 8, HALF, () => walkup(c, rng, 26, o));
+
+      // lot: one row along the back building, a double row in the middle, aisles between
+      pave(k, 3, 6, 46, 34);
+      pave(k, 10, 25.5, 9, 5);
+      stalls(k, -18, 3, 14, -11, -5.5);
+      parkRow(c, rng, -18, 3, 14, -8.6, -1, 0.7);
+      stalls(k, -12, 3, 11, 3, 15);
+      parkRow(c, rng, -12, 3, 11, 6.4, 1, 0.6);
+      parkRow(c, rng, -12, 3, 11, 11.6, -1, 0.55);
+      for (const [lx, lz] of [[-18, 0], [24, 0], [-18, 20], [24, 20]]) lamp(k, lx, lz, lx < 0 ? 0 : Math.PI);
+
+      // office and laundry
+      k.at(31.5, -17, 0, () => {
+        k.solid(0, 0, 8, 7);
+        k.box(0, 0, 0, 8.1, 0.3, 7.1, 0x8f8c87, 'concrete');
+        k.box(0, 0.3, 0, 8, 3.0, 7, o.wall, o.mat);
+        k.hipRoof(0, 3.3, 0, 8, 7, 1.5, o.roof, 'shingle', 0.5);
+        doorAt(k, -1.6, 0.3, 3.5, 0.95, 2.1, 0x3d5a73, { frame: o.trim, glass: true });
+        windowAt(k, 1.6, 1.1, 3.5, 2.2, 1.3, { frame: o.trim, mx: 2 });
+        k.sign(0, 2.55, 3.56, 5.2, 0.7, office, {});
+        k.box(-4.5, 0, 0, 0.8, 1.1, 0.8, 0xd9d6cc);
+      });
+
+      if (o.pool) {
+        // fenced pool, a 1970s complex's pride
+        k.at(31, 6, 0, () => {
+          slab(k, 0, 0, 8, 14, 0.12);
+          k.box(0, 0.06, 0, 5, 0.1, 10, 0x3f8fb8, 'water', { cast: false });
+          k.box(0, 0.12, -5.2, 5.2, 0.05, 0.3, 0xf1f1ec);
+          securityFence(k, [[-4.2, -7.2], [4.2, -7.2], [4.2, 7.2], [-4.2, 7.2], [-4.2, -7.2]], 0, 1.4);
+          for (const zz of [-3, 0, 3]) k.box(3.1, 0.12, zz, 0.7, 0.35, 1.8, 0xf1f1ec);
+        });
+      } else {
+        // picnic lawn and a few young trees
+        lawn(k, 31, 6, 8, 14);
+        k.box(31, 0.72, 6, 1.8, 0.06, 0.8, 0x8a6a46, 'planks');
+        for (const zz of [0, 12]) conifer(k, 31, zz, rng.range(6, 9));
+      }
+
+      // dumpsters behind a cinder-block screen, mailbox cluster, monument sign
+      k.at(31, 22, 0, () => {
+        k.box(0, 0, -1.8, 7, 1.8, 0.25, 0xb9b4ab, 'cinder');
+        for (const s of [-1, 1]) k.box(s * 3.5, 0, 0, 0.25, 1.8, 3.6, 0xb9b4ab, 'cinder');
+        dumpster(k, -1.6, -0.2, 0, undefined, rng);
+        dumpster(k, 1.6, -0.2, 0);
+        k.solid(0, 0, 7, 3.8);
+      });
+      k.box(-6, 0, 24.5, 3.0, 1.4, 0.5, 0x6c7075, 'metal');
+      k.solid(-6, 24.5, 3.0, 0.5);
+      k.box(-14, 0, 26.2, 6.6, 0.5, 1.2, 0x9b9893, 'stone');
+      k.sign(-14, 1.3, 26.85, 6.2, 1.55, sign, { back: 0x6c6a66, thick: 0.4 });
+      k.solid(-14, 26.2, 6.6, 1.2);
+      for (const [tx, tz] of [[-33, -25], [33, -26], [-20, 26.5], [34, 26]]) conifer(k, tx, tz, rng.range(9, 13));
+      for (let i = 0; i < 3; i++) person(k, rng.range(-16, 20), rng.range(-3, 2), rng.range(0, 6), randomPerson(rng));
+    });
+  });
+}
+
+/* ================================================================================================
  * Catalogue
  * ============================================================================================== */
 export const TOWN: BuildingDef[] = [
   def('hospital', 'Silver Valley Medical Center', 64, 56, ['civic', 'medical'], hospital),
   elementary('westEndElementary', 'West End Elementary', 'PINE HOLLOW SCHOOL DISTRICT 391'),
+  elementary('sunnysideElementary', 'Sunnyside Elementary', 'HOME OF THE BOBCATS · DISTRICT 391'),
   def('highSchool', 'Pine Hollow High School', 92, 52, ['civic', 'school'], highSchool),
   def('footballField', 'Logger Field', 118, 76, ['civic', 'school'], (c, x, z, ry) => footballField(c, x, z, ry)),
   def('supermarket', 'Valley Thriftway', 60, 62, ['retail'], supermarket),
@@ -1058,6 +1217,13 @@ export const TOWN: BuildingDef[] = [
   def('mine', 'Sierra Silver Mine', 64, 44, ['industrial'], (c, x, z, ry) => mine(c, x, z, ry)),
   ballpark('westEndPark', 'West End Park'),
   ballpark('loggerPark', 'Logger Ballpark'),
+  ballpark('sunnysideField', 'Sunnyside Field'),
+  apartments('valleyViewApts', 'Valley View Apartments', '1 & 2 BEDROOMS · NOW LEASING', {
+    wall: 0x8a6a4a, mat: 'boards', trim: 0xe9e0c8, roof: 0x3b3d42, door: 0xc9a227, hip: true, pool: true, bg: '#5a3a24', fg: '#f2e3c2',
+  }),
+  apartments('cascadeCourtApts', 'Cascade Court Apartments', 'INCOME RESTRICTED · OFFICE ON SITE', {
+    wall: 0xd9cfb8, mat: 'siding', trim: 0xf2efe8, roof: 0x4a4c52, door: 0x2c4a6b, bg: '#2c4a6b', fg: '#ffffff',
+  }),
   civicHall('vfwHall', 'VFW Post 4421', 'VETERANS OF FOREIGN WARS', { bg: '#1f3d6b' }),
   civicHall('grangeHall', 'Silver Valley Grange', 'GRANGE HALL · NO. 116', { wall: 0xb8322a, mat: 'boards', bg: '#f4f1ea', fg: '#7a2c25' }),
   civicHall('elksLodge', 'Elks Lodge 1798', 'B.P.O.E. · MEMBERS & GUESTS', { wall: 0xffffff, mat: 'brickTan', bg: '#4a2a5a', fg: '#f2e3c2' }),

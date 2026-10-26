@@ -116,16 +116,28 @@ function pickFrom(ids: string[], weights?: number[]) {
   };
 }
 
+/**
+ * House mixes per neighbourhood, by era and income: Old Town and the North Side are pre-war, Mill Town is the
+ * sawmill's company housing, the West End is post-war, Sunnyside spans the 1960s–2010s, Eastgate is newest.
+ */
 const POOLS = {
-  historic: () => pickFrom(['victorianQueenAnne', 'minersCottage', 'craftsmanBungalow', 'foursquare', 'duplex'], [2, 3, 3, 2, 1]),
-  rowhouse: () => pickFrom(['townhouseRow', 'duplex', 'foursquare'], [3, 2, 1]),
-  northside: () => pickFrom(['craftsmanBungalow', 'capeCod', 'ranchPorch', 'foursquare', 'minersCottage', 'splitLevel'], [3, 3, 2, 1, 2, 1]),
-  hillside: () => pickFrom(['minersCottage', 'craftsmanBungalow', 'logCabin', 'aframe', 'victorianQueenAnne'], [3, 2, 1, 1, 1]),
-  suburb: () => pickFrom(['colonial', 'ranchPorch', 'capeCod', 'splitLevel', 'ranchGarage', 'modernTwoStory'], [2, 2, 2, 2, 3, 2]),
-  newer: () => pickFrom(['modernTwoStory', 'ranchGarage', 'splitLevel', 'capeCod'], [3, 2, 1, 1]),
+  historic: () => pickFrom(['victorianQueenAnne', 'minersCottage', 'craftsmanBungalow', 'foursquare', 'duplex', 'hipCottage', 'dutchColonial'], [2, 3, 3, 2, 1, 2, 1]),
+  rowhouse: () => pickFrom(['townhouseRow', 'duplex', 'foursquare', 'fourplex'], [3, 2, 1, 1]),
+  northside: () =>
+    pickFrom(['craftsmanBungalow', 'capeCod', 'ranchPorch', 'foursquare', 'minersCottage', 'splitLevel', 'hipCottage', 'minimalTraditional', 'dutchColonial', 'duplex'], [3, 3, 2, 1, 2, 1, 2, 2, 1, 1]),
+  hillside: () => pickFrom(['minersCottage', 'craftsmanBungalow', 'logCabin', 'aframe', 'victorianQueenAnne', 'hipCottage'], [3, 2, 1, 1, 1, 2]),
+  suburb: () => pickFrom(['colonial', 'ranchPorch', 'capeCod', 'splitLevel', 'ranchGarage', 'modernTwoStory', 'raisedRanch', 'minimalTraditional', 'dutchColonial'], [2, 2, 2, 2, 3, 2, 2, 1, 1]),
+  newer: () => pickFrom(['modernTwoStory', 'ranchGarage', 'splitLevel', 'capeCod', 'neoTraditional', 'raisedRanch', 'modernFarmhouse'], [3, 2, 1, 1, 3, 1, 1]),
+  /** Sunnyside's middle-class mix, one or two of everything built from the 1960s on. */
+  sunnyside: () =>
+    pickFrom(['raisedRanch', 'splitLevel', 'ranchGarage', 'capeCod', 'dutchColonial', 'neoTraditional', 'modernTwoStory', 'minimalTraditional', 'modernFarmhouse', 'colonial'], [3, 3, 3, 2, 1, 3, 2, 1, 1, 1]),
+  /** Starter homes and rentals in earshot of I-90. */
+  starter: () => pickFrom(['minimalTraditional', 'ranchPorch', 'doubleWide', 'duplex', 'fourplex', 'raisedRanch', 'ranchGarage'], [3, 2, 1, 2, 1, 1, 1]),
+  /** Mill Town: the company houses, a few older cottages, and the rentals that filled the gaps. */
+  milltown: () => pickFrom(['millHouse', 'hipCottage', 'minersCottage', 'minimalTraditional', 'duplex', 'fourplex', 'singleWide'], [6, 3, 2, 2, 1, 1, 1]),
   estate: () => pickFrom(['lodgeEstate', 'colonialEstate', 'modernTwoStory'], [4, 3, 1]),
-  posh: () => pickFrom(['lodgeEstate', 'colonialEstate', 'modernTwoStory', 'craftsmanBungalow', 'victorianQueenAnne'], [5, 4, 2, 1, 1]),
-  rural: () => pickFrom(['farmhouseGable', 'doubleWide', 'ranchPorch', 'logCabin', 'aframe'], [3, 2, 2, 2, 1]),
+  posh: () => pickFrom(['lodgeEstate', 'colonialEstate', 'modernTwoStory', 'craftsmanBungalow', 'victorianQueenAnne', 'modernFarmhouse', 'dutchColonial'], [5, 4, 2, 1, 1, 1, 1]),
+  rural: () => pickFrom(['farmhouseGable', 'doubleWide', 'ranchPorch', 'logCabin', 'aframe', 'modernFarmhouse', 'minimalTraditional'], [3, 2, 2, 2, 1, 1, 1]),
   cabin: () => pickFrom(['logCabin', 'aframe', 'lakeCottage'], [3, 2, 1]),
   lake: () => pickFrom(['lakeCottage', 'logCabin', 'aframe'], [3, 2, 2]),
   trailer: () => pickFrom(['singleWide', 'doubleWide'], [4, 1]),
@@ -212,6 +224,10 @@ export const PADS = {
   lodge: { x: 1180, z: 512, w: 50, d: 30 },
   campground: { x: 1580, z: 330, w: 54, d: 74 },
   cemetery: { x: -410, z: 450, w: 56, d: 76 },
+  sunnysideSchool: { x: -150, z: -633, w: 66, d: 50 },
+  sunnysideField: { x: -245, z: -652, w: 88, d: 88 },
+  valleyViewApts: { x: 600, z: -536, w: 74, d: 58 },
+  cascadeCourtApts: { x: -1100, z: 54, w: 74, d: 58 },
 };
 const PAD_FALL: Partial<Record<keyof typeof PADS, number>> = { mine: 24, tower: 24, radio: 24, cemetery: 20, lodge: 18, hospital: 20 };
 
@@ -221,10 +237,25 @@ export function registerPads() {
   return out;
 }
 
-/** Keeps houses off the job sites and farmyards that are built later in the pass. */
+/**
+ * High-voltage lines into Substation 4. The west line comes down the valley; the east line climbs from the
+ * substation over I-90 and runs along the forest edge above Sunnyside.
+ */
+const POWER_LINES: Record<'west' | 'east', [number, number][]> = {
+  west: [[-2350, -1150], [-1700, -950], [-1150, -760], [-700, -680], [-560, -520]],
+  east: [[-470, -520], [-470, -725], [-100, -748], [300, -752], [700, -735], [1100, -600], [1500, -560], [1900, -540], [2400, -700]],
+};
+
+/** Keeps houses off the job sites, farmyards and power-line easements that are built later in the pass. */
 function reserveSites(pl: Placer) {
   for (const p of Object.values(PADS)) pl.c.occ.add(p.x, p.z, p.w, p.d, 0, 2, false);
   for (const f of Object.values(FARMS)) pl.c.occ.add(f.x, f.z, f.w, f.d, 0, 4, false);
+  for (const line of Object.values(POWER_LINES))
+    for (let i = 0; i < line.length - 1; i++) {
+      const [ax, az] = line[i];
+      const [bx, bz] = line[i + 1];
+      pl.c.occ.add((ax + bx) / 2, (az + bz) / 2, Math.hypot(bx - ax, bz - az), 20, Math.atan2(-(bz - az), bx - ax), 0, false);
+    }
 }
 
 /** Main St / Alder St frontage between avenues: kerb lines minus a 0.6 m margin. */
@@ -292,6 +323,11 @@ export function civic(pl: Placer) {
   mark(pl, 'Pine Hollow High School', PADS.highSchool.x, PADS.highSchool.z, 'school');
   mark(pl, 'Logger Field', PADS.field.x, PADS.field.z, 'park');
   mark(pl, 'Logger Ballpark', PADS.loggerPark.x, PADS.loggerPark.z, 'park');
+  // ---- Sunnyside Elementary and its ballfield on the North Slope, facing Highland Dr
+  pl.force(D('sunnysideElementary'), PADS.sunnysideSchool.x, PADS.sunnysideSchool.z, 0, 47);
+  pl.force(D('sunnysideField'), PADS.sunnysideField.x, PADS.sunnysideField.z, 0, 48);
+  mark(pl, 'Sunnyside Elementary', PADS.sunnysideSchool.x, PADS.sunnysideSchool.z, 'school');
+  mark(pl, 'Sunnyside Field', PADS.sunnysideField.x, PADS.sunnysideField.z, 'park');
 }
 
 /** Lawns, paths, trees, gazebo, fountain and memorial around the courthouse. */
@@ -624,6 +660,29 @@ export function neighbourhoods(pl: Placer) {
   street('Hillcrest Dr', POOLS.newer(), { setback: 7, gap: 5, jitter: 1.5, s0: sAtX(R('Hillcrest Dr'), 510), bulb: 4 });
   for (const name of ['Elm Ct', 'Tamarack Ct']) street(name, POOLS.newer(), { setback: 7, gap: 5, jitter: 1.5, bulb: 5 });
 
+  // ---- Sunnyside: the North Slope subdivision across I-90 (1960s on), with starter homes and rentals on
+  // Valley View Dr below Highland Dr and the Valley View Apartments by the Exit 63 ramps
+  const sr = R('Sunnyside Rd');
+  const sun = { setback: 7, gap: 5, jitter: 1.5, maxSlope: 7, car: 0.8 };
+  gateSign(pl, sr, 'sunnyside', 'SUNNYSIDE', 'EST. 1964', sAtZ(sr, -520));
+  pl.force(D('valleyViewApts'), PADS.valleyViewApts.x, PADS.valleyViewApts.z, PI, 91);
+  mark(pl, 'Valley View Apartments', PADS.valleyViewApts.x, PADS.valleyViewApts.z, 'residential');
+  street('Sunnyside Rd', POOLS.sunnyside(), { ...sun, s0: sAtZ(sr, -505), bulb: 4 });
+  street('Highland Dr', POOLS.sunnyside(), sun);
+  street('Meadowlark Ln', POOLS.sunnyside(), sun);
+  for (const name of ['Crestview Ct', 'Sunflower Ct', 'Juniper Ct', 'Bitterroot Ct']) street(name, POOLS.sunnyside(), { ...sun, bulb: 5 });
+  street('Valley View Dr', POOLS.starter(), { setback: 6, gap: 4, jitter: 1.5, maxSlope: 7, car: 0.85 });
+
+  // ---- Mill Town: the sawmill's 1923 company houses on tight lots by the Mill Spur, more along the highway,
+  // and the income-restricted Cascade Court Apartments across Old Hwy 10
+  const mt = { setback: 4, gap: 3, jitter: 1, maxSlope: 8, car: 0.65 };
+  const hw = R('Old Hwy 10 W');
+  gateSign(pl, R('Sawmill Ave'), 'milltown', 'MILL TOWN', 'COMPANY HOUSES · 1923', sAtZ(R('Sawmill Ave'), -14));
+  pl.force(D('cascadeCourtApts'), PADS.cascadeCourtApts.x, PADS.cascadeCourtApts.z, PI, 92);
+  mark(pl, 'Cascade Court Apartments', PADS.cascadeCourtApts.x, PADS.cascadeCourtApts.z, 'residential');
+  for (const name of ['Sawmill Ave', 'Mill Row', 'Shingle St']) street(name, POOLS.milltown(), { ...mt, bulb: 3 });
+  pl.along(hw, 1, sAtX(hw, -1290), sAtX(hw, -1012), POOLS.milltown(), { ...home, ...mt });
+
   // ---- Riverside Mobile Home Park, beside the river at the west end
   const rl = R('Riverside Ln');
   gateSign(pl, rl, 'riversidemhp', 'RIVERSIDE', 'MOBILE HOME PARK · SPACES AVAILABLE');
@@ -637,7 +696,7 @@ export function neighbourhoods(pl: Placer) {
   mark(pl, 'Silver Valley Grange', -1330, 50, 'civic');
   pl.force(D('forestService'), ...frontXZ(pl, ow, -1680, 1, D('forestService')), 82);
   mark(pl, 'U.S. Forest Service', -1680, 10, 'civic');
-  for (const side of [1, -1] as const) pl.along(ow, side, 40, sAtX(ow, -1075), POOLS.rural(), { ...home, setback: 14, gap: 55, jitter: 6 });
+  for (const side of [1, -1] as const) pl.along(ow, side, 40, sAtX(ow, -1330), POOLS.rural(), { ...home, setback: 14, gap: 55, jitter: 6 });
   street('Cougar Creek Rd', POOLS.rural(), { setback: 14, gap: 36, jitter: 5, maxSlope: 7, bulb: 2 });
   street('Grouse Ln', POOLS.cabin(), { setback: 10, gap: 34, jitter: 5, maxSlope: 7, bulb: 2 });
   for (const side of [1, -1] as const) pl.along(oe, side, sAtX(oe, 1420), oe.length - 40, POOLS.rural(), { ...home, setback: 14, gap: 60, jitter: 6 });
@@ -839,23 +898,8 @@ export function industry(pl: Placer, padY: Record<string, number>) {
   const sp = PADS.substation;
   const pts = substation(c, sp.x, sp.z, padY.substation);
   mark(pl, 'Substation 4', sp.x, sp.z, 'industrial');
-  const west = transmissionLine(c, [
-    [-2350, -1150],
-    [-1700, -950],
-    [-1150, -760],
-    [-700, -680],
-    [-560, -520],
-  ]);
-  const east = transmissionLine(c, [
-    [-470, -520],
-    [-150, -600],
-    [300, -610],
-    [700, -600],
-    [1100, -580],
-    [1500, -560],
-    [1900, -540],
-    [2400, -700],
-  ]);
+  const west = transmissionLine(c, POWER_LINES.west);
+  const east = transmissionLine(c, POWER_LINES.east);
   const drop = (a: THREE.Vector3[], b: THREE.Vector3[]) => {
     for (let i = 0; i < 3; i++) {
       const A = a[i * 2];

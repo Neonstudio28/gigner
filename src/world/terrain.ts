@@ -80,9 +80,12 @@ export const HILLS = [
   { name: 'Church Hill', x: -420, z: 440, s: 190, h: 20 },
 ];
 
+/** Sunnyside bench: north of Highland Dr the floor climbs gently (≤ 7°) toward the mountains. */
+const benchRise = (x: number, z: number) => 14 * smoothstep(565, 740, -z) * (1 - smoothstep(700, 1000, Math.abs(x)));
+
 /** Downtown stays level; elsewhere the floor has a little low-poly roll. */
 function floorRelief(x: number, z: number) {
-  let h = 0;
+  let h = benchRise(x, z);
   for (const b of HILLS) h += b.h * Math.exp(-((x - b.x) ** 2 + (z - b.z) ** 2) / (b.s * b.s));
   const dx = Math.max(0, Math.abs(x) - 560);
   const dz = Math.max(0, Math.abs(z) - 200);
