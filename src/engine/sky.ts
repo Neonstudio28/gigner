@@ -37,6 +37,10 @@ export class SkyRig {
   clouds: CloudSettings = { coverage: 0.35, density: 0.9, base: 1800, top: 3600 };
   readonly domeUniforms = { uHorizonCol: { value: new THREE.Color(0xa9afc0) }, uHorizon: { value: 0.16 }, uHorizonMix: { value: 0.8 } };
   private fog: THREE.FogExp2;
+  /** Colour of the valley haze (linear): the sky light the fog scatters. */
+  get fogColor() {
+    return this.fog.color;
+  }
   /** Sky dome sampling the equirect directly (avoids the equirect→cube background conversion). */
   readonly dome: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
   private snapRight = new THREE.Vector3();
@@ -121,11 +125,14 @@ export class SkyRig {
       this.hemi.color.copy(this.physical.skyTop).multiplyScalar(1 / Math.max(0.05, Math.max(this.physical.skyTop.r, this.physical.skyTop.g, this.physical.skyTop.b)));
     } else {
       this.sun.color.setRGB(1, 0.86 + 0.1 * low, 0.72 + 0.2 * low).multiply(this.sunTint);
-      this.sun.intensity = this.sunIntensity * e * (0.35 + 0.65 * low);
+      // the sun fades out as it sets (time of day can put it below the horizon)
+      this.sun.intensity = this.sunIntensity * e * (0.35 + 0.65 * low) * THREE.MathUtils.smoothstep(this.elevation, -2, 3);
     }
-    this.hemi.intensity = this.hemiIntensity * e;
-    this.scene.environmentIntensity = this.envIntensity * e;
-    this.dome.material.color.copy(this.skyTint).multiplyScalar(this.skyIntensity * e);
+    // the HDRI sky has no night of its own: dim it and the sky light once the sun is down
+    const night = this.physical ? 1 : Math.max(0.12, THREE.MathUtils.smoothstep(this.elevation, -6, 4));
+    this.hemi.intensity = this.hemiIntensity * e * night;
+    this.scene.environmentIntensity = this.envIntensity * e * night;
+    this.dome.material.color.copy(this.skyTint).multiplyScalar(this.skyIntensity * e * night);
     this.fog.density = this.hazeDensity;
     fogUniforms.uFogHF.value = this.fogFalloff;
     fogUniforms.uSunDir.value.copy(this.dir);
@@ -157,7 +164,8 @@ export class SkyRig {
     surfaceUniforms.uWet.value = p.wet;
     surfaceUniforms.uWindowGlow.value = p.windows;
     this.exposure = p.exposure;
-    this.clouds = { ...p.clouds };
+    // updated in place: the settings panel's cloud sliders stay bound to this object
+    Object.assign(this.clouds, p.clouds);
     // softer, lighter shadows under cloud
     this.sun.shadow.intensity = 0.55 + 0.35 * Math.min(1, p.sun.intensity / 3);
     this.sun.shadow.radius = 2.2 + 3 * (1 - Math.min(1, p.sun.intensity / 3));

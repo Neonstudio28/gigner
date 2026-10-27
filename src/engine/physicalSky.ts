@@ -396,6 +396,8 @@ export class PhysicalSky {
     uFrame: { value: 0 },
     uRes: { value: new THREE.Vector2() },
   };
+  /** Cloud drift speed multiplier (1 = a gentle breeze aloft). */
+  windSpeed = 1;
   /** Linear sun colour at the ground (transmittance × power, normalised to the noon value). */
   readonly sunColor = new THREE.Color(1, 1, 1);
   /** Sky light from above and the horizon, for the hemisphere light. */
@@ -413,6 +415,10 @@ export class PhysicalSky {
   private prevVP = new THREE.Matrix4();
   private frame = 0;
   private envDirty = true;
+  /** Seconds since the environment map was baked, and the sun direction it was baked for. */
+  private envAge = 0;
+  private envSun = new THREE.Vector3();
+  private lastClouds = '';
   private scale = 0.5;
 
   constructor(
@@ -513,7 +519,15 @@ export class PhysicalSky {
     // overcast skies hide the sun: dim the ground sun colour by the cloud cover overhead
     const shade = 1 - Math.max(0, clouds.coverage - 0.55) * 1.6;
     this.sunColor.multiplyScalar(Math.max(0.15, shade));
-    u.uBlend.value = 0;
+    // only a new cloud deck drops the temporal history (a moving sun keeps it, so the sky doesn't sparkle)
+    const key = `${clouds.coverage},${clouds.density},${clouds.base},${clouds.top}`;
+    if (key !== this.lastClouds) {
+      this.lastClouds = key;
+      u.uBlend.value = 0;
+      this.envAge = Infinity;
+    }
+    // a big jump of the sun re-lights reflections at once; a slowly moving one at most about once a second
+    if (this.envSun.angleTo(u.uSunDir.value) > 0.05) this.envAge = Infinity;
     this.envDirty = true;
   }
 
@@ -530,8 +544,8 @@ export class PhysicalSky {
   render(camera: THREE.PerspectiveCamera, dt: number) {
     const r = this.renderer;
     const u = this.uniforms;
-    u.uWind.value.x += dt * 0.0016;
-    u.uWind.value.z += dt * 0.0007;
+    u.uWind.value.x += dt * 0.0016 * this.windSpeed;
+    u.uWind.value.z += dt * 0.0007 * this.windSpeed;
     u.uCamPos.value.copy(camera.position);
     camera.updateMatrixWorld();
     u.uInvProj.value.copy(camera.projectionMatrixInverse);
@@ -550,11 +564,14 @@ export class PhysicalSky {
     this.scene.background = this.rtB.texture;
     // after the first frame, blend with history (clouds drift slowly; jitter converges in a few frames)
     u.uBlend.value = 0.86;
-    if (this.envDirty) this.updateEnvironment();
+    this.envAge += dt;
+    if (this.envDirty && this.envAge >= 1) this.updateEnvironment();
   }
 
   private updateEnvironment() {
     this.envDirty = false;
+    this.envAge = 0;
+    this.envSun.copy(this.uniforms.uSunDir.value);
     this.domeMat.uniforms.uSteps.value = 24;
     const prev = this.env;
     this.env = this.pmrem.fromScene(this.domeScene as unknown as THREE.Scene, 0, 0.1, 1000);

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { clamp } from './rng';
 
 export type Col = THREE.ColorRepresentation;
 export interface PartOpts {
@@ -158,6 +159,8 @@ export class Kit {
   private stack: THREE.Matrix4[] = [new THREE.Matrix4()];
   /** Receives world-space collision rectangles registered with `solid()`. */
   onSolid?: (x: number, z: number, w: number, d: number, ry: number) => void;
+  /** Receives light sources (lamp heads, lit panels, neon) for the volumetric fog: world position, colour, power. */
+  onLight?: (p: THREE.Vector3, color: THREE.Color, power: number) => void;
 
   constructor(
     public batch: Batcher,
@@ -176,6 +179,15 @@ export class Kit {
   }
   at(x: number, z: number, ry: number, fn: () => void, y = 0, scale = 1) {
     this.push(x, y, z, ry, scale);
+    try {
+      fn();
+    } finally {
+      this.pop();
+    }
+  }
+  /** Runs `fn` in an arbitrary local frame (e.g. a parked car pitched with a sloping drive). */
+  atMatrix(m: THREE.Matrix4, fn: () => void) {
+    this.stack.push(this.matrix.clone().multiply(m));
     try {
       fn();
     } finally {
@@ -204,7 +216,18 @@ export class Kit {
     const g = prepare(geo, color, spec);
     geo.dispose();
     g.applyMatrix4(local ? _m.multiplyMatrices(this.matrix, local) : this.matrix);
+    // anything lit (lamp lenses, canopy panels, neon) also lights the fog around it; tiny bulbs don't count
+    if (mat === 'light' && this.onLight) {
+      g.computeBoundingBox();
+      const b = g.boundingBox!;
+      const size = Math.max(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z);
+      if (size >= 0.25) this.onLight(b.getCenter(new THREE.Vector3()), new THREE.Color(color), clamp(size / 0.7, 0.4, 3));
+    }
     this.batch.add(g, spec.bucket, cast);
+  }
+  /** A light source with no glowing part of its own (e.g. frosted globes), in local coordinates. */
+  lamp(x: number, y: number, z: number, color: Col, power = 1) {
+    this.onLight?.(this.toWorld(x, y, z), new THREE.Color(color), power);
   }
 
   local(x: number, y: number, z: number, o?: PartOpts, sx = 1, sy = 1, sz = 1): THREE.Matrix4 {

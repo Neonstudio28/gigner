@@ -11,6 +11,8 @@ export const fogUniforms = {
   uSunDir: { value: new THREE.Vector3(0.5, 0.4, 0.5).normalize() },
   uSunCol: { value: new THREE.Color(0xffe2c0) },
   uInscatter: { value: 0.35 },
+  /** Distance where this haze begins (the volumetric fog pass covers the stretch in front of it). */
+  uFogStart: { value: 0 },
 };
 
 const patched = new WeakSet<THREE.Material>();
@@ -44,7 +46,7 @@ export function applyAtmosphere(mat: THREE.Material) {
         `#include <fog_pars_fragment>
         varying vec3 vAtmoWorld;
         uniform float uFogHF; uniform float uFogBase; uniform float uFogHaze; uniform float uFogMax;
-        uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uInscatter;`,
+        uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uInscatter; uniform float uFogStart;`,
       )
       .replace(
         '#include <fog_fragment>',
@@ -57,10 +59,13 @@ export function applyAtmosphere(mat: THREE.Material) {
           #else
             float atmoD = 0.001;
           #endif
-          float a0 = atmoD * exp(-uFogHF * (cameraPosition.y - uFogBase));
-          float ry = atmoDir.y * uFogHF * atmoDist;
-          float hf = a0 * atmoDist * (abs(ry) > 1e-4 ? (1.0 - exp(-ry)) / ry : 1.0);
-          float atmoAmt = clamp(1.0 - exp(-(hf + uFogHaze * atmoDist)), 0.0, uFogMax);
+          // integrate from where the volumetric fog stops (the camera, when it is off) to the surface
+          float atmoS = min(uFogStart, atmoDist);
+          float atmoLen = atmoDist - atmoS;
+          float a0 = atmoD * exp(-uFogHF * (cameraPosition.y + atmoDir.y * atmoS - uFogBase));
+          float ry = atmoDir.y * uFogHF * atmoLen;
+          float hf = a0 * atmoLen * (abs(ry) > 1e-4 ? (1.0 - exp(-ry)) / ry : 1.0);
+          float atmoAmt = clamp(1.0 - exp(-(hf + uFogHaze * atmoLen)), 0.0, uFogMax);
           float sunAmt = pow(max(dot(atmoDir, uSunDir), 0.0), 7.0) * uInscatter;
           gl_FragColor.rgb = mix(gl_FragColor.rgb, mix(fogColor, uSunCol, sunAmt), atmoAmt);
         #endif`,
@@ -233,9 +238,28 @@ export interface AtmoPreset {
   grain: number;
   /** Volumetric cloud layer: coverage 0..1, density, base and top altitude (m above the valley). */
   clouds: { coverage: number; density: number; base: number; top: number };
+  /** Raymarched valley fog (see FogSettings): thickness, layer, banks, scattering, shafts and lamp glow. */
+  volume: { density: number; falloff: number; base: number; noise: number; sun: number; anisotropy: number; penetration: number; ambient: number; shafts: number; lamps: number };
 }
 
 export const PRESETS: AtmoPreset[] = [
+  {
+    name: 'Morning Fog',
+    sun: { azimuth: 104, elevation: 9, intensity: 2.4, tint: 0xffd9b0 },
+    env: 0.6,
+    sky: { intensity: 0.92, tint: 0xf2e6da, horizon: 0.2, horizonMix: 0.95 },
+    hemi: 0.3,
+    fog: { color: 0xa7adaf, density: 0.0022, falloff: 0.01, haze: 0.00006, max: 0.94, inscatter: 0.7 },
+    mist: { opacity: 0.7, color: 0xdcdfdc },
+    grade: { saturation: 0.82, contrast: 1.06, lift: [0.02, 0.03, 0.035], gain: [1.0, 0.99, 0.97], split: 0.65, shadowTint: 0x2c5f66, highTint: 0xffd7a8 },
+    wet: 0.75,
+    windows: 0.45,
+    bloom: 0.55,
+    exposure: 1.05,
+    grain: 0.05,
+    clouds: { coverage: 0.55, density: 1.0, base: 1600, top: 3200 },
+    volume: { density: 0.013, falloff: 0.05, base: 22, noise: 0.62, sun: 1.1, anisotropy: 0.6, penetration: 0.7, ambient: 0.7, shafts: 1, lamps: 0.7 },
+  },
   {
     name: 'PNW Mist',
     sun: { azimuth: 236, elevation: 26, intensity: 2.0, tint: 0xffe9d2 },
@@ -251,6 +275,7 @@ export const PRESETS: AtmoPreset[] = [
     exposure: 1.0,
     grain: 0.05,
     clouds: { coverage: 0.6, density: 1.0, base: 1700, top: 3300 },
+    volume: { density: 0.009, falloff: 0.04, base: 18, noise: 0.6, sun: 1, anisotropy: 0.6, penetration: 0.65, ambient: 0.8, shafts: 0.8, lamps: 0.45 },
   },
   {
     name: 'Overcast Drizzle',
@@ -267,6 +292,7 @@ export const PRESETS: AtmoPreset[] = [
     exposure: 1.05,
     grain: 0.07,
     clouds: { coverage: 0.93, density: 1.35, base: 1600, top: 3400 },
+    volume: { density: 0.014, falloff: 0.03, base: 30, noise: 0.5, sun: 0.5, anisotropy: 0.45, penetration: 0.4, ambient: 0.9, shafts: 0.4, lamps: 0.9 },
   },
   {
     name: 'Golden Hour',
@@ -283,6 +309,7 @@ export const PRESETS: AtmoPreset[] = [
     exposure: 1.0,
     grain: 0.04,
     clouds: { coverage: 0.42, density: 0.85, base: 1900, top: 3800 },
+    volume: { density: 0.006, falloff: 0.05, base: 12, noise: 0.65, sun: 1.3, anisotropy: 0.7, penetration: 0.8, ambient: 0.75, shafts: 1, lamps: 0.5 },
   },
   {
     name: 'Dusk',
@@ -299,6 +326,7 @@ export const PRESETS: AtmoPreset[] = [
     exposure: 1.35,
     grain: 0.06,
     clouds: { coverage: 0.5, density: 0.9, base: 1900, top: 3700 },
+    volume: { density: 0.01, falloff: 0.04, base: 18, noise: 0.55, sun: 0.9, anisotropy: 0.65, penetration: 0.6, ambient: 0.7, shafts: 0.8, lamps: 1 },
   },
   {
     name: 'Clear Day',
@@ -315,5 +343,6 @@ export const PRESETS: AtmoPreset[] = [
     exposure: 1.0,
     grain: 0,
     clouds: { coverage: 0.3, density: 0.85, base: 1900, top: 3700 },
+    volume: { density: 0.003, falloff: 0.05, base: 6, noise: 0.6, sun: 1, anisotropy: 0.6, penetration: 0.9, ambient: 0.85, shafts: 0.6, lamps: 0 },
   },
 ];

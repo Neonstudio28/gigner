@@ -29,7 +29,7 @@ export function utilityPole(k: Kit, x: number, z: number, ry: number, o: { h?: n
     if (o.lamp) {
       k.beam(V(0, h - 3.2, 0), V(0, h - 3.0, 2.0), 0.08, 0.08, 0x8a8e92, 'metal');
       k.box(0, h - 3.2, 2.15, 0.35, 0.18, 0.7, 0x8a8e92, 'metal');
-      k.box(0, h - 3.24, 2.15, 0.26, 0.04, 0.5, 0xfff3d6, 'light', { cast: false });
+      k.box(0, h - 3.24, 2.15, 0.26, 0.04, 0.5, 0xffc27a, 'light', { cast: false });
     }
   });
   return out;
@@ -69,7 +69,8 @@ export function streetLight(k: Kit, x: number, z: number, ry: number, h = 8.5) {
     const pts = [V(0, h - 0.6, 0), V(0, h + 0.15, 0.6), V(0, h + 0.35, 1.6), V(0, h + 0.3, 2.6)].map((p) => k.toWorld(p.x, p.y, p.z));
     k.tube(pts, 0.06, 0x9a9ea2, 'metal', 8);
     k.boxC(0, h + 0.22, 2.95, 0.45, 0.2, 0.95, 0xb5b9bd, 'metal');
-    k.boxC(0, h + 0.1, 2.98, 0.34, 0.04, 0.7, 0xfff3d6, 'light', { cast: false });
+    // high-pressure sodium: the orange glow PNW streets have in fog
+    k.boxC(0, h + 0.1, 2.98, 0.34, 0.04, 0.7, 0xffb15e, 'light', { cast: false });
   });
 }
 
@@ -368,8 +369,9 @@ export function acornLamp(k: Kit, x: number, z: number, h = 4.2) {
   k.cyl(x, 0, z, 0.2, 0.26, 0.6, 8, 0x1d2420, 'metal');
   k.cyl(x, 0.6, z, 0.07, 0.09, h - 0.6, 8, 0x1d2420, 'metal');
   k.cyl(x, h, z, 0.16, 0.1, 0.12, 8, 0x1d2420, 'metal');
-  // daytime: globes unlit (frosted glass)
+  // daytime: globes unlit (frosted glass); warm incandescent in the fog
   k.sphere(x, h + 0.38, z, 0.3, 0xf3efe6, 'gloss', 10, 8);
+  k.lamp(x, h + 0.38, z, 0xffdcaa, 1);
   k.cone(x, h + 0.66, z, 0.2, 0.22, 8, 0x1d2420, 'metal');
 }
 

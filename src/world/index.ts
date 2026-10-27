@@ -4,7 +4,7 @@ import { Rng } from './core/rng';
 import { createLayers, loadPhotoSet } from './textures';
 import { MaterialLib, windUniform } from './materials';
 import { SignBook } from './signs';
-import { createTerrain, groundHeight, isWater, MAP_RADIUS } from './terrain';
+import { createTerrain, groundHeight, heightAt as groundHeightPre, isWater, MAP_RADIUS } from './terrain';
 import { createVegetation, type Vegetation, type TreeIndex } from './vegetation';
 import { Traffic } from './traffic';
 import { loadFonts } from './fonts';
@@ -45,6 +45,17 @@ export interface RoadPoint {
   heading: number;
 }
 
+/** A light source in the town (street lamp, lit canopy, neon sign): linear colour and relative power. */
+export interface Lamp {
+  x: number;
+  y: number;
+  z: number;
+  r: number;
+  g: number;
+  b: number;
+  power: number;
+}
+
 export interface TownWorld {
   /** Add this to your scene. Contains terrain, merged static town, vegetation, animated props and traffic. */
   root: THREE.Group;
@@ -67,6 +78,8 @@ export interface TownWorld {
   materials: MaterialLib;
   signs: SignBook;
   vegetation: Vegetation;
+  /** Street lamps, lit canopies and neon signs (for the coloured glow in the fog). */
+  lamps: Lamp[];
   update: (dt: number, elapsed: number, camera: THREE.Vector3, player?: { x: number; z: number } | null) => void;
   dispose: () => void;
 }
@@ -93,6 +106,26 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   const solids = new Occupancy(16);
   occ.solids = solids;
   kit.onSolid = (x, z, w, d, ry) => solids.add(x, z, w, d, ry, 0, false);
+  // light sources for the volumetric fog, merged per ~4 m cell (a canopy of panels is one glow, not twenty)
+  const lightCells = new Map<string, Lamp>();
+  kit.onLight = (p, color, power) => {
+    // well above the ground only: skips the lit screens and signs at knee height
+    if (p.y - groundHeightPre(p.x, p.z) < 2.2) return;
+    const key = `${Math.floor(p.x / 4)},${Math.floor(p.y / 4)},${Math.floor(p.z / 4)}`;
+    const l = lightCells.get(key);
+    if (!l) {
+      lightCells.set(key, { x: p.x, y: p.y, z: p.z, r: color.r, g: color.g, b: color.b, power });
+      return;
+    }
+    const t = power / (l.power + power);
+    l.x += (p.x - l.x) * t;
+    l.y += (p.y - l.y) * t;
+    l.z += (p.z - l.z) * t;
+    l.r += (color.r - l.r) * t;
+    l.g += (color.g - l.g) * t;
+    l.b += (color.b - l.b) * t;
+    l.power = Math.min(4, l.power + power);
+  };
   const surf = new SurfaceMap();
   const dynamic = new THREE.Group();
   dynamic.name = 'dynamic-props';
@@ -119,8 +152,6 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   registerFarmPads();
   const net = buildNetwork();
   net.occupy(occ);
-  await progress(0.14, 'Paving roads, bridges and the I-90 viaduct');
-  net.build(kit, solids);
   const pl = new Placer(ctx, net);
   // a broken district must not take the whole town down
   const zone = (label: string, fn: () => void) => {
@@ -142,12 +173,21 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   zone('industry', () => industry(pl, padY));
   zone('furnish', () => furnishRoads(pl));
   zone('dressing', () => dressing(pl));
+  // paved after the lots are laid out, so the curbs leave cuts where the driveways cross
+  await progress(0.44, 'Paving roads, bridges and the I-90 viaduct');
+  net.build(kit, solids);
   await progress(0.48, 'Merging static geometry');
   const statics = new THREE.Group();
   statics.name = 'town-static';
   batch.build((key) => materials.get(key), statics);
   await progress(0.58, 'Sculpting mountains, river and lake');
   const terrain = createTerrain();
+  // driveways, mailboxes and parked cars are laid on the finished ground mesh so they follow it exactly
+  const late = new Batcher(150);
+  const lateKit = new Kit(late, materials);
+  lateKit.onSolid = kit.onSolid;
+  pl.finish(lateKit);
+  late.build((key) => materials.get(key), statics);
   await progress(0.7, 'Growing the forest');
   const { veg: vegetation, trees } = createVegetation({ occ, trees: pl.trees, cornFields: pl.cornFields, grassPatches: pl.grassPatches, clearings: pl.clearings });
   await progress(0.88, 'Starting traffic');
@@ -191,6 +231,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
     materials,
     signs,
     vegetation,
+    lamps: [...lightCells.values()],
     update(dt, elapsed, camera, player) {
       windUniform.value = elapsed;
       for (const a of pl.animated) a.update(dt, elapsed);

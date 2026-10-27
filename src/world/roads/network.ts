@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Kit, Occupancy } from '../core/kit';
+import { Occupancy, type Kit } from '../core/kit';
 import { clamp, lerp, smoothstep } from '../core/rng';
 import { preRoadHeight, river, setRoadHook, setRoadSurfaceHooks } from '../terrain';
 import { P } from '../palette';
@@ -151,7 +151,8 @@ interface Bulb {
   R: number;
   gap: number;
 }
-type CoverMode = 'surface' | 'mark' | 'edge' | 'side';
+/** 'curb' is 'side' plus the driveway curb cuts. */
+type CoverMode = 'surface' | 'mark' | 'edge' | 'side' | 'curb';
 
 /**
  * A curb return where two roads meet: the corner between road `a`'s curb line (running along `w1` away from the
@@ -306,7 +307,10 @@ export class RoadNetwork {
       // only surfaces that are drawn: where a junction trims a road away, the road that wins is what you see
       if (a <= sp.hw + (sp.shoulder?.w ?? 0)) {
         if (!this.cover(h.road, x, z, 'surface', h.y)) y = h.y + 0.04;
-      } else if (sp.curb && a <= h.road.full && !this.cover(h.road, x, z, 'side', h.y)) y = h.y + 0.16;
+      } else if (sp.curb && a <= h.road.full && !this.cover(h.road, x, z, 'side', h.y)) {
+        // a driveway's curb cut ramps down to the road, as drawn
+        y = a < sp.hw + 0.25 && this.curbCuts.blocked(x, z) ? h.y + lerp(0.045, 0.17, (a - sp.hw) / 0.25) : h.y + 0.16;
+      }
       if (y === -Infinity) continue;
       const score = nearY === undefined ? -y : Math.abs(y - nearY);
       if (score < bs) {
@@ -523,7 +527,19 @@ export class RoadNetwork {
       // a junction's surface folds between roads and fillets, so the straight-edged ground mesh sits deeper there
       (x, z, nearY) => this.surfaceY(x, z, nearY) - (this.nearJunction(x, z) ? 0.3 : 0),
       (x, z, m) => this.close(x, z, m),
+      (x, z) => this.edgeDistance(x, z),
     );
+  }
+
+  /** How far (x, z) lies beyond the outer edge of the nearest at-grade road or turnaround (negative inside). */
+  edgeDistance(x: number, z: number): number {
+    let best = Infinity;
+    for (const h of this.near(x, z)) {
+      if (h.road.pts[h.i].elevated && h.road.pts[h.i + 1].elevated) continue;
+      best = Math.min(best, Math.abs(h.lat) - h.road.full);
+    }
+    for (const b of this.bulbs) best = Math.min(best, Math.hypot(x - b.x, z - b.z) - b.R - sideWidth(b.r));
+    return best;
   }
 
   /** Near a curb return, or where two carriageways meet. */
@@ -708,8 +724,14 @@ export class RoadNetwork {
   }
 
   /** The cul-de-sac turnaround at the end of road r, if any. */
-  bulbOf(r: Road): { x: number; z: number; R: number } | null {
+  bulbOf(r: Road): { x: number; z: number; R: number; y: number } | null {
     return this.bulbs.find((b) => b.r === r) ?? null;
+  }
+
+  /** Where driveways and site entrances cross the curb (the curb is left out there and the drive ramps down). */
+  readonly curbCuts = new Occupancy(16);
+  addCurbCut(x: number, z: number, w: number, d: number, ry: number) {
+    this.curbCuts.add(x, z, w, d, ry, 0, false);
   }
 
   /** How far back from the junction road r's curb returns run, for corners near (x, z) (0 if none). */
@@ -885,8 +907,8 @@ export class RoadNetwork {
   build(k: Kit, solids: Occupancy) {
     const geo = new MeshAccumulator();
     for (const r of this.roads) buildRoad(this, r, geo, solids);
-    for (const c of this.bulbs) buildBulb(c, geo);
-    for (const c of this.corners) buildCorner(c, geo);
+    for (const c of this.bulbs) buildBulb(this, c, geo);
+    for (const c of this.corners) buildCorner(this, c, geo);
     this.buildJoints(geo);
     geo.flush(k);
   }
@@ -922,7 +944,11 @@ export class RoadNetwork {
   }
 
   /** Is a point inside another road's carriageway / full zone (for trimming at junctions)? */
-  cover(self: Road, x: number, z: number, mode: 'surface' | 'mark' | 'edge' | 'side', y: number): boolean {
+  cover(self: Road, x: number, z: number, mode: CoverMode, y: number): boolean {
+    if (mode === 'curb') {
+      if (this.curbCuts.blocked(x, z)) return true;
+      mode = 'side';
+    }
     if (mode === 'side' && this.inCornerCut(self, x, z)) return true;
     for (const h of this.near(x, z)) {
       const o = h.road;
@@ -1192,8 +1218,8 @@ function buildRoad(net: RoadNetwork, r: Road, g: MeshAccumulator, solids: Occupa
         const l3 = l2 + sp.walk;
         const nx = tz * s;
         const nz = -tx * s;
-        const wall = (lat: number, y0: number, y1: number, color: number, face: number) => {
-          const c = clip(s * lat, 'side');
+        const wall = (lat: number, y0: number, y1: number, color: number, face: number, mode: CoverMode) => {
+          const c = clip(s * lat, mode);
           if (!c) return;
           const sa = S(c[0]);
           const sb = S(c[1]);
@@ -1201,11 +1227,11 @@ function buildRoad(net: RoadNetwork, r: Road, g: MeshAccumulator, solids: Occupa
           const B = L(sb, s * lat, 0);
           g.wall(chunk, 'concrete', color, A[0], A[2], B[0], B[2], sa.y + y0, sa.y + y1, sb.y + y0, sb.y + y1, face * nx, face * nz, sa.s, sb.s, false);
         };
-        wall(l0 + 0.02, 0.03, 0.16, 0xb9bab8, -1);
-        fill(s * l0, s * l1, 0.16, 'concrete', 0xc9cac9, 'side');
+        wall(l0 + 0.02, 0.03, 0.16, 0xb9bab8, -1, 'curb');
+        fill(s * l0, s * l1, 0.16, 'concrete', 0xc9cac9, 'curb');
         if (sp.park > 0) fill(s * l1, s * l2, 0.14, 'paint', 0x6f9040, 'side');
         fill(s * l2, s * l3, 0.16, 'concrete', P.sidewalk, 'side');
-        wall(l3 - 0.02, -0.4, 0.16, 0xb4b5b3, 1);
+        wall(l3 - 0.02, -0.4, 0.16, 0xb4b5b3, 1, 'side');
       }
     }
     // elevated decks / bridges: slab edges, underside, parapets
@@ -1335,9 +1361,10 @@ function buildRoad(net: RoadNetwork, r: Road, g: MeshAccumulator, solids: Occupa
   }
 }
 
-function buildBulb(c: Bulb, g: MeshAccumulator) {
+function buildBulb(net: RoadNetwork, c: Bulb, g: MeshAccumulator) {
   const sp = c.r.spec;
-  const segs = 28;
+  // one segment count for the disc, curb and rings, so the curb face stands exactly on the asphalt's edge
+  const segs = 96;
   const e = c.r.pts[c.r.pts.length - 1];
   const entry = Math.atan2(-e.tz, -e.tx); // direction back toward the road (in x,z angle space)
   const chunk = `bulb${c.r.id}`;
@@ -1359,23 +1386,41 @@ function buildBulb(c: Bulb, g: MeshAccumulator) {
   };
   ring(0, c.R, 0.028, 'asphalt@decal', sp.color, false);
   if (sp.curb) {
-    ring(c.R, c.R + 0.25, 0.16, 'concrete', 0xc9cac9, true);
     if (sp.park > 0) ring(c.R + 0.25, c.R + 0.25 + sp.park, 0.14, 'paint', 0x6f9040, true);
     ring(c.R + 0.25 + sp.park, c.R + 0.25 + sp.park + sp.walk, 0.16, 'concrete', P.sidewalk, true);
-    // curb face
+    // curb top and face, left out where a driveway crosses (pieces at a cut's edge are split finely)
+    const cut = (t: number) => net.curbCuts.blocked(c.x + Math.cos(t) * (c.R + 0.12), c.z + Math.sin(t) * (c.R + 0.12));
+    const piece = (t0: number, t1: number) => {
+      const mid = (t0 + t1) / 2;
+      const P0 = (r: number, t: number) => [c.x + Math.cos(t) * r, c.y + 0.16, c.z + Math.sin(t) * r];
+      const R1 = c.R + 0.25;
+      g.quad(chunk, 'concrete', 0xc9cac9, P0(c.R, t0), P0(R1, t0), P0(c.R, t1), P0(R1, t1), [
+        [Math.cos(t0) * c.R, Math.sin(t0) * c.R],
+        [Math.cos(t0) * R1, Math.sin(t0) * R1],
+        [Math.cos(t1) * c.R, Math.sin(t1) * c.R],
+        [Math.cos(t1) * R1, Math.sin(t1) * R1],
+      ]);
+      g.wall(chunk, 'concrete', 0xb9bab8, c.x + Math.cos(t0) * c.R, c.z + Math.sin(t0) * c.R, c.x + Math.cos(t1) * c.R, c.z + Math.sin(t1) * c.R, c.y + 0.03, c.y + 0.16, c.y + 0.03, c.y + 0.16, -Math.cos(mid), -Math.sin(mid), 0, 1, false);
+    };
     for (let i = 0; i < segs; i++) {
       const t0 = (i / segs) * Math.PI * 2;
       const t1 = ((i + 1) / segs) * Math.PI * 2;
-      const mid = (t0 + t1) / 2;
-      const da = Math.abs(((mid - entry + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+      const da = Math.abs((((t0 + t1) / 2 - entry + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
       if (da < c.gap) continue;
-      g.wall(chunk, 'concrete', 0xb9bab8, c.x + Math.cos(t0) * c.R, c.z + Math.sin(t0) * c.R, c.x + Math.cos(t1) * c.R, c.z + Math.sin(t1) * c.R, c.y + 0.03, c.y + 0.16, c.y + 0.03, c.y + 0.16, -Math.cos(mid), -Math.sin(mid), 0, 1, false);
+      const ends = [cut(t0), cut((t0 + t1) / 2), cut(t1)];
+      if (!ends.some(Boolean)) piece(t0, t1);
+      else if (!ends.every(Boolean))
+        for (let k = 0; k < 10; k++) {
+          const a = t0 + ((t1 - t0) * k) / 10;
+          const b = t0 + ((t1 - t0) * (k + 1)) / 10;
+          if (!cut((a + b) / 2)) piece(a, b);
+        }
     }
   }
 }
 
 /** Curb return: asphalt fillet between the curb corner and the arc, then curb, planting strip and sidewalk round it. */
-function buildCorner(c: Corner, g: MeshAccumulator) {
+function buildCorner(net: RoadNetwork, c: Corner, g: MeshAccumulator) {
   const chunk = `corner${Math.floor(c.X[0] / CHUNK)},${Math.floor(c.X[1] / CHUNK)}`;
   const a1 = Math.atan2(c.P1[1] - c.C[1], c.P1[0] - c.C[0]);
   let da = Math.atan2(c.P2[1] - c.C[1], c.P2[0] - c.C[0]) - a1;
@@ -1420,9 +1465,27 @@ function buildCorner(c: Corner, g: MeshAccumulator) {
     const mx = (p[0] + q[0]) / 2 - c.C[0];
     const mz = (p[2] + q[2]) / 2 - c.C[1];
     const ml = Math.hypot(mx, mz) || 1;
-    // curb face looks out to the road (away from the fillet centre)
-    g.wall(chunk, 'concrete', 0xb9bab8, p[0], p[2], q[0], q[2], p[1] + 0.03, p[1] + 0.16, q[1] + 0.03, q[1] + 0.16, mx / ml, mz / ml, 0, 1, false);
-    quad(k, () => R, () => R - 0.25, 0.16, 'concrete', 0xc9cac9);
+    // curb face looks out to the road (away from the fillet centre); left out where a driveway crosses,
+    // with the pieces at a cut's edge split finely so the opening matches the drive
+    const cutAt = (kk: number) => {
+      const r = ring(R - 0.12, kk, 0);
+      return net.curbCuts.blocked(r[0], r[2]);
+    };
+    const ends = [cutAt(k), cutAt(k + 0.5), cutAt(k + 1)];
+    const sub = !ends.some(Boolean) ? 1 : ends.every(Boolean) ? 0 : 8;
+    for (let j = 0; j < sub; j++) {
+      const k0 = k + j / sub;
+      const k1 = k + (j + 1) / sub;
+      if (sub > 1 && cutAt((k0 + k1) / 2)) continue;
+      const a = ring(R, k0, 0);
+      const b = ring(R, k1, 0);
+      const ao = ring(R, k0, 0.16);
+      const bo = ring(R, k1, 0.16);
+      const ai = ring(R - 0.25, k0, 0.16);
+      const bi = ring(R - 0.25, k1, 0.16);
+      g.wall(chunk, 'concrete', 0xb9bab8, a[0], a[2], b[0], b[2], a[1] + 0.03, a[1] + 0.16, b[1] + 0.03, b[1] + 0.16, mx / ml, mz / ml, 0, 1, false);
+      g.quad(chunk, 'concrete', 0xc9cac9, ao, ai, bo, bi, [uv(ao), uv(ai), uv(bo), uv(bi)]);
+    }
     if (park(k) + park(k + 1) > 0.05) quad(k, () => R - 0.25, (j) => R - 0.25 - park(j), 0.14, 'paint', 0x6f9040);
     quad(k, (j) => R - 0.25 - park(j), (j) => R - 0.25 - park(j) - walk(j), 0.16, 'concrete', P.sidewalk);
     const rb0 = R - 0.25 - park(k) - walk(k);

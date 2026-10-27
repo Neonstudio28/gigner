@@ -10,6 +10,23 @@ import { DRIVABLE, type DriveMode } from './drive';
 import { PRESETS, type Mist } from './atmosphere';
 import { surfaceUniforms } from '../world/materials';
 import { fogUniforms } from './atmosphere';
+import type { VolumetricFogPass } from './volumetric';
+import type { PhysicalSky } from './physicalSky';
+
+const D2R = Math.PI / 180;
+/** Pine Hollow's latitude (the Silver Valley, Idaho panhandle). */
+const LATITUDE = 47.5;
+
+/** Sun bearing (0 = north, 90 = east) and elevation (degrees) for a local solar time and season (declination). */
+export function solarPosition(hours: number, declination: number) {
+  const phi = LATITUDE * D2R;
+  const dec = declination * D2R;
+  const H = (hours - 12) * 15 * D2R;
+  const sinEl = Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(H);
+  const el = Math.asin(THREE.MathUtils.clamp(sinEl, -1, 1));
+  const az = Math.atan2(-Math.sin(H) * Math.cos(dec), (Math.sin(dec) - sinEl * Math.sin(phi)) / Math.cos(phi));
+  return { azimuth: (((az / D2R) % 360) + 360) % 360, elevation: el / D2R };
+}
 
 export function createUI(o: {
   sky: SkyRig;
@@ -24,8 +41,10 @@ export function createUI(o: {
   mist: Mist;
   setPreset: (name: string) => void;
   preset: { name: string };
+  fog: VolumetricFogPass;
+  physical: PhysicalSky | null;
 }) {
-  const { sky, post, director, world, renderer, drive, driveState } = o;
+  const { sky, post, director, world, renderer, drive, driveState, fog } = o;
   const gui = new GUI({ title: 'Pine Hollow' });
   gui.close();
 
@@ -78,6 +97,7 @@ export function createUI(o: {
     .name('Preset')
     .onChange((n: string) => {
       o.setPreset(n);
+      syncDay();
       gui.controllersRecursive().forEach((c) => c.updateDisplay());
     });
   fAtmo.add(sky, 'hazeDensity', 0, 0.006, 0.0001).name('Valley fog').onChange(() => sky.apply());
@@ -88,10 +108,88 @@ export function createUI(o: {
   fAtmo.add(fogUniforms.uInscatter, 'value', 0, 1.5, 0.01).name('Sun glow in fog');
   fAtmo.open();
 
+  // raymarched valley fog: thickness, layer, drifting banks, light shafts and lamp glow
+  const fs = fog.settings;
+  const fVol = gui.addFolder('Volumetric fog');
+  fVol
+    .add(fs, 'enabled')
+    .name('Volumetric fog')
+    .onChange((v: boolean) => {
+      fog.enabled = v;
+      if (!v) fogUniforms.uFogStart.value = 0;
+    })
+    .listen();
+  fVol.add(fs, 'density', 0, 0.08, 0.0005).name('Thickness').listen();
+  fVol.add(fs, 'base', -20, 150, 1).name('Fog layer top (m)').listen();
+  fVol.add(fs, 'falloff', 0.002, 0.08, 0.001).name('Thinning with height').listen();
+  fVol.add(fs, 'noise', 0, 1, 0.01).name('Drifting banks').listen();
+  fVol.add(fs, 'noiseScale', 60, 1500, 10).name('Bank size (m)');
+  fVol.add(fs, 'windSpeed', 0, 20, 0.1).name('Wind (m/s)');
+  fVol.add(fs, 'windDir', 0, 360, 1).name('Wind toward °');
+  fVol.add(fs, 'sun', 0, 4, 0.01).name('Sunlight in fog').listen();
+  fVol.add(fs, 'anisotropy', 0, 0.95, 0.01).name('Glare toward sun').listen();
+  fVol.add(fs, 'penetration', 0, 1, 0.01).name('Sun through fog layer').listen();
+  fVol.add(fs, 'ambient', 0, 2.5, 0.01).name('Sky light in fog').listen();
+  fVol.add(fs, 'shafts', 0, 1, 0.01).name('Light shafts').listen();
+  fVol.add(fs, 'lamps', 0, 4, 0.01).name('Lamp glow').listen();
+  fVol.add(fog, 'lampsOn', 0, 1, 0.01).name('Street lamps on').listen();
+  fVol.add(fs, 'range', 200, 3000, 10).name('Raymarch range (m)');
+  fVol.add(fs, 'steps', 8, 64, 1).name('Quality (steps)');
+  fVol.open();
+
+  // physically based sky and volumetric cloud deck
+  const fSky = gui.addFolder('Sky & clouds');
+  const reSky = () => sky.apply();
+  // the cloud deck only exists with the physically based sky (not with ?sky=hdri)
+  if (o.physical) {
+    fSky.add(sky.clouds, 'coverage', 0, 1, 0.01).name('Cloud cover').onChange(reSky).listen();
+    fSky.add(sky.clouds, 'density', 0, 3, 0.01).name('Cloud density').onChange(reSky).listen();
+    fSky.add(sky.clouds, 'base', 300, 5000, 10).name('Cloud base (m)').onChange(reSky).listen();
+    fSky.add(sky.clouds, 'top', 600, 8000, 10).name('Cloud top (m)').onChange(reSky).listen();
+    fSky.add(o.physical, 'windSpeed', 0, 20, 0.1).name('Cloud drift speed');
+  }
+  fSky.add(sky, 'horizon', 0, 0.6, 0.01).name('Horizon haze height').onChange(reSky).listen();
+  fSky.add(sky, 'horizonMix', 0, 1, 0.01).name('Horizon haze').onChange(reSky).listen();
+
+  // time of day: the sun follows its real arc over the Silver Valley
+  const day = { time: 8.5, season: 'Equinox (Mar/Sep)', animate: false, speed: 2 };
+  const seasons: Record<string, number> = { 'Midsummer (Jun)': 23.4, 'Late summer (Aug)': 13, 'Equinox (Mar/Sep)': 0, 'Late autumn (Nov)': -18, 'Midwinter (Dec)': -23.4 };
+  const setTime = () => {
+    const s = solarPosition(day.time, seasons[day.season]);
+    sky.azimuth = s.azimuth;
+    // below the horizon the sky rig holds a deep dusk; the lamps take over
+    sky.elevation = Math.max(-3, s.elevation);
+    const weather = Math.min(1, (PRESETS.find((p) => p.name === o.preset.name)?.windows ?? 0) * 1.3);
+    fog.lampsOn = Math.max(weather, THREE.MathUtils.smoothstep(-s.elevation, -12, -2));
+    sky.apply();
+  };
+  /** Sets the time and season that put the sun where the current preset has it (so animating starts from there). */
+  const syncDay = () => {
+    let best = Infinity;
+    for (const season of Object.keys(seasons))
+      for (let t = 4; t <= 22; t += 0.05) {
+        const p = solarPosition(t, seasons[season]);
+        const da = Math.abs(((p.azimuth - sky.azimuth + 540) % 360) - 180);
+        const err = da * da + (p.elevation - sky.elevation) ** 2 * 4;
+        if (err < best) {
+          best = err;
+          day.time = Math.round(t * 20) / 20;
+          day.season = season;
+        }
+      }
+  };
+  syncDay();
+  const fDay = gui.addFolder('Time of day');
+  fDay.add(day, 'time', 4, 22, 0.05).name('Local time (h)').onChange(setTime).listen();
+  fDay.add(day, 'season', Object.keys(seasons)).name('Season').onChange(setTime).listen();
+  fDay.add(day, 'animate').name('Animate sun');
+  fDay.add(day, 'speed', 0.1, 60, 0.1).name('Hours per minute');
+  let since = 0;
+
   const fLight = gui.addFolder('Lighting');
   const apply = () => sky.apply();
-  fLight.add(sky, 'azimuth', 0, 360, 1).name('Sun bearing °').onChange(apply);
-  fLight.add(sky, 'elevation', 3, 80, 0.5).name('Sun elevation °').onChange(apply);
+  fLight.add(sky, 'azimuth', 0, 360, 1).name('Sun bearing °').onChange(apply).listen();
+  fLight.add(sky, 'elevation', -3, 80, 0.5).name('Sun elevation °').onChange(apply).listen();
   fLight.add(sky, 'sunIntensity', 0, 8, 0.05).name('Sun').onChange(apply);
   fLight.add(sky, 'envIntensity', 0, 2, 0.01).name('Sky light (IBL)').onChange(apply);
   fLight.add(sky, 'skyIntensity', 0.2, 2, 0.01).name('Sky brightness').onChange(apply);
@@ -118,7 +216,20 @@ export function createUI(o: {
   };
   fWorld.add(exp, 'glb').name('Export world (.glb)');
 
-  return gui;
+  return {
+    gui,
+    /** Advances the animated sun (re-lighting the sky a few times a second, not every frame). */
+    update(dt: number) {
+      if (!day.animate) return;
+      day.time += (dt * day.speed) / 60;
+      if (day.time > 22) day.time = 4;
+      since += dt;
+      if (since > 0.1) {
+        since = 0;
+        setTime();
+      }
+    },
+  };
 }
 
 function scheduleMaterialsUpdate(world: TownWorld) {

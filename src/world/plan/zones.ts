@@ -183,7 +183,7 @@ function fillRowS(pl: Placer, r: Road, side: 1 | -1, s0: number, s1: number, sho
     const w = sh.fixed ? sh.w : sh.w * scale;
     const span = w;
     const f = pl.net.frontage(r, s + span / 2, side, r.full + setback + sh.d / 2);
-    pl.force({ id: 'shop', name: 'shop', w, d: sh.d, tags: [], build: (c, x, z, ry) => sh.make(c, x, z, ry, w) }, f.x, f.z, f.ry, (pl.rng.next() * 1e6) | 0, { foundation: false });
+    pl.force({ id: 'shop', name: 'shop', w, d: sh.d, tags: [], build: (c, x, z, ry) => sh.make(c, x, z, ry, w) }, f.x, f.z, f.ry, (pl.rng.next() * 1e6) | 0, { grade: false });
     s += span;
   }
 }
@@ -608,7 +608,7 @@ function bobsCars(c: Ctx, x: number, z: number, ry: number) {
 export function neighbourhoods(pl: Placer) {
   const net = pl.net;
   const R = (name: string) => net.byName(name);
-  const home = { driveway: true, mailbox: true, foundation: true };
+  const home = { driveway: true, mailbox: true };
   /** Houses along a road (both sides or the listed ones, optionally a sub-range) plus the cul-de-sac bulb. */
   const street = (name: string, pick: (rng: Rng) => BuildingDef | null, o: { setback: number; gap: number; jitter?: number; maxSlope?: number; car?: number; bulb?: number; s0?: number; s1?: number; sides?: (1 | -1)[] }) => {
     const r = R(name);
@@ -840,7 +840,7 @@ export function lakeside(pl: Placer) {
   stripRowS(pl, lr, OUT, sNear(lr, 882, 300), sNear(lr, 884, 400), [[L.bait, 'Lakeside Bait & Tackle']]);
 
   // ---- cabins on the lake side (with private docks) and across the road; estates on the south-west shore
-  const home = { driveway: true, mailbox: true, foundation: true };
+  const home = { driveway: true, mailbox: true };
   const sN = sNear(lr, 878, 140);
   const sSW = sNear(lr, 920, 450);
   const sS = sNear(lr, 1180, 545);
@@ -946,9 +946,9 @@ export function industry(pl: Placer, padY: Record<string, number>) {
   drop(east.first, pts.east);
 
   // ---- north slope: Sierra Silver Mine and the KPHR transmitter
-  pl.force(D('mine'), PADS.mine.x, PADS.mine.z, HALF, 104, { foundation: false });
+  pl.force(D('mine'), PADS.mine.x, PADS.mine.z, HALF, 104, { grade: false });
   mark(pl, 'Sierra Silver Mine', PADS.mine.x, PADS.mine.z, 'industrial');
-  pl.force(D('radioStation'), PADS.radio.x, PADS.radio.z, -HALF, 105, { foundation: false });
+  pl.force(D('radioStation'), PADS.radio.x, PADS.radio.z, -HALF, 105, { grade: false });
   mark(pl, 'KPHR Radio Transmitter', PADS.radio.x, PADS.radio.z, 'business');
 
   // ---- Hansen farm (barn, farmhouse, windmill, corn) north of Old Hwy 10 E

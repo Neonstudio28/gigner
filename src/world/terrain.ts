@@ -280,6 +280,71 @@ export function preRoadHeight(x: number, z: number) {
   return applyPads(x, z, rawHeight(x, z));
 }
 
+// ------------------------------------------------------------------ building lots (graded last, over roads and river)
+interface LotPad {
+  x: number;
+  z: number;
+  hw: number;
+  hd: number;
+  c: number;
+  s: number;
+  fall: number;
+  h: number;
+}
+const LOT_CELL = 32;
+const lotCells = new Map<string, LotPad[]>();
+
+/**
+ * Grades a building lot (a rectangle turned by ry, Kit convention) flat at height h and blends it back into
+ * the surrounding ground over `fall` metres, so the building stands on the ground instead of a plinth.
+ */
+export function addLotPad(x: number, z: number, w: number, d: number, ry: number, h: number, fall: number) {
+  const p: LotPad = { x, z, hw: w / 2, hd: d / 2, c: Math.cos(ry), s: Math.sin(ry), fall, h };
+  const ext = Math.hypot(p.hw, p.hd) + fall;
+  for (let i = Math.floor((x - ext) / LOT_CELL); i <= Math.floor((x + ext) / LOT_CELL); i++)
+    for (let j = Math.floor((z - ext) / LOT_CELL); j <= Math.floor((z + ext) / LOT_CELL); j++) {
+      const k = `${i},${j}`;
+      let arr = lotCells.get(k);
+      if (!arr) lotCells.set(k, (arr = []));
+      arr.push(p);
+    }
+}
+
+/** Distance from (x, z) to a lot's flat rectangle (0 inside). */
+function lotDist(p: LotPad, x: number, z: number) {
+  const dx = x - p.x;
+  const dz = z - p.z;
+  const lx = dx * p.c - dz * p.s;
+  const lz = dx * p.s + dz * p.c;
+  return Math.hypot(Math.max(0, Math.abs(lx) - p.hw), Math.max(0, Math.abs(lz) - p.hd));
+}
+
+function applyLots(x: number, z: number, h: number) {
+  const arr = lotCells.get(`${Math.floor(x / LOT_CELL)},${Math.floor(z / LOT_CELL)}`);
+  if (!arr) return h;
+  // beside a street the ground keeps the street's own grading, so a raised lot never banks up over the sidewalk
+  let fade = -1;
+  // in placement order: a later lot keeps its own floor flat and blends into what was there before
+  for (const p of arr) {
+    const d = lotDist(p, x, z);
+    if (d >= p.fall) continue;
+    if (fade < 0) fade = roadEdge ? smoothstep(0.4, 3, roadEdge(x, z)) : 1;
+    // the floor itself always stays level (the building stands on it); only its slope gives way to the street
+    h = lerp(h, lerp(p.h, h, smoothstep(0, p.fall, d)), lerp(1, fade, smoothstep(0, 0.5, d)));
+  }
+  return h;
+}
+
+/** Is (x, z) within `margin` of a lot's flat floor? (Scans every bin the margin reaches: a lot is only binned out to its fall.) */
+function nearLot(x: number, z: number, margin: number) {
+  for (let i = Math.floor((x - margin) / LOT_CELL); i <= Math.floor((x + margin) / LOT_CELL); i++)
+    for (let j = Math.floor((z - margin) / LOT_CELL); j <= Math.floor((z + margin) / LOT_CELL); j++) {
+      const arr = lotCells.get(`${i},${j}`);
+      if (arr && arr.some((p) => lotDist(p, x, z) < margin)) return true;
+    }
+  return false;
+}
+
 /** Final ground height of the near terrain (metres). */
 export function heightAt(x: number, z: number): number {
   let h = preRoadHeight(x, z);
@@ -289,17 +354,19 @@ export function heightAt(x: number, z: number): number {
     const B = r.hw + 8;
     if (r.dist < B) h = Math.min(h, r.bed + (h - r.bed) * smoothstep(r.hw * 0.45, B, r.dist));
   }
-  return h;
+  return applyLots(x, z, h);
 }
 
 // ------------------------------------------------------------------ road-aware near-terrain mesh
 let roadTop: ((x: number, z: number, nearY: number) => number) | null = null;
 let roadClose: ((x: number, z: number, margin: number) => boolean) | null = null;
+let roadEdge: ((x: number, z: number) => number) | null = null;
 
 /** Registered by the road network: top of the road/sidewalk surface at a point, and a proximity test. */
-export function setRoadSurfaceHooks(top: (x: number, z: number, nearY: number) => number, close: (x: number, z: number, margin: number) => boolean) {
+export function setRoadSurfaceHooks(top: (x: number, z: number, nearY: number) => number, close: (x: number, z: number, margin: number) => boolean, edge: (x: number, z: number) => number) {
   roadTop = top;
   roadClose = close;
+  roadEdge = edge;
 }
 
 /** Keeps the ground just under any at-grade road, shoulder or sidewalk so it never pokes through. */
@@ -312,6 +379,8 @@ function underRoads(x: number, z: number, h: number) {
 const STEP = (GRID_HALF * 2) / GRID_SEG;
 /** Near-terrain cells beside roads are split SUB×SUB (≈4 m) so the ground follows the road grading. */
 const SUB = 3;
+/** Cells under building lots are split finer (≈2 m) so graded lots stay flat up to the walls. */
+const SUB_LOT = 6;
 
 /** Height on one grid cell split along the same diagonal the mesh uses (u, v in 0..1). */
 function cellHeight(a: number, b: number, c: number, d: number, u: number, v: number, even: boolean) {
@@ -340,12 +409,13 @@ class TerrainSampler {
     const key = j * GRID_SEG + i;
     const f = this.fine.get(key);
     if (f) {
-      const gx = (fx - i) * SUB;
-      const gz = (fz - j) * SUB;
-      const a = Math.min(SUB - 1, Math.floor(gx));
-      const b = Math.min(SUB - 1, Math.floor(gz));
-      const n = SUB + 1;
-      return cellHeight(f[b * n + a], f[b * n + a + 1], f[(b + 1) * n + a], f[(b + 1) * n + a + 1], gx - a, gz - b, (i * SUB + a + j * SUB + b) % 2 === 0);
+      const n = Math.round(Math.sqrt(f.length));
+      const s = n - 1;
+      const gx = (fx - i) * s;
+      const gz = (fz - j) * s;
+      const a = Math.min(s - 1, Math.floor(gx));
+      const b = Math.min(s - 1, Math.floor(gz));
+      return cellHeight(f[b * n + a], f[b * n + a + 1], f[(b + 1) * n + a], f[(b + 1) * n + a + 1], gx - a, gz - b, (i * s + a + j * s + b) % 2 === 0);
     }
     // jittered mountain-wall cells: the analytic height is close enough there
     if (this.rough[key]) return heightAt(x, z);
@@ -565,7 +635,7 @@ export function createTerrain(): THREE.Group {
       // low-poly irregularity only on the mountain walls, away from roads and farmyards
       const jx = jitter.range(-3.5, 3.5);
       const jz = jitter.range(-3.5, 3.5);
-      if (v.e > 45 && i > 0 && j > 0 && i < GRID_SEG && j < GRID_SEG && !roadClose?.(x, z, 20) && !pads.some((p) => Math.abs(x - p.x) < p.hw + p.fall && Math.abs(z - p.z) < p.hd + p.fall)) {
+      if (v.e > 45 && i > 0 && j > 0 && i < GRID_SEG && j < GRID_SEG && !roadClose?.(x, z, 20) && !nearLot(x, z, 25) && !pads.some((p) => Math.abs(x - p.x) < p.hw + p.fall && Math.abs(z - p.z) < p.hd + p.fall)) {
         x += jx;
         z += jz;
         jittered[j * cols + i] = 1;
@@ -578,65 +648,74 @@ export function createTerrain(): THREE.Group {
       gh[j * cols + i] = y;
     }
 
-  // cells beside roads are refined so the ground follows cuts, fills, curbs and junctions closely
+  // cells beside roads are refined so the ground follows cuts, fills, curbs and junctions closely, and cells under
+  // building lots twice as finely again, so a lot graded flat is drawn flat right up to the walls
   const rough = new Uint8Array(GRID_SEG * GRID_SEG);
-  const refined = new Uint8Array(GRID_SEG * GRID_SEG);
+  const sub = new Uint8Array(GRID_SEG * GRID_SEG);
   for (let j = 0; j < GRID_SEG; j++)
     for (let i = 0; i < GRID_SEG; i++) {
       const key = j * GRID_SEG + i;
       rough[key] = jittered[j * cols + i] | jittered[j * cols + i + 1] | jittered[(j + 1) * cols + i] | jittered[(j + 1) * cols + i + 1];
       const cx = -GRID_HALF + (i + 0.5) * STEP;
       const cz = -GRID_HALF + (j + 0.5) * STEP;
-      if (!rough[key] && Math.hypot(cx, cz) < RING_IN - 30 && roadClose?.(cx, cz, 15)) refined[key] = 1;
+      if (rough[key] || Math.hypot(cx, cz) >= RING_IN - 30) continue;
+      if (nearLot(cx, cz, STEP * 0.75)) sub[key] = SUB_LOT;
+      else if (roadClose?.(cx, cz, 15)) sub[key] = SUB;
     }
-  const isRefined = (i: number, j: number) => i >= 0 && j >= 0 && i < GRID_SEG && j < GRID_SEG && refined[j * GRID_SEG + i] === 1;
+  const subAt = (i: number, j: number) => (i >= 0 && j >= 0 && i < GRID_SEG && j < GRID_SEG ? sub[j * GRID_SEG + i] : 0);
   const fine = new Map<number, Float32Array>();
-  const n = SUB + 1;
-  let fineCells = 0;
-  for (let j = 0; j < GRID_SEG; j++)
-    for (let i = 0; i < GRID_SEG; i++) if (refined[j * GRID_SEG + i]) fineCells++;
-  const fw = new FacetWriter(fineCells * SUB * SUB * 2);
+  let fineTris = 0;
+  for (const s of sub) fineTris += s * s * 2;
+  const fw = new FacetWriter(fineTris);
   const A = new THREE.Vector3();
   const B = new THREE.Vector3();
   const C = new THREE.Vector3();
   const D = new THREE.Vector3();
   for (let j = 0; j < GRID_SEG; j++)
     for (let i = 0; i < GRID_SEG; i++) {
-      if (!refined[j * GRID_SEG + i]) continue;
+      const s = sub[j * GRID_SEG + i];
+      if (!s) continue;
+      const n = s + 1;
       const x0 = -GRID_HALF + i * STEP;
       const z0 = -GRID_HALF + j * STEP;
       const h00 = gh[j * cols + i];
       const h10 = gh[j * cols + i + 1];
       const h01 = gh[(j + 1) * cols + i];
       const h11 = gh[(j + 1) * cols + i + 1];
+      // an edge shared with a refined neighbour keeps only the vertices both cells have (the coarser grid's) and runs
+      // straight between them; against an unrefined neighbour the whole edge stays straight (no cracks either way)
+      const edge = (k: number, sN: number, px: (t: number) => number, pz: (t: number) => number, h0: number, h1: number) => {
+        if (!sN) return lerp(h0, h1, k / s);
+        const step = s / Math.min(s, sN);
+        const at = (kk: number) => (kk === 0 ? h0 : kk === s ? h1 : vh(px(kk / s), pz(kk / s)));
+        const k0 = k - (k % step);
+        return k === k0 ? at(k) : lerp(at(k0), at(k0 + step), (k - k0) / step);
+      };
       const f = new Float32Array(n * n);
-      for (let b = 0; b <= SUB; b++)
-        for (let a = 0; a <= SUB; a++) {
-          const u = a / SUB;
-          const v = b / SUB;
-          const x = x0 + u * STEP;
-          const z = z0 + v * STEP;
+      for (let b = 0; b <= s; b++)
+        for (let a = 0; a <= s; a++) {
+          const u = a / s;
+          const v = b / s;
           let h: number;
-          const ea = a === 0 || a === SUB;
-          const eb = b === 0 || b === SUB;
+          const ea = a === 0 || a === s;
+          const eb = b === 0 || b === s;
           if (ea && eb) h = a === 0 ? (b === 0 ? h00 : h01) : b === 0 ? h10 : h11;
-          // a shared edge stays a straight line unless the neighbour is refined too (no cracks)
-          else if (a === 0) h = isRefined(i - 1, j) ? vh(x, z) : lerp(h00, h01, v);
-          else if (a === SUB) h = isRefined(i + 1, j) ? vh(x, z) : lerp(h10, h11, v);
-          else if (b === 0) h = isRefined(i, j - 1) ? vh(x, z) : lerp(h00, h10, u);
-          else if (b === SUB) h = isRefined(i, j + 1) ? vh(x, z) : lerp(h01, h11, u);
-          else h = vh(x, z);
+          else if (a === 0) h = edge(b, subAt(i - 1, j), () => x0, (t) => z0 + t * STEP, h00, h01);
+          else if (a === s) h = edge(b, subAt(i + 1, j), () => x0 + STEP, (t) => z0 + t * STEP, h10, h11);
+          else if (b === 0) h = edge(a, subAt(i, j - 1), (t) => x0 + t * STEP, () => z0, h00, h10);
+          else if (b === s) h = edge(a, subAt(i, j + 1), (t) => x0 + t * STEP, () => z0 + STEP, h01, h11);
+          else h = vh(x0 + u * STEP, z0 + v * STEP);
           f[b * n + a] = h;
         }
       fine.set(j * GRID_SEG + i, f);
-      for (let b = 0; b < SUB; b++)
-        for (let a = 0; a < SUB; a++) {
-          const P = (aa: number, bb: number, out: THREE.Vector3) => out.set(x0 + (aa / SUB) * STEP, f[bb * n + aa], z0 + (bb / SUB) * STEP);
+      for (let b = 0; b < s; b++)
+        for (let a = 0; a < s; a++) {
+          const P = (aa: number, bb: number, out: THREE.Vector3) => out.set(x0 + (aa / s) * STEP, f[bb * n + aa], z0 + (bb / s) * STEP);
           P(a, b, A);
           P(a + 1, b, B);
           P(a, b + 1, C);
           P(a + 1, b + 1, D);
-          if ((i * SUB + a + j * SUB + b) % 2 === 0) {
+          if ((i * s + a + j * s + b) % 2 === 0) {
             fw.tri(A, C, B);
             fw.tri(B, C, D);
           } else {
@@ -648,7 +727,7 @@ export function createTerrain(): THREE.Group {
   sampler.init(gh, rough, fine);
 
   const sink = (x: number, z: number) => smoothstep(RING_IN + 40, RING_IN + 110, Math.hypot(x, z)) * 260;
-  const ground = new THREE.Mesh(facetMesh(grid, cols, cols, false, sink, (i, j) => refined[j * GRID_SEG + i] === 1), mat);
+  const ground = new THREE.Mesh(facetMesh(grid, cols, cols, false, sink, (i, j) => sub[j * GRID_SEG + i] > 0), mat);
   ground.receiveShadow = true;
   ground.name = 'ground';
   ground.matrixAutoUpdate = false;

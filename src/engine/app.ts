@@ -9,6 +9,7 @@ import { createTownWorld } from '../world';
 import { applyAtmosphereTo, Mist, PRESETS } from './atmosphere';
 import { PhysicalSky } from './physicalSky';
 import { WaterFX } from './water';
+import { VolumetricFogPass } from './volumetric';
 import { isWater } from '../world/terrain';
 import { surfaceUniforms } from '../world/materials';
 
@@ -108,6 +109,11 @@ export async function startApp(container: HTMLElement) {
   const water = new WaterFX(renderer);
   water.attach(world.root);
   if (params.get('ao') === '0') post.ao.enabled = false;
+  // raymarched valley fog with sun shafts and lamp glow, after AO and before bloom (so lamp halos bloom)
+  const fog = new VolumetricFogPass(camera, sky, physical?.uniforms.tBase.value ?? null, quality);
+  fog.setLamps(world.lamps);
+  post.composer.addPass(fog, 3);
+  if (params.get('fog') === '0') fog.enabled = fog.settings.enabled = false;
 
   // Pacific Northwest atmosphere (height fog, mist banks, wet roads, grade) — the HDRI sky is kept
   const mist = new Mist(quality === 'low' ? 380 : 760);
@@ -122,14 +128,17 @@ export async function startApp(container: HTMLElement) {
     mist.uniforms.uOpacity.value = p.mist.opacity;
     mist.uniforms.uColor.value.setHex(p.mist.color);
     mist.mesh.visible = p.mist.opacity > 0.01;
+    Object.assign(fog.settings, p.volume);
+    // street lamps come on in gloomy weather and after dark
+    fog.lampsOn = Math.min(1, p.windows * 1.3);
   };
   setPreset(preset.name);
 
   setProgress(0.94, 'Compiling shaders');
   await renderer.compileAsync(scene, camera);
 
-  if (showUI) createUI({ sky, post, director, world, renderer, drive, driveState, enterDrive, exitDrive, mist, setPreset, preset });
-  else document.body.classList.add('no-ui');
+  const ui = showUI ? createUI({ sky, post, director, world, renderer, drive, driveState, enterDrive, exitDrive, mist, setPreset, preset, fog, physical }) : null;
+  if (!ui) document.body.classList.add('no-ui');
 
   const hudShot = document.getElementById('hud-shot');
   const stats = document.getElementById('hud-stats');
@@ -215,6 +224,8 @@ export async function startApp(container: HTMLElement) {
     }
     world.update(dt, elapsed, camera.position, drive.active ? drive.pos : null);
     mist.update(elapsed);
+    fog.tick(dt);
+    ui?.update(dt);
     water.update(dt, elapsed, focus, surfaceUniforms.uWet.value, isWater, drive.active ? drive.pos : null);
     renderer.info.reset();
     physical?.render(camera, dt);
@@ -247,8 +258,11 @@ export async function startApp(container: HTMLElement) {
       scene,
       camera,
       setPreset,
+      fog,
+      sky,
       frame: (dt = 1 / 60) => {
         elapsed += dt;
+        fog.tick(dt);
         director.focus(focus);
         world.update(dt, elapsed, camera.position, null);
         water.update(dt, elapsed, focus, surfaceUniforms.uWet.value, isWater, null);
