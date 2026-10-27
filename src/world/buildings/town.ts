@@ -37,6 +37,10 @@ export function board(c: Ctx, key: string, title: string, sub: string, bg: strin
 function def(id: string, name: string, w: number, d: number, tags: string[], build: BuildingDef['build'], front?: number): BuildingDef {
   return { id, name, w, d, tags, front, build };
 }
+/** Marks where a site's lot meets its street, so the layout paves an apron from there to the road. */
+function withAccess(x: number, w: number, d: BuildingDef): BuildingDef {
+  return { ...d, access: [x, w] };
+}
 
 /* ------------------------------------------------------------------------- site helpers */
 
@@ -267,6 +271,8 @@ function elementary(id: string, title: string, sub: string) {
       if (rng.chance(0.6)) schoolBus(k, 17, 9, 0);
       flagPole(k, c.signs, -20, -1.5, 10);
       lawn(k, 0, 18, 60, 10);
+      // the bus drive runs from the loop across the front lawn to the street
+      k.box(0, 0, 18, 8, 0.09, 12.4, ASPH, 'asphalt', { cast: false });
       for (let i = 0; i < 6; i++) if (Math.abs(-27 + i * 4.6 + 6) > 5.5) shrub(k, -27 + i * 4.6, -4.6, 0.6);
       playground(k, 22, 17);
       for (const bx of [-24, -12]) bench(k, bx, 15, 0);
@@ -1120,7 +1126,7 @@ function walkup(c: Ctx, rng: Rng, L: number, o: AptOpts) {
 
 /** Garden-apartment complex: a long walk-up at the back, a short one down the left side, lot, office and laundry. */
 function apartments(id: string, title: string, sub: string, o: AptOpts) {
-  return def(id, title, 72, 56, ['residential', 'apartments'], (c, x, z, ry, seed) => {
+  return withAccess(10, 9, def(id, title, 72, 56, ['residential', 'apartments'], (c, x, z, ry, seed) => {
     const { kit: k } = c;
     const rng = new Rng(seed);
     c.occ.add(x, z, 72, 56, ry, 1, false);
@@ -1184,7 +1190,7 @@ function apartments(id: string, title: string, sub: string, o: AptOpts) {
       for (const [tx, tz] of [[-33, -25], [33, -26], [-20, 26.5], [34, 26]]) conifer(k, tx, tz, rng.range(9, 13));
       for (let i = 0; i < 3; i++) person(k, rng.range(-16, 20), rng.range(-3, 2), rng.range(0, 6), randomPerson(rng));
     });
-  });
+  }));
 }
 
 /* ================================================================================================
@@ -1209,7 +1215,7 @@ interface WarehouseOpts {
 function warehouseSite(id: string, title: string, sub: string, o: WarehouseOpts) {
   const W = o.w + 8;
   const D = o.d + 34;
-  return def(id, title, W, D, ['industrial', 'warehouse'], (c, x, z, ry, seed) => {
+  return withAccess(0, Math.min(16, o.w * 0.4), def(id, title, W, D, ['industrial', 'warehouse'], (c, x, z, ry, seed) => {
     const { kit: k } = c;
     const rng = new Rng(seed);
     c.occ.add(x, z, W, D, ry, 1, false);
@@ -1259,14 +1265,14 @@ function warehouseSite(id: string, title: string, sub: string, o: WarehouseOpts)
       for (const lx of [-o.w / 2 + 2, 0, o.w / 2 - 2]) lamp(k, lx, fz + 33, Math.PI);
       securityFence(k, [[-W / 2 + 0.5, fz + 8], [-W / 2 + 0.5, -D / 2 + 0.5], [W / 2 - 0.5, -D / 2 + 0.5], [W / 2 - 0.5, fz + 8]]);
     });
-  });
+  }));
 }
 
 /** Mini-storage: rows of roll-up units inside a fence, an office and keypad gate at the front. */
 function selfStorage(id: string, title: string, sub: string) {
   const W = 70;
   const D = 60;
-  return def(id, title, W, D, ['industrial', 'storage'], (c, x, z, ry, seed) => {
+  return withAccess(-22, 10, def(id, title, W, D, ['industrial', 'storage'], (c, x, z, ry, seed) => {
     const { kit: k } = c;
     const rng = new Rng(seed);
     c.occ.add(x, z, W, D, ry, 1, false);
@@ -1298,7 +1304,7 @@ function selfStorage(id: string, title: string, sub: string) {
       for (let i = 0; i < 3; i++) park(c, rng.pick(['pickup', 'van', 'suv'] as const), -10 + i * 14, -15.5 + rng.int(0, 2) * 13, 0, rng.pick(CAR_COLORS));
       for (const lx of [-20, 20]) lamp(k, lx, 0, 0, 7);
     });
-  });
+  }));
 }
 
 /* ================================================================================================

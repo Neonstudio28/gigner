@@ -15,6 +15,8 @@ export interface BuildingDef {
   front?: number;
   /** Local x of a garage/carport driveway at the front edge (layout runs the driveway from there to the road). */
   drive?: number;
+  /** Lot entrance for sites set back from the street: local x and width of the paved apron to the road. */
+  access?: [number, number];
   /** Rough era/zone tags used by the layout to pick styles per neighbourhood. */
   tags: string[];
   build: (c: Ctx, x: number, z: number, ry: number, seed: number) => void;

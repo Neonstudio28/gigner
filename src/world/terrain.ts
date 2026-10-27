@@ -565,7 +565,7 @@ export function createTerrain(): THREE.Group {
       // low-poly irregularity only on the mountain walls, away from roads and farmyards
       const jx = jitter.range(-3.5, 3.5);
       const jz = jitter.range(-3.5, 3.5);
-      if (v.e > 45 && i > 0 && j > 0 && i < GRID_SEG && j < GRID_SEG && !pads.some((p) => Math.abs(x - p.x) < p.hw + p.fall && Math.abs(z - p.z) < p.hd + p.fall)) {
+      if (v.e > 45 && i > 0 && j > 0 && i < GRID_SEG && j < GRID_SEG && !roadClose?.(x, z, 20) && !pads.some((p) => Math.abs(x - p.x) < p.hw + p.fall && Math.abs(z - p.z) < p.hd + p.fall)) {
         x += jx;
         z += jz;
         jittered[j * cols + i] = 1;

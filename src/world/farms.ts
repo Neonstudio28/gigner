@@ -108,8 +108,9 @@ export function dairyFarm(c: Ctx, y: number, trees: PlacedTree[]) {
       dairyBarn(c, cx + 18, cz + 2);
       silo(k, cx + 45, cz - 6, 17, 3);
       silo(k, cx + 52.5, cz - 6, 15, 2.6, 0xc9c1b1);
-      grainBin(k, cx - 6, cz + 8);
-      grainBin(k, cx + 1, cz + 8, 2.8, 5.4);
+      // grain bins stand off the west gable of the barn (which runs from cx - 3 to cx + 39)
+      grainBin(k, cx - 16, cz + 8);
+      grainBin(k, cx - 9, cz + 8, 2.8, 5.4);
       k.box(cx + 45, 0, cz + 4, 5, 3.2, 4, 0xf2efe8, 'cinder');
       k.cylX(cx + 45, 1.5, cz + 6.4, 0.9, 3.6, 12, 0xd9dcdf, 'chrome');
       // pasture

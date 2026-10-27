@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import type { Ctx } from '../buildings/common';
-import type { Kit } from '../core/kit';
+import { Occupancy, type Kit } from '../core/kit';
 import type { BuildingDef } from '../buildings/catalog';
-import type { RoadNetwork, Road } from '../roads/network';
+import type { RoadNetwork, Road, RoadHit } from '../roads/network';
 import { heightAt, isWater, river } from '../terrain';
 import { Rng } from '../core/rng';
 import * as pr from '../props';
@@ -21,9 +21,14 @@ export interface PlaceOpts {
   car?: number;
 }
 
+/** Sites that are reached by car and so get a paved entrance from their lot to the street. */
+const SITE_TAGS = ['medical', 'school', 'retail', 'apartments', 'warehouse', 'storage', 'industrial', 'highway', 'service', 'hotel', 'office', 'media'];
+
 /** Shared placement state for the zone builders. */
 export class Placer {
   readonly trees: PlacedTree[] = [];
+  /** Driveways (and site entrances): street trees, hydrants, lamps and parked cars keep off them. */
+  readonly drives = new Occupancy(16);
   readonly cornFields: VegetationInput['cornFields'] = [];
   readonly grassPatches: VegetationInput['grassPatches'] = [];
   readonly clearings: { x: number; z: number; w: number; d: number }[] = [];
@@ -91,6 +96,40 @@ export class Placer {
     const corners = [-1, 1].flatMap((sx) => [-1, 1].map((sz) => Placer.world(x, z, ry, (sx * def.w) / 2, (sz * def.d) / 2)));
     const hs = [...corners.map(([px, pz]) => heightAt(px, pz)), heightAt(x, z)];
     this.build(def, x, z, ry, seed, { lo: Math.min(...hs), hi: Math.max(...hs) }, o);
+    if (def.access || SITE_TAGS.some((t) => def.tags.includes(t))) this.apron(def, x, z, ry);
+  }
+
+  /**
+   * Paves a site's entrance out to the street it faces: from the lot's front edge, across any verge and
+   * sidewalk, to the edge of the carriageway (nothing is drawn when the lot already meets the sidewalk).
+   */
+  private apron(def: BuildingDef, x: number, z: number, ry: number) {
+    const [ax, aw] = def.access ?? [0, 8];
+    const [sx, sz] = Placer.world(x, z, ry, ax, def.d / 2);
+    const fx = Math.sin(ry);
+    const fz = Math.cos(ry);
+    const ok = (h: RoadHit) => !h.road.def.link && h.road.kind !== 'interstate' && h.road.kind !== 'ramp' && h.road.kind !== 'alley';
+    let edge = -1;
+    for (let d = 0; d <= 34; d += 0.25) {
+      const hit = this.net.near(sx + fx * d, sz + fz * d).find((h) => ok(h) && Math.abs(h.lat) < h.road.full + 0.1);
+      if (!hit) continue;
+      if (edge < 0) edge = d;
+      if (Math.abs(hit.lat) < hit.road.spec.hw + 0.2) {
+        if (edge < 0.6 && d - edge < 0.6) return;
+        const y0 = heightAt(sx, sz);
+        const k = this.k;
+        this.drives.add(sx + fx * d * 0.5, sz + fz * d * 0.5, aw + 1, d + 1, ry, 0, false);
+        k.at(0, 0, 0, () => {
+          k.beam({ x: sx, y: y0 + 0.06, z: sz }, { x: sx + fx * (d + 0.4), y: hit.y + 0.06, z: sz + fz * (d + 0.4) }, aw, 0.12, P.asphalt, 'asphalt', false);
+          // curb cut: a concrete apron over the sidewalk and curb
+          if (hit.road.spec.curb) {
+            const w0 = Math.max(0, d - (hit.road.full - hit.road.spec.hw));
+            k.beam({ x: sx + fx * w0, y: hit.y + 0.18, z: sz + fz * w0 }, { x: sx + fx * (d + 0.3), y: hit.y + 0.06, z: sz + fz * (d + 0.3) }, aw + 1.2, 0.08, P.concrete, 'concrete', false);
+          }
+        });
+        return;
+      }
+    }
   }
 
   private build(def: BuildingDef, x: number, z: number, ry: number, seed: number, f: { lo: number; hi: number }, o: PlaceOpts) {
@@ -127,20 +166,42 @@ export class Placer {
     const [sx, sz] = Placer.world(x, z, ry, def.drive!, def.d / 2);
     const hit = this.net.near(sx, sz).find((h) => h.road === r);
     if (!hit) return;
-    const len = Math.abs(hit.lat) - r.spec.hw + 0.3;
+    let len = Math.abs(hit.lat) - r.spec.hw + 0.3;
+    // houses round a cul-de-sac run their driveway to the edge of the turnaround, not to the street
+    const bulb = this.net.bulbOf(r);
+    if (bulb) {
+      const d = Math.hypot(sx - bulb.x, sz - bulb.z);
+      if (d < bulb.R + 30) len = Math.min(len, d - bulb.R + 0.3);
+    }
     if (len < 0.5 || len > 40) return;
     const roadY = hit.y + 0.04;
+    const [dcx, dcz] = Placer.world(x, z, ry, def.drive!, def.d / 2 + len / 2 - 0.75);
+    this.drives.add(dcx, dcz, 3.6, len + 1.5, ry, 0, false);
+    this.c.occ.add(dcx, dcz, 3.4, len + 1.5, ry, 0, false);
+    // the parked car stays on the lot side of the sidewalk (no car at all on a very shallow front yard)
+    const yard = len - (r.full - r.spec.hw) - 0.3;
+    // the mailbox stands at the curb, but not inside a junction's curb return
+    const box = def.d / 2 + len - (r.spec.curb ? r.spec.park + r.spec.walk + 0.6 : 1.2);
+    const [mx, mz] = Placer.world(x, z, ry, def.drive! + 2.4, box);
+    const mailbox = o.mailbox !== false && !this.net.inJunction(r, mx, mz, hit.y);
     k.at(
       x,
       z,
       ry,
       () => {
         k.beam({ x: def.drive!, y: 0.04, z: def.d / 2 - 1.5 }, { x: def.drive!, y: roadY - base + 0.02, z: def.d / 2 + len }, 3.4, 0.08, P.concrete, 'concrete', false);
-        if (o.mailbox !== false) pr.ruralMailbox(k, def.drive! + 2.4, def.d / 2 + len - (r.spec.curb ? r.spec.park + r.spec.walk + 0.6 : 1.2), -Math.PI / 2, this.rng.pick([0x2c2c2e, 0x8a8e92, 0x2c4a8c, 0xc8262c]));
+        if (o.mailbox !== false) {
+          const color = this.rng.pick([0x2c2c2e, 0x8a8e92, 0x2c4a8c, 0xc8262c]);
+          if (mailbox) pr.ruralMailbox(k, def.drive! + 2.4, box, -Math.PI / 2, color);
+        }
         if (this.rng.next() < (o.car ?? 0.6)) {
           const t: VehicleType = this.rng.pick(['pickup', 'pickup', 'sedan', 'wagon', 'suv', 'van', 'coupe', 'jeep'] as const);
-          k.solid(def.drive!, def.d / 2 + 3.6, 2.1, VEHICLE_LENGTH[t]);
-          vehicle(k, this.c.signs, t, def.drive!, def.d / 2 + 3.6, this.rng.chance(0.5) ? Math.PI / 2 : -Math.PI / 2, this.rng.pick(CAR_COLORS), this.rng.chance(0.3) ? { accent: 0xf2f1ec } : {});
+          const L = VEHICLE_LENGTH[t];
+          const at = Math.min(3.6, yard - L / 2 - 0.3);
+          if (at >= L / 2 - 1.2) {
+            k.solid(def.drive!, def.d / 2 + at, 2.1, L);
+            vehicle(k, this.c.signs, t, def.drive!, def.d / 2 + at, this.rng.chance(0.5) ? Math.PI / 2 : -Math.PI / 2, this.rng.pick(CAR_COLORS), this.rng.chance(0.3) ? { accent: 0xf2f1ec } : {});
+          }
         }
       },
       base,
@@ -267,7 +328,7 @@ export function furnishRoads(pl: Placer) {
       for (let s = 20; s < r.length - 15; s += step) {
         const side: 1 | -1 = (Math.floor(s / step) % 2 ? 1 : -1) as 1 | -1;
         const f = net.frontage(r, s, side, sp.hw + (sp.curb ? 0.9 : (sp.shoulder?.w ?? 0) + 0.8));
-        if (f.p.elevated || isWater(f.x, f.z) || net.inJunction(r, f.x, f.z, f.y)) continue;
+        if (f.p.elevated || isWater(f.x, f.z) || net.inJunction(r, f.x, f.z, f.y) || pl.drives.blocked(f.x, f.z, 1.2)) continue;
         k.at(0, 0, 0, () => pr.streetLight(k, f.x, f.z, f.ry, 8), f.y + (sp.curb ? 0.16 : 0));
       }
     }
@@ -294,7 +355,7 @@ export function furnishRoads(pl: Placer) {
     if (sp.curb && r.kind !== 'alley')
       for (let s = 30; s < r.length - 20; s += 95) {
         const f = net.frontage(r, s, -1, sp.hw + 0.7);
-        if (net.inJunction(r, f.x, f.z, f.y)) continue;
+        if (net.inJunction(r, f.x, f.z, f.y) || pl.drives.blocked(f.x, f.z, 1.2)) continue;
         k.at(0, 0, 0, () => pr.hydrant(k, f.x, f.z), f.y + 0.16);
       }
     // parallel-parked cars downtown and along older streets
@@ -305,8 +366,9 @@ export function furnishRoads(pl: Placer) {
         for (const side of [1, -1] as const) {
           if (!rng.chance(prob)) continue;
           const f = net.frontage(r, s, side, lat);
-          // keep junction mouths clear
+          // keep junction mouths, curb returns and driveways clear
           if (net.near(f.x, f.z).some((h) => h.road !== r && !r.chained.has(h.road) && Math.abs(h.lat) < h.road.spec.hw + 6)) continue;
+          if (net.inJunction(r, f.x, f.z, f.y) || pl.drives.blocked(f.x, f.z, 3.2)) continue;
           const t: VehicleType = rng.pick(['sedan', 'sedan', 'pickup', 'wagon', 'coupe', 'suv', 'van', 'pickup'] as const);
           // parked with the flow of traffic on that side
           const heading = Math.atan2(-f.p.tz, f.p.tx) + (side > 0 ? Math.PI : 0);
@@ -322,6 +384,7 @@ export function furnishRoads(pl: Placer) {
           if (!rng.chance(0.55)) continue;
           const f = net.frontage(r, s + rng.range(-3, 3), side, sp.hw + 0.25 + sp.park / 2);
           if (net.near(f.x, f.z).some((h) => h.road !== r && Math.abs(h.lat) < h.road.full + 2)) continue;
+          if (net.inJunction(r, f.x, f.z, f.y) || pl.drives.blocked(f.x, f.z, 1.5)) continue;
           pl.trees.push({ kind: rng.chance(0.75) ? 'oak' : 'fir', x: f.x, z: f.z, s: rng.range(0.55, 0.85) });
         }
   }

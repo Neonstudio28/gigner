@@ -163,7 +163,6 @@ export const ROADS: RoadDef[] = [
   // River St follows the bank, rounding off both ends of the old town toward Old Hwy 10
   { name: 'River St', kind: 'collector', pts: [[-600, 0], [-578, -52], [-530, -84], [-450, -92], [-300, -89], [-150, -92], [0, -90], [150, -92], [300, -89], [450, -92], [530, -84], [578, -52], [600, 0]] },
   street('Alder St', 'downtown', Z.alder, -300, 300),
-  alley('Main Alley', 45, -296, 296),
   ...avenues(),
 
   // ---------------------------------------------------------------- Old Town (south of Main St)
@@ -241,7 +240,8 @@ export const ROADS: RoadDef[] = [
   { name: 'Miller Dairy Rd', kind: 'gravel', pts: [[-1450, 27.5], [-1450, 70], [-1450, 112]] },
   { name: 'Ridgeview Ln', kind: 'gravel', pts: [[-1200, 15], [-1200, 70], [-1198, 125]] },
   { name: 'Cougar Creek Rd', kind: 'gravel', pts: [[-1050, 9], [-1060, 120], [-1090, 230], [-1070, 330], [-1030, 400]], culdesac: true },
-  { name: 'Grouse Ln', kind: 'dirt', pts: [[-1070, 330], [-1180, 380], [-1300, 420]], culdesac: true },
+  // ends at the foot of the mountain wall (its turnaround would otherwise ramp up the slope)
+  { name: 'Grouse Ln', kind: 'dirt', pts: [[-1070, 330], [-1180, 380], [-1276, 411]], culdesac: true },
   { name: 'Orchard Rd', kind: 'gravel', pts: [[1600, -6], [1602, 100], [1600, 215]], culdesac: true },
   { name: 'Hansen Rd', kind: 'gravel', pts: [[1600, -6], [1598, -120], [1595, -247]] },
 ];

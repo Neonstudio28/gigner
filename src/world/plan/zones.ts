@@ -75,18 +75,24 @@ const L = {
 
 /* ------------------------------------------------------------------------- helpers */
 
-/** Arc length of the point on a road closest to x (for straight-ish E-W roads). */
-function sAtX(r: Road, x: number) {
+/** Arc length where a road reaches coordinate v along an axis, interpolated between samples (not snapped to them). */
+function sAtAxis(r: Road, v: number, axis: 'x' | 'z') {
   let best = r.pts[0];
-  for (const p of r.pts) if (Math.abs(p.x - x) < Math.abs(best.x - x)) best = p;
+  for (const p of r.pts) if (Math.abs(p[axis] - v) < Math.abs(best[axis] - v)) best = p;
+  const i = r.pts.indexOf(best);
+  for (const j of [i - 1, i]) {
+    const a = r.pts[j];
+    const b = r.pts[j + 1];
+    if (!a || !b || a[axis] === b[axis]) continue;
+    const t = (v - a[axis]) / (b[axis] - a[axis]);
+    if (t >= 0 && t <= 1) return a.s + (b.s - a.s) * t;
+  }
   return best.s;
 }
-/** Arc length of the point on a road closest to z (for N-S roads). */
-function sAtZ(r: Road, z: number) {
-  let best = r.pts[0];
-  for (const p of r.pts) if (Math.abs(p.z - z) < Math.abs(best.z - z)) best = p;
-  return best.s;
-}
+/** Arc length where a road crosses x (for straight-ish E-W roads). */
+const sAtX = (r: Road, x: number) => sAtAxis(r, x, 'x');
+/** Arc length where a road crosses z (for N-S roads). */
+const sAtZ = (r: Road, z: number) => sAtAxis(r, z, 'z');
 /** Arc length of the point on a road closest to (x, z) (for loops and curves). */
 function sNear(r: Road, x: number, z: number) {
   let best = r.pts[0];
@@ -168,12 +174,14 @@ const falseFrontShop = (sign: SignId, w: number, d: number, color: Col) =>
 
 /** Lays a row of storefronts along one side of a road between arc lengths s0..s1. */
 function fillRowS(pl: Placer, r: Road, side: 1 | -1, s0: number, s1: number, shops: Shop[], setback = 0.4) {
-  const total = shops.reduce((a, d) => a + d.w, 0);
-  const scale = Math.min(1.12, (s1 - s0) / total);
-  let s = s0 + Math.max(0, (s1 - s0 - total * scale) / 2);
+  // fixed-width builders keep their size; the rest stretch or shrink so the row always fits its block
+  const fixed = shops.reduce((a, d) => a + (d.fixed ? d.w : 0), 0);
+  const flex = shops.reduce((a, d) => a + (d.fixed ? 0 : d.w), 0);
+  const scale = flex > 0 ? Math.min(1.12, Math.max(0.5, (s1 - s0 - fixed) / flex)) : 1;
+  let s = s0 + Math.max(0, (s1 - s0 - fixed - flex * scale) / 2);
   for (const sh of shops) {
     const w = sh.fixed ? sh.w : sh.w * scale;
-    const span = sh.w * scale;
+    const span = w;
     const f = pl.net.frontage(r, s + span / 2, side, r.full + setback + sh.d / 2);
     pl.force({ id: 'shop', name: 'shop', w, d: sh.d, tags: [], build: (c, x, z, ry) => sh.make(c, x, z, ry, w) }, f.x, f.z, f.ry, (pl.rng.next() * 1e6) | 0, { foundation: false });
     s += span;
@@ -247,7 +255,7 @@ export function registerPads() {
  */
 const POWER_LINES: Record<'west' | 'east', [number, number][]> = {
   west: [[-2350, -1150], [-1700, -950], [-1150, -760], [-700, -680], [-560, -520]],
-  east: [[-470, -520], [-470, -725], [-100, -748], [300, -752], [700, -735], [1100, -600], [1500, -560], [1900, -540], [2400, -700]],
+  east: [[-470, -520], [-470, -725], [-100, -748], [300, -752], [700, -735], [1000, -722], [1100, -600], [1500, -560], [1900, -540], [2400, -700]],
 };
 
 /** Keeps houses off the job sites, farmyards and power-line easements that are built later in the pass. */
@@ -265,8 +273,8 @@ function reserveSites(pl: Placer) {
 /** Main St / Alder St frontage between avenues: kerb lines minus a 0.6 m margin. */
 const BLK = {
   w5w4: [-491.75, -408.25],
-  w4w3: [-391.75, -308.25],
-  w3w2: [-291.75, -212.65],
+  w4w3: [-391.75, -309.35],
+  w3w2: [-290.65, -212.65],
   w2w1: [-187.35, -112.65],
   w1d: [-87.35, -12.65],
   de1: [12.65, 87.35],
@@ -376,7 +384,7 @@ export function downtown(pl: Placer) {
   fillRow(pl, main, N, ...BLK.e2e3, [st('chinese', 16, 18, { wall: 'brickPaint', wallColor: 0xf6e6c8, awning: 'awningRed', neon: 'neonOpen' }), st('icecream', 14, 18, { wall: 'brickPaint', wallColor: 0xfff0f4, awning: 'awningBlue', seating: 0x6bc3c9 }), cs('electronics', 'HOLLOW ELECTRONICS · TV · VCR', '#c8262c', '#ffffff', 16, 18, { wall: 'brickDark' }), cs('outfitters', 'CASCADE OUTFITTERS', '#2f4a3a', '#f2e3c2', 18, 20, { stories: 2, wall: 'brickBrown' }, 'Alfa Slab One')]);
   fillRow(pl, main, N, ...BLK.e3e4, [st('steakhouse', 20, 18, { wall: 'brickDark', awning: 'awningGreen', planters: true, chimneys: 2 }), cs('bell', 'MOUNTAIN BELL TELEPHONE', '#f4f1ea', '#1f4f6b', 16, 20, { stories: 2, wall: 'brickTan' }), st('pawn', 14, 18, { wall: 'brickTan', trim: 0xf0e8d8 }), st('laundromat', 12, 18, { wall: 'stucco', wallColor: 0xdfe9ee, neon: 'neonOpen' }), cs('creditunion', 'SILVER VALLEY CREDIT UNION', '#1f4f6b', '#ffffff', 16, 20, { wall: 'stucco', wallColor: 0xe8e4d8 })]);
 
-  // ---- Main St, south side (backs onto Main Alley inside 3rd Aves, deeper lots beyond)
+  // ---- Main St, south side (backs onto the cross-street shops inside 3rd Aves, deeper lots beyond)
   fillRow(pl, main, S, ...BLK.w4w3, [st('grocery', 22, 18, { wall: 'brickPurple', awning: 'awningGreen' }), st('auto', 18, 18, { wall: 'brickRed', awning: 'awningRed' }), cs('feedseed', 'HOLLOW MERCANTILE', '#3d2f28', '#e9c27a', 18, 18, { wall: 'brickBrown' }, 'Rye'), st('gun', 14, 18, { wall: 'brickTan' })]);
   fillRow(pl, main, S, ...BLK.w3w2, [falseFrontShop('tavern', 17, 17, 0x6a4a32), cs('kettle', 'The Copper Kettle', '#7a3b1f', '#f2e3c2', 14, 17, { wall: 'brickPaint', wallColor: 0xf0e8d6, seating: 0x7a3b1f }, 'Lobster'), cs('hobby', 'HOLLOW HOBBY & TOY', '#c8262c', '#f2c94c', 14, 17, { wall: 'brickTan' }), st('fruit', 16, 17, { wall: 'brickPaint', awning: 'awningRed', produce: true }), cs('salon', "Rosie's Beauty Salon", '#e9b8c8', '#7a2c4a', 12, 17, { wall: 'stucco', wallColor: 0xf6e6ee }, 'Lobster')]);
   fillRow(pl, main, S, ...BLK.w2w1, [cs('printing', 'PINE HOLLOW PRINTING', '#f4f1ea', '#1b1f1c', 14, 17, { wall: 'brickTan' }), cs('boots', 'TIMBER BOOT & SHOE', '#3d2f28', '#e9c27a', 14, 17, { wall: 'brickBrown' }), cs('espresso', 'STEAM DONKEY ESPRESSO', '#3d2f28', '#f2e3c2', 12, 17, { wall: 'brickPaint', wallColor: 0xe9e1cf, seating: 0x3d2f28 }), cs('news', 'NEWS & TOBACCO', '#f4f1ea', '#1b1f1c', 12, 17, { wall: 'brickRed' }), st('realty', 14, 17, { stories: 2, wall: 'brickPaint' })]);
@@ -444,14 +452,15 @@ function riverfront(pl: Placer) {
     k.at(0, 0, 0, () => k.box(cx, 0.02, z, x1 - x0, 0.1, d, P.lawn, 'paint', { cast: false }), heightAt(cx, z));
     pl.grassPatches.push({ x: cx, z, w: x1 - x0, d: d - 2, n: Math.round((x1 - x0) * 0.6) });
   };
+  // benches and lamps line the park side of River St, just off its sidewalk (River St wanders with the bank)
+  const parkEdge = (x: number, off: number) => net.frontage(river, sAtX(river, x), N, river.full + off);
   for (const [x0, x1] of [[-440, -312], [-212, -150], [-114, -14], [14, 128], [172, 440]] as const) {
-    lawnStrip(x0, x1, -110, 22);
+    lawnStrip(x0, x1, -113, 20);
     for (let x = x0 + 8; x < x1 - 4; x += 18) {
-      const y = heightAt(x, -101);
-      k.at(0, 0, 0, () => {
-        pr.bench(k, x, -101, PI);
-        pr.acornLamp(k, x + 5, -100);
-      }, y);
+      const b = parkEdge(x, 1.6);
+      const l = parkEdge(x + 5, 1.1);
+      k.at(0, 0, 0, () => pr.bench(k, b.x, b.z, PI), heightAt(b.x, b.z));
+      k.at(0, 0, 0, () => pr.acornLamp(k, l.x, l.z), heightAt(l.x, l.z));
       if ((x | 0) % 3 === 0) pl.trees.push({ kind: 'oak', x: x + 2, z: -118, s: 0.8 });
     }
   }
@@ -469,9 +478,12 @@ function riverfront(pl: Placer) {
 
   // North Bank Park: lawn, trail and a picnic shelter between Riverside Dr and the river
   for (const [x0, x1] of [[-380, -312], [-288, -12], [12, 380]] as const) lawnStrip(x0, x1, -218, 30);
+  // Riverside Dr bows south between its bends, so the benches keep to the park side of its sidewalk
+  const riverside = net.byName('Riverside Dr');
   for (let x = -360; x < 370; x += 40) {
     if (Math.abs(x) < 16 || Math.abs(x + 300) < 16) continue;
-    k.at(0, 0, 0, () => pr.bench(k, x, -232, 0), heightAt(x, -232));
+    const b = net.frontage(riverside, sAtX(riverside, x), -1, riverside.full + 1.6);
+    k.at(0, 0, 0, () => pr.bench(k, b.x, b.z, 0), heightAt(b.x, b.z));
     if ((x / 40) % 2 === 0) pl.trees.push({ kind: 'fir', x: x + 6, z: -212, s: 0.8 });
   }
   const sx = 120;
@@ -945,8 +957,9 @@ export function industry(pl: Placer, padY: Record<string, number>) {
   k.at(0, 0, 0, () => {
     farmhouse(c, h.x - 40, h.z + 36, PI);
     barn(c, h.x + 30, h.z + 18, PI, { shed: true });
-    waterTower(k, h.x - 10, h.z + 30, { legH: 9 });
-    c.occ.add(h.x - 10, h.z + 30, 6, 6, 0, 1);
+    // the water tower stands in the yard west of Hansen Rd (the farm lane runs north at x ≈ h.x - 5)
+    waterTower(k, h.x - 24, h.z + 24, { legH: 9 });
+    c.occ.add(h.x - 24, h.z + 24, 6, 6, 0, 1);
     k.plane(h.x - 2, 0.03, h.z + 30, 70, 30, 0x8f7050, 'gravel');
     pr.railFence(k, h.x - 75, h.z - 55, h.x + 75, h.z - 55);
     for (let i = 0; i < 6; i++) k.box(h.x + 50 + (i % 3) * 1.3, i > 2 ? 0.8 : 0, h.z + 2, 1.2, 0.8, 0.9, 0xd8b75a);
@@ -957,7 +970,7 @@ export function industry(pl: Placer, padY: Record<string, number>) {
   pl.animated.push({ obj: wm, update: (dt) => (wm.rotation.z -= dt * 1.6) });
   pl.cornFields.push({ x: h.x + 25, z: h.z - 25, w: 70, d: 50, ry: 0 });
   c.occ.add(h.x + 25, h.z - 25, 70, 50, 0, 0.5, false);
-  pl.car('pickup', h.x - 20, h.z + 28, PI / 2, 0x7b2532, { accent: 0xe9e8e2 }, padY.hansen);
+  pl.car('pickup', h.x - 34, h.z + 22, PI / 2, 0x7b2532, { accent: 0xe9e8e2 }, padY.hansen);
   pl.car('tractor', h.x + 10, h.z + 4, 0.4, 0x2f7a3a, {}, padY.hansen);
   mark(pl, 'Hansen Farm', h.x, h.z, 'rural');
 
