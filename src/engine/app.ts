@@ -128,9 +128,10 @@ export async function startApp(container: HTMLElement) {
     mist.uniforms.uOpacity.value = p.mist.opacity;
     mist.uniforms.uColor.value.setHex(p.mist.color);
     mist.mesh.visible = p.mist.opacity > 0.01;
-    Object.assign(fog.settings, p.volume);
-    // street lamps come on in gloomy weather and after dark
-    fog.lampsOn = Math.min(1, p.windows * 1.3);
+    const { lampsOn, ...settings } = p.volume;
+    Object.assign(fog.settings, settings);
+    // street lamps come on in gloomy weather and after dark, unless the preset sets them
+    fog.lampsOn = lampsOn ?? Math.min(1, p.windows * 1.3);
   };
   setPreset(preset.name);
 

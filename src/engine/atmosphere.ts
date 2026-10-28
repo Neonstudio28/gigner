@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Rng } from '../world/core/rng';
+import type { FogSettings } from './volumetric';
 import { heightAt, forestDensity, valley, river, LAKE, MAP_RADIUS } from '../world/terrain';
 
 /** Shared uniforms injected into every scene material (height fog with sun in-scattering). */
@@ -239,7 +240,7 @@ export interface AtmoPreset {
   /** Volumetric cloud layer: coverage 0..1, density, base and top altitude (m above the valley). */
   clouds: { coverage: number; density: number; base: number; top: number };
   /** Raymarched valley fog (see FogSettings): thickness, layer, banks, scattering, shafts and lamp glow. */
-  volume: { density: number; falloff: number; base: number; noise: number; sun: number; anisotropy: number; penetration: number; ambient: number; shafts: number; lamps: number };
+  volume: Partial<Omit<FogSettings, 'enabled'>> & { lampsOn?: number };
 }
 
 export const PRESETS: AtmoPreset[] = [
@@ -344,5 +345,22 @@ export const PRESETS: AtmoPreset[] = [
     grain: 0,
     clouds: { coverage: 0.3, density: 0.85, base: 1900, top: 3700 },
     volume: { density: 0.003, falloff: 0.05, base: 6, noise: 0.6, sun: 1, anisotropy: 0.6, penetration: 0.9, ambient: 0.85, shafts: 0.6, lamps: 0 },
+  },
+  {
+    name: 'PNW Thick Fog',
+    sun: { azimuth: 236, elevation: 26, intensity: 2.0, tint: 0xffe9d2 },
+    env: 0.72,
+    sky: { intensity: 0.95, tint: 0xe6edf0, horizon: 0.16, horizonMix: 0.85 },
+    hemi: 0.34,
+    fog: { color: 0x9aa9ad, density: 0.0018, falloff: 0.011, haze: 0.00005, max: 0.9, inscatter: 0.4 },
+    mist: { opacity: 0.42, color: 0xcfd8d8 },
+    grade: { saturation: 0.86, contrast: 1.06, lift: [0.015, 0.03, 0.035], gain: [0.98, 1.0, 0.99], split: 0.6, shadowTint: 0x2f6f6a, highTint: 0xf2d9b0 },
+    wet: 0.55,
+    windows: 0.12,
+    bloom: 0.42,
+    exposure: 1.0,
+    grain: 0.05,
+    clouds: { coverage: 0.6, density: 1.0, base: 1700, top: 3300 },
+    volume: { density: 0.08, falloff: 0.08, base: 150, noise: 1, noiseScale: 60, windSpeed: 0.4, windDir: 70, sun: 0, anisotropy: 0.6, penetration: 0.65, ambient: 0.15, shafts: 1, lamps: 0.79, range: 3000, steps: 64, lampsOn: 1 },
   },
 ];
