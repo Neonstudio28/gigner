@@ -232,9 +232,6 @@ export const PADS = {
   lodge: { x: 1180, z: 512, w: 50, d: 30 },
   campground: { x: 1580, z: 330, w: 54, d: 74 },
   cemetery: { x: -410, z: 450, w: 56, d: 76 },
-  sunnysideSchool: { x: -150, z: -633, w: 66, d: 50 },
-  sunnysideField: { x: -245, z: -652, w: 88, d: 88 },
-  valleyViewApts: { x: 600, z: -536, w: 74, d: 58 },
   cascadeCourtApts: { x: -1100, z: 54, w: 74, d: 58 },
   distCenter: { x: 642, z: -346, w: 80, d: 78 },
   coldStorage: { x: 717, z: -342, w: 56, d: 70 },
@@ -335,11 +332,6 @@ export function civic(pl: Placer) {
   mark(pl, 'Pine Hollow High School', PADS.highSchool.x, PADS.highSchool.z, 'school');
   mark(pl, 'Logger Field', PADS.field.x, PADS.field.z, 'park');
   mark(pl, 'Logger Ballpark', PADS.loggerPark.x, PADS.loggerPark.z, 'park');
-  // ---- Sunnyside Elementary and its ballfield on the North Slope, facing Highland Dr
-  pl.force(D('sunnysideElementary'), PADS.sunnysideSchool.x, PADS.sunnysideSchool.z, 0, 47);
-  pl.force(D('sunnysideField'), PADS.sunnysideField.x, PADS.sunnysideField.z, 0, 48);
-  mark(pl, 'Sunnyside Elementary', PADS.sunnysideSchool.x, PADS.sunnysideSchool.z, 'school');
-  mark(pl, 'Sunnyside Field', PADS.sunnysideField.x, PADS.sunnysideField.z, 'park');
 }
 
 /** Lawns, paths, trees, gazebo, fountain and memorial around the courthouse. */
@@ -664,30 +656,12 @@ export function neighbourhoods(pl: Placer) {
   const posh = { setback: 7, gap: 4, jitter: 1.5, maxSlope: 6, car: 0.85 };
   for (const name of ['Division St S', '2nd Ave E S', '2nd Ave W S']) street(name, POOLS.posh(), { ...posh, s0: sAtZ(R(name), 192), bulb: 4 });
   street('Hillcrest Dr', POOLS.posh(), { ...posh, s1: sAtX(R('Hillcrest Dr'), 505) });
-  for (const name of ['Ridgecrest Dr', 'Laurel Ln']) street(name, POOLS.posh(), posh);
-  for (const name of ['Overlook Ct', 'Summit Ct', 'Madrona Ct', 'Aspen Ct', 'Sunrise Ct', 'Hilltop Ct', 'Chapel Ct']) street(name, POOLS.posh(), { ...posh, bulb: 5 });
+  street('Laurel Ln', POOLS.posh(), posh);
+  street('Chapel Ct', POOLS.posh(), { ...posh, bulb: 5 });
   street('5th Ave W', POOLS.hillside(), { setback: 5, gap: 5, jitter: 2, maxSlope: 9, s0: sAtZ(R('5th Ave W'), 192), bulb: 3 });
 
-  // ---- West End: post-war suburb grown off Alder St, around the elementary school
+  // ---- West End: a few post-war houses where Alder St runs out past the elementary school
   street('Alder St W', POOLS.suburb(), { setback: 7, gap: 5, jitter: 1.5, s0: sAtX(R('Alder St W'), -520), bulb: 4 });
-  for (const name of ['Sunset Dr', 'Hemlock Ct']) street(name, POOLS.suburb(), { setback: 7, gap: 5, jitter: 1.5, bulb: 5 });
-
-  // ---- Eastgate: 1990s homes where Hillcrest Dr curves past the high school
-  street('Hillcrest Dr', POOLS.newer(), { setback: 7, gap: 5, jitter: 1.5, s0: sAtX(R('Hillcrest Dr'), 510), bulb: 4 });
-  for (const name of ['Elm Ct', 'Tamarack Ct']) street(name, POOLS.newer(), { setback: 7, gap: 5, jitter: 1.5, bulb: 5 });
-
-  // ---- Sunnyside: the North Slope subdivision across I-90 (1960s on), with starter homes and rentals on
-  // Valley View Dr below Highland Dr and the Valley View Apartments by the Exit 63 ramps
-  const sr = R('Sunnyside Rd');
-  const sun = { setback: 7, gap: 5, jitter: 1.5, maxSlope: 7, car: 0.8 };
-  gateSign(pl, sr, 'sunnyside', 'SUNNYSIDE', 'EST. 1964', sAtZ(sr, -520));
-  pl.force(D('valleyViewApts'), PADS.valleyViewApts.x, PADS.valleyViewApts.z, PI, 91);
-  mark(pl, 'Valley View Apartments', PADS.valleyViewApts.x, PADS.valleyViewApts.z, 'residential');
-  street('Sunnyside Rd', POOLS.sunnyside(), { ...sun, s0: sAtZ(sr, -505), bulb: 4 });
-  street('Highland Dr', POOLS.sunnyside(), sun);
-  street('Meadowlark Ln', POOLS.sunnyside(), sun);
-  for (const name of ['Crestview Ct', 'Sunflower Ct', 'Juniper Ct', 'Bitterroot Ct']) street(name, POOLS.sunnyside(), { ...sun, bulb: 5 });
-  street('Valley View Dr', POOLS.starter(), { setback: 6, gap: 4, jitter: 1.5, maxSlope: 7, car: 0.85 });
 
   // ---- Mill Town: the sawmill's 1923 company houses on tight lots by the Mill Spur, more along the highway,
   // and the income-restricted Cascade Court Apartments across Old Hwy 10

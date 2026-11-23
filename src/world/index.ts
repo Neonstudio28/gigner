@@ -4,7 +4,7 @@ import { Rng } from './core/rng';
 import { createLayers, loadPhotoSet } from './textures';
 import { MaterialLib, windUniform } from './materials';
 import { SignBook } from './signs';
-import { createTerrain, groundHeight, heightAt as groundHeightPre, isWater, MAP_RADIUS } from './terrain';
+import { createTerrain, groundHeight, heightAt as groundHeightPre, isWater, MAP_RADIUS, setDevelopment } from './terrain';
 import { createVegetation, type Vegetation, type TreeIndex } from './vegetation';
 import { Traffic } from './traffic';
 import { loadFonts } from './fonts';
@@ -181,6 +181,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   statics.name = 'town-static';
   batch.build((key) => materials.get(key), statics);
   await progress(0.58, 'Sculpting mountains, river and lake');
+  setDevelopment((x, z) => occ.blocked(x, z, 4) || pl.clearings.some((c) => Math.abs(x - c.x) < c.w / 2 && Math.abs(z - c.z) < c.d / 2));
   const terrain = createTerrain();
   // driveways, mailboxes and parked cars are laid on the finished ground mesh so they follow it exactly
   const late = new Batcher(150);

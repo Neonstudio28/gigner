@@ -469,15 +469,70 @@ export function forestDensity(x: number, z: number): number {
     d = Math.max(d, smoothstep(1.0, 1.45, town) * 0.6 * (0.35 + 0.65 * clearing));
     const r = river.query(x, z);
     if (r && r.dist > r.hw + 4 && r.dist < r.hw + 45) d = Math.max(d, 0.35 * clearing);
+    // second growth takes back every piece of the valley floor that nobody built on, farmed or mowed
+    const meadow = smoothstep(0.25, 0.6, nA(x * 0.0031 - 7, z * 0.0031 + 3));
+    d = Math.max(d, smoothstep(16, 58, wildDistance(x, z)) * (0.9 - 0.75 * meadow));
   }
   return d;
 }
 
+const WILD = { half: 1920, cell: 8, n: 480, data: null as Float32Array | null };
+
+/** Metres from (x, z) to the nearest road, lot, farm or other developed ground; 0 until the town is laid out. */
+export function wildDistance(x: number, z: number): number {
+  const f = WILD.data;
+  if (!f) return 0;
+  const u = clamp((x + WILD.half) / WILD.cell - 0.5, 0, WILD.n - 1.001);
+  const w = clamp((z + WILD.half) / WILD.cell - 0.5, 0, WILD.n - 1.001);
+  const i = Math.floor(u);
+  const j = Math.floor(w);
+  const fu = u - i;
+  const fw = w - j;
+  const a = f[j * WILD.n + i];
+  const b = f[j * WILD.n + i + 1];
+  const c = f[(j + 1) * WILD.n + i];
+  const e = f[(j + 1) * WILD.n + i + 1];
+  return (a + (b - a) * fu) * (1 - fw) + (c + (e - c) * fu) * fw;
+}
+
+/** Records the developed ground once the town is laid out, so the forest can grow back around it. */
+export function setDevelopment(developed: (x: number, z: number) => boolean) {
+  const { n, cell, half } = WILD;
+  const f = new Float32Array(n * n).fill(1e6);
+  for (let j = 0; j < n; j++)
+    for (let i = 0; i < n; i++) if (developed(-half + (i + 0.5) * cell, -half + (j + 0.5) * cell)) f[j * n + i] = 0;
+  const D1 = cell;
+  const D2 = cell * Math.SQRT2;
+  for (let j = 0; j < n; j++)
+    for (let i = 0; i < n; i++) {
+      let v = f[j * n + i];
+      if (i > 0) v = Math.min(v, f[j * n + i - 1] + D1);
+      if (j > 0) {
+        v = Math.min(v, f[(j - 1) * n + i] + D1);
+        if (i > 0) v = Math.min(v, f[(j - 1) * n + i - 1] + D2);
+        if (i < n - 1) v = Math.min(v, f[(j - 1) * n + i + 1] + D2);
+      }
+      f[j * n + i] = v;
+    }
+  for (let j = n - 1; j >= 0; j--)
+    for (let i = n - 1; i >= 0; i--) {
+      let v = f[j * n + i];
+      if (i < n - 1) v = Math.min(v, f[j * n + i + 1] + D1);
+      if (j < n - 1) {
+        v = Math.min(v, f[(j + 1) * n + i] + D1);
+        if (i < n - 1) v = Math.min(v, f[(j + 1) * n + i + 1] + D2);
+        if (i > 0) v = Math.min(v, f[(j + 1) * n + i - 1] + D2);
+      }
+      f[j * n + i] = v;
+    }
+  WILD.data = f;
+}
+
 const C = (hex: number) => new THREE.Color(hex);
 const COL = {
-  floor: C(0x739440),
-  floor2: C(0x7d9b45),
-  meadow: C(0x7f9a48),
+  floor: C(0x66803f),
+  floor2: C(0x718a45),
+  meadow: C(0x76894a),
   dry: C(0x9d9a5c),
   forest: C(0x45612f),
   forestDark: C(0x364d27),

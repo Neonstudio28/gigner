@@ -48,8 +48,8 @@ export const EXITS = [
   { n: 63, x: 760, road: 'Eastside Rd', to: 'Downtown · Spirit Lake · Hospital' },
 ];
 const DECK = 7.5;
-/** Crossroads that pass under I-90: the two interchanges and Sunnyside Rd up to the North Slope. */
-const UNDERPASSES = [...EXITS.map((e) => e.x), 0];
+/** Crossroads that pass under I-90: the two interchanges. */
+const UNDERPASSES = EXITS.map((e) => e.x);
 const interstateElev = (x: number) => {
   let e = 0;
   for (const ux of UNDERPASSES) e = Math.max(e, smoothstep(ux - 160, ux - 60, x) * (1 - smoothstep(ux + 60, ux + 160, x)));
@@ -182,13 +182,6 @@ export const ROADS: RoadDef[] = [
     culdesac: true,
   },
   { name: 'Laurel Ln', kind: 'suburban', pts: [[-225, 320], [-150, 335], [-80, 330], [-20, 320]] },
-  { name: 'Ridgecrest Dr', kind: 'suburban', pts: [[-10, 350], [55, 370], [100, 402], [200, 398], [280, 390], [380, 368], [455, 338], [488, 298], [480, 250]] },
-  { name: 'Overlook Ct', kind: 'suburban', pts: [[60, 430], [105, 428], [150, 452], [190, 490]], culdesac: true },
-  { name: 'Summit Ct', kind: 'suburban', pts: [[380, 368], [400, 430], [380, 480]], culdesac: true },
-  { name: 'Madrona Ct', kind: 'suburban', pts: [[120, 250], [130, 300], [160, 340]], culdesac: true },
-  { name: 'Aspen Ct', kind: 'suburban', pts: [[300, 250], [315, 295], [325, 325]], culdesac: true },
-  { name: 'Sunrise Ct', kind: 'suburban', pts: [[-150, 335], [-150, 400], [-120, 450]], culdesac: true },
-  { name: 'Hilltop Ct', kind: 'suburban', pts: [[-585, 320], [-505, 330], [-455, 362]], culdesac: true },
   { name: 'Chapel Ct', kind: 'suburban', pts: [[-265, 380], [-325, 364], [-382, 350]], culdesac: true },
 
   // ---------------------------------------------------------------- North Side (across the river)
@@ -198,22 +191,6 @@ export const ROADS: RoadDef[] = [
   alley('North Alley 1', -287.5, -395, 395),
   alley('North Alley 2', -367.5, -395, 395),
 
-  // ---------------------------------------------------------------- Sunnyside: the North Slope above I-90
-  // Sunnyside Rd carries Division St on under I-90 and up the slope. Highland Dr follows the hill between the two
-  // interchange crossroads, Valley View Dr loops below it, and the courts climb toward the trees.
-  { name: 'Sunnyside Rd', kind: 'collector', pts: [[0, Z.larch], [0, -445], [0, -485], [0, -542], [0, -600], [-12, -645], [-30, -688]], culdesac: true },
-  {
-    name: 'Highland Dr',
-    kind: 'collector',
-    pts: [[-760, -578], [-640, -572], [-520, -585], [-380, -596], [-240, -590], [-120, -597], [0, -600], [120, -597], [240, -590], [380, -596], [520, -585], [640, -572], [760, -578]],
-  },
-  { name: 'Valley View Dr', kind: 'suburban', pts: [[-490, -587], [-486, -562], [-440, -547], [-300, -540], [-140, -538], [0, -542], [140, -538], [300, -540], [440, -547], [486, -562], [490, -587]] },
-  { name: 'Crestview Ct', kind: 'suburban', pts: [[120, -597], [128, -640], [110, -685]], culdesac: true },
-  { name: 'Meadowlark Ln', kind: 'suburban', pts: [[240, -590], [255, -640], [330, -668], [420, -655], [428, -625], [420, -593]] },
-  { name: 'Sunflower Ct', kind: 'suburban', pts: [[640, -572], [652, -615], [684, -648]], culdesac: true },
-  { name: 'Juniper Ct', kind: 'suburban', pts: [[-380, -596], [-398, -640], [-440, -668]], culdesac: true },
-  { name: 'Bitterroot Ct', kind: 'suburban', pts: [[-705, -575], [-712, -612], [-728, -640]], culdesac: true },
-
   // ---------------------------------------------------------------- west end: industry, mobile homes, the West End suburb
   { name: 'Industrial Way', kind: 'rural', pts: [[-760, -370], [-680, -366], [-620, -362], [-560, -357]] },
   { name: 'Mill Spur', kind: 'gravel', pts: [[-1000, 7], [-1000, -90], [-1000, -190]] },
@@ -222,12 +199,6 @@ export const ROADS: RoadDef[] = [
   { name: 'Mill Row', kind: 'residential', pts: [[-1000, -60], [-1140, -60], [-1280, -60]], culdesac: true },
   { name: 'Shingle St', kind: 'residential', pts: [[-1000, -125], [-1140, -125], [-1280, -125]], culdesac: true },
   { name: 'Riverside Ln', kind: 'lane', pts: [[-735, 0], [-735, -70], [-710, -140], [-660, -150], [-640, -90], [-650, 0]] },
-  { name: 'Sunset Dr', kind: 'suburban', pts: [[-780, 110], [-760, 180], [-745, 255], [-705, 300]], culdesac: true },
-  { name: 'Hemlock Ct', kind: 'suburban', pts: [[-840, 170], [-890, 172], [-935, 200], [-955, 240]], culdesac: true },
-
-  // ---------------------------------------------------------------- Eastgate (beyond the high school)
-  { name: 'Elm Ct', kind: 'suburban', pts: [[650, 325], [662, 390], [645, 445]], culdesac: true },
-  { name: 'Tamarack Ct', kind: 'suburban', pts: [[740, 320], [775, 385], [790, 440]], culdesac: true },
 
   // ---------------------------------------------------------------- Spirit Lake (Lakeshore Dr loops the lake, both ends on Old Hwy 10)
   {

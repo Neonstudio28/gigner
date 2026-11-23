@@ -425,10 +425,10 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
   // Forest scatter on a jittered grid whose spacing grows with distance.
   const R = MAP_RADIUS + 60;
   for (let gz = -R; gz < R; ) {
-    const stepZ = Math.abs(gz) < 700 ? 9 : Math.abs(gz) < 1300 ? 14 : 20;
+    const stepZ = Math.abs(gz) < 700 ? 7.5 : Math.abs(gz) < 1300 ? 12 : 20;
     for (let gx = -R; gx < R; ) {
       const r0 = Math.hypot(gx, gz);
-      const step = r0 < 700 ? 9 : r0 < 1300 ? 14 : 20;
+      const step = r0 < 700 ? 7.5 : r0 < 1300 ? 12 : 20;
       const x = gx + rng.range(0, step);
       const z = gz + rng.range(0, stepZ);
       gx += step;
@@ -451,10 +451,11 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
       const z = gz + rng.range(0, 13);
       if (valley(x, z).e > -8) continue;
       const core = x > -310 && x < 310 && z > -95 && z < 100;
-      if (rng.next() > (core ? 0.01 : 0.07)) continue;
+      if (rng.next() > (core ? 0.02 : 0.2)) continue;
       if (input.occ.blocked(x, z, 2.5) || cleared(x, z)) continue;
       const roll = rng.next();
-      placeTree(roll < 0.45 ? 'fir' : roll < 0.75 ? 'oak' : roll < 0.85 ? 'pine' : 'bush', x, z, rng.range(0.6, 1.1));
+      // back-yard Douglas firs tower over the roofs; maples and alders fill in between
+      placeTree(roll < 0.5 ? 'fir' : roll < 0.72 ? 'oak' : roll < 0.87 ? 'pine' : 'bush', x, z, roll < 0.5 ? rng.range(0.8, 1.5) : rng.range(0.6, 1.1));
     }
 
   for (const gp of input.grassPatches)
