@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { MatResolver, MatSpec } from './core/kit';
 import type { LayerDef } from './textures';
+import { windowMaterial } from './windowMaterial';
 
 /** Shared uniform used by foliage/flag vertex animation. */
 export const windUniform = { value: 0 };
@@ -91,6 +92,7 @@ export class MaterialLib implements MatResolver {
       ['rubber', 'world', 0.95, 0],
       ['decal', 'decal', 0.86, 0],
       ['glass', 'glass', 0.08, 0.4],
+      ['window', 'window', 0.06, 0],
       ['light', 'light', 1, 0],
       ['wire', 'wire', 0.6, 0],
       ['water', 'water', 0.05, 0.3],
@@ -115,12 +117,13 @@ export class MaterialLib implements MatResolver {
             vec2 cell = floor(vWinWorld.xz * 0.45) + floor(vWinWorld.y / 2.9) * 17.0;
             float on = step(0.48, wHash(cell));
             vec3 tone = mix(vec3(1.0, 0.68, 0.36), vec3(1.0, 0.86, 0.6), wHash(cell + 3.1));
-            totalEmissiveRadiance += uWindowGlow * on * tone * 1.6;
+            totalEmissiveRadiance += uWindowGlow * on * tone * 0.0;
           }`,
         );
     };
     glass.customProgramCacheKey = () => 'pinehollow-glass';
     this.set('glass', glass);
+    this.set('window', windowMaterial(surfaceUniforms.uWindowGlow));
     // Unlit, pushed above 1.0 so bloom picks up lamps and neon.
     this.set('light', new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(2.2, 2.2, 2.2) }));
     this.set('wire', new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }));

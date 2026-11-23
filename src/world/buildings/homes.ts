@@ -169,7 +169,7 @@ export function aframeCabin(c: Ctx, x: number, z: number, ry: number, color: Col
     for (let i = 0; i < 3; i++) {
       const y = 1.0 + i * 1.9;
       const half = (w / 2) * (1 - (y + 1.6 - 0.6) / 7.6) - 0.5;
-      if (half > 0.4) k.box(0, y, zf + 0.02, half * 2, 1.6, 0.08, P.glassLit, 'glass');
+      if (half > 0.4) k.pane(0, y, zf + 0.062, half * 2, 1.6, 'home', 0.9);
     }
     for (const s of [-1, 1]) k.box(s * 0.6, 0.6, zf + 0.06, 0.1, 5.4, 0.08, 0xe9dcc0);
     doorAt(k, 0, 0.6, zf + 0.05, 1.0, 2.1, 0x5a3a26, { frame: 0xe9dcc0, glass: true });

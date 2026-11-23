@@ -169,7 +169,7 @@ function hospital(c: Ctx, x: number, z: number, ry: number, seed: number) {
     const MZ = -15;
     flatBlock(k, rng, MX, MZ, 40, 18, 11.2, 0xe9e4d8, 'stucco', 1);
     for (let f = 0; f < 3; f++) {
-      k.box(MX, 1.0 + f * 3.6, MZ + 9.02, 40, 1.5, 0.06, 0x8fb1c4, 'glass');
+      for (let i = 0; i < 10; i++) k.pane(MX - 18 + i * 4, 1.0 + f * 3.6, MZ + 9.052, 3.9, 1.5, 'office', 1.0);
       k.box(MX, 0.85 + f * 3.6, MZ + 9.05, 40.1, 0.15, 0.1, 0xb9b4ab, 'concrete');
       for (const s of [-1, 1]) k.at(MX + s * 20, MZ, s * HALF, () => winRow(k, -8, 8, 5, 1.0 + f * 3.6, 0, 1.4, 1.5, 0xb9b4ab));
     }
@@ -435,7 +435,7 @@ function garageShop(id: string, title: string, sub: string, o: GarageOpts = {}) 
       k.roof(0, H + 0.35, -7, W, [[6.3, 0], [0, 1.4], [-6.3, 0]], 0x9ea2a6, 'corrugated', { eaveOH: 0.3, gableOH: 0.2 });
       for (let i = 0; i < bays; i++) rollDoor(k, -W / 2 + 7 + i * 4.6 + 2.3, -1, 3.6, 3.6);
       // office
-      k.box(-W / 2 + 2.8, 0.4, -0.9, 4.4, 2.6, 0.08, P.glass, 'glass');
+      k.glazing(-W / 2 + 2.8, 0.4, -0.9, 4.4, 2.6, 0.08, 'office', 0.4);
       doorAt(k, -W / 2 + 6.0, 0, -1, 0.95, 2.2, 0x3a3d41, { glass: true });
       k.sign(0, H - 0.9, -0.85, Math.min(W - 2, 16), 1.4, sign, {});
       pave(k, 0, 6, W + 6, 14);

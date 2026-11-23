@@ -370,7 +370,7 @@ export function burgerBarn(c: Ctx, x: number, z: number, ry: number) {
       k.box(0, 0, 0, 10, 3.4, 8, 0xb8322a, 'boards');
       k.box(0, 0, 0, 10.1, 0.3, 8.1, 0x8f8c87, 'concrete');
       k.roof(0, 3.4, 0, 10, [[4, 0], [2.6, 1.3], [0, 2.1], [-2.6, 1.3], [-4, 0]], 0x34394a, 'roofMetal', { trim: TRIM, fill: 0xb8322a, fillMat: 'boards', eaveOH: 0.4 });
-      k.box(0, 1.0, 4.02, 8, 1.6, 0.06, P.glassLit, 'glass');
+      k.pane(0, 1.0, 4.052, 8, 1.6, 'shop', 1.0);
       k.box(0, 0.95, 4.35, 8.2, 0.08, 0.7, 0xd9d9d6, 'metal');
       for (let i = 0; i <= 4; i++) k.box(-4 + i * 2, 0.95, 4.04, 0.08, 1.7, 0.06, TRIM);
       k.box(0, 2.75, 4.05, 9.6, 0.5, 0.08, TRIM);

@@ -281,10 +281,10 @@ export function diner(c: Ctx, x: number, z: number, ry: number) {
     k.box(0, 0.9, 0, w + 0.08, 0.12, d + 0.08, 0xd5d8db, 'metal');
     k.box(0, 2.85, 0, w + 0.08, 0.14, d + 0.08, 0xd5d8db, 'metal');
     k.box(0, 3.0, 0, w + 0.06, 0.55, d + 0.06, 0xc8262c);
-    k.box(0, 1.05, zf - 0.02, w - 1.2, 1.7, 0.1, P.glassLit, 'glass');
+    k.pane(0, 1.05, zf + 0.032, w - 1.2, 1.7, 'shop', 1.05);
     for (let i = 0; i <= 9; i++) k.box(-w / 2 + 0.6 + i * ((w - 1.2) / 9), 1.0, zf + 0.04, 0.08, 1.8, 0.06, 0xd5d8db, 'metal');
     k.at(w / 2, 0, Math.PI / 2, () => {
-      k.box(0, 1.05, -0.02, d - 1.5, 1.7, 0.1, P.glassLit, 'glass');
+      k.pane(0, 1.05, 0.032, d - 1.5, 1.7, 'shop', 1.05);
       doorAt(k, 3.6, 0.05, 0.02, 1.1, 2.3, 0xd5d8db, { glass: true });
     });
     flatRoof(k, w, d, H, 0.3, 0xd5d8db);

@@ -127,7 +127,7 @@ function trashCorral(k: Kit, x: number, z: number, rng: Rng, wall = 'brickRed') 
 }
 /** Little 4-pane window on a +Z wall that glows like a lit interior. */
 function litWindow(k: Kit, x: number, y: number, zf: number, w: number, h: number, frame: Col = 0x2b2420) {
-  k.box(x, y, zf - 0.02, w, h, 0.06, P.glassLit, 'glass');
+  k.pane(x, y, zf + 0.012, w, h, 'shop', y);
   k.box(x, y + h, zf + 0.02, w + 0.2, 0.1, 0.1, frame);
   k.box(x, y - 0.1, zf + 0.03, w + 0.3, 0.1, 0.14, frame);
   for (const s of [-1, 1]) k.box(x + (s * (w + 0.1)) / 2, y, zf + 0.02, 0.1, h, 0.1, frame);
@@ -301,7 +301,7 @@ function bigBun(c: Ctx, x: number, z: number, ry: number, seed: number) {
       // left (drive-thru) wall: pay + pickup windows with canopy
       k.at(-8, 0, -HALF, () => {
         for (const wz of [-1.5, 1.8]) {
-          k.box(wz, 0.9, 0.02, 1.8, 1.4, 0.08, P.glassLit, 'glass');
+          k.glazing(wz, 0.9, 0.02, 1.8, 1.4, 0.08, 'shop', 0.9);
           k.box(wz, 0.8, 0.2, 2.0, 0.1, 0.5, 0xd9d9d6, 'metal');
           k.box(wz, 2.3, 0.08, 2.2, 0.12, 0.14, 0x2b2420);
           for (const s of [-1, 1]) k.box(wz + s * 0.95, 0.9, 0.06, 0.1, 1.4, 0.1, 0x2b2420);
@@ -347,7 +347,7 @@ function bigBun(c: Ctx, x: number, z: number, ry: number, seed: number) {
       k.box(0, 0, 0, 4.7, 0.3, 4.7, CURB, 'concrete');
       for (const [i, col] of [0xc8262c, 0x2f7fd0, 0x3fa34d].entries()) k.cyl(-1.4 + i * 1.4, 3.2, 1.4, 0.45, 0.45, 1.0, 8, col);
       k.cyl(0, 3.2, 0, 1.8, 2.1, 0.7, 8, 0xc8262c);
-      k.box(0, 1.0, 2.32, 3.4, 1.4, 0.06, P.glassLit, 'glass');
+      k.glazing(0, 1.0, 2.32, 3.4, 1.4, 0.06, 'shop', 1.0);
       k.sign(0, 2.75, 2.35, 3.0, 0.65, play, { thick: 0.05 });
       // slide
       k.beam({ x: 1.6, y: 2.9, z: -2.3 }, { x: 1.6, y: 0.35, z: -5.2 }, 0.8, 0.08, 0xc8262c);
@@ -467,7 +467,7 @@ function tacoShack(c: Ctx, x: number, z: number, ry: number, seed: number) {
         k.box(ax, 1.3, zf + 0.08, 2.5, 0.07, 0.05, 0xe8dcb5);
       }
       // order window with striped awning
-      k.box(4.4, 1.2, zf - 0.02, 1.9, 1.3, 0.06, P.glassLit, 'glass');
+      k.pane(4.4, 1.2, zf + 0.012, 1.9, 1.3, 'shop', 1.2);
       k.box(4.4, 1.05, zf + 0.25, 2.2, 0.1, 0.55, 0xd9d9d6, 'metal');
       awning(k, 4.4, 2.8, zf + 0.04, 2.5, 1.5, 0.6, 'awningGreen');
       k.sign(4.4, 3.2, zf + 0.06, 1.6, 0.4, order, { thick: 0.05, back: 0x145a55 });
@@ -710,7 +710,7 @@ function cluckers(c: Ctx, x: number, z: number, ry: number, seed: number) {
       k.sign(5.4, 1.5, zf + 0.12, 1.5, 0.8, deal, { thick: 0.05, back: 0xc8262c });
       // drive-thru window on the right wall + menu board
       k.at(w / 2, 0, HALF, () => {
-        k.box(2.0, 1.0, 0.02, 1.8, 1.3, 0.08, P.glassLit, 'glass');
+        k.glazing(2.0, 1.0, 0.02, 1.8, 1.3, 0.08, 'shop', 1.0);
         k.box(2.0, 0.9, 0.22, 2.0, 0.1, 0.5, 0xd9d9d6, 'metal');
         awning(k, 2.0, 2.7, 0.04, 2.4, 1.1, 0.5, 'awningRed');
       });
@@ -815,7 +815,7 @@ function dairyDream(c: Ctx, x: number, z: number, ry: number, seed: number) {
       k.sign(0, H + 2.3, 0, 6.4, 1.3, roofSign, { back: 0xc8262c, thick: 0.25, twoSided: true });
       // order windows (sliding glass) + shelves + awnings
       for (const wx of [-1.6, 1.6]) {
-        k.box(wx, 1.2, zf - 0.02, 2.0, 1.3, 0.06, P.glassLit, 'glass');
+        k.pane(wx, 1.2, zf + 0.012, 2.0, 1.3, 'shop', 1.2);
         k.box(wx, 1.05, zf + 0.3, 2.3, 0.1, 0.6, 0xd9d9d6, 'metal');
         for (const s of [-1, 1]) k.box(wx + s * 1.1, 1.2, zf + 0.02, 0.1, 1.3, 0.1, 0xc8262c);
         awning(k, wx, 2.75, zf + 0.04, 2.5, 1.3, 0.6, 'awningRed');

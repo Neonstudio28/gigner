@@ -195,7 +195,7 @@ function win(k: Kit, x: number, y: number, zf: number, w: number, h: number, tri
   const mx = o.mx ?? 1;
   const my = o.my ?? 2;
   fbox(k, x, y - 0.1, zf + 0.01, w + 0.2, h + 0.2, 0.06, trim);
-  fbox(k, x, y, zf + 0.025, w, h, 0.05, o.glass ?? P.glass, 'glass');
+  k.pane(x, y, zf + 0.052, w, h, 'home', h > 1.75 ? 0.35 : 0.9);
   for (let i = 1; i < mx; i++) fbox(k, x - w / 2 + (w * i) / mx, y, zf + 0.055, 0.045, h, 0.02, trim, 'paint', [1, 3, 5]);
   for (let i = 1; i < my; i++) fbox(k, x, y + (h * i) / my - 0.022, zf + 0.055, w, 0.045, 0.02, trim, 'paint', [1, 3, 5]);
   if (!o.noSill) fbox(k, x, y - 0.17, zf + 0.07, w + 0.3, 0.07, 0.17, trim);

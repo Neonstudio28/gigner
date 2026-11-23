@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Kit, Col, Occupancy, SurfaceMap, SignRef } from '../core/kit';
+import type { Kit, Col, Occupancy, SurfaceMap, SignRef, RoomStyle } from '../core/kit';
 import type { Rng } from '../core/rng';
 import type { SignBook, SignId } from '../signs';
 import { P } from '../palette';
@@ -34,6 +34,8 @@ export interface WinOpts {
   arch?: Col;
   sill?: boolean;
   ac?: boolean;
+  /** Room seen through the glass. */
+  room?: RoomStyle;
 }
 
 /** Window on a wall facing +Z whose surface is z = zf; (x, y) is the bottom centre of the glass. */
@@ -41,7 +43,7 @@ export function windowAt(k: Kit, x: number, y: number, zf: number, w: number, h:
   const fr = o.frame ?? P.windowFrame;
   const t = 0.1;
   const out = 0.07;
-  k.box(x, y, zf - 0.03, w, h, 0.08, o.glass ?? P.glass, 'glass');
+  k.pane(x, y, zf + 0.012, w, h, o.room ?? 'home', h > 1.75 ? 0.35 : 0.9);
   k.box(x, y + h, zf + out / 2 - 0.01, w + t * 2, t, out, fr);
   k.box(x, y - t, zf + 0.04, w + t * 2 + 0.1, t, out + 0.08, fr);
   k.box(x - w / 2 - t / 2, y, zf + out / 2 - 0.01, t, h, out, fr);
@@ -74,7 +76,7 @@ export function doorAt(k: Kit, x: number, y: number, zf: number, w: number, h: n
   const fr = o.frame ?? P.windowFrame;
   k.box(x, y, zf + 0.02, w + 0.24, h + 0.12, 0.08, fr);
   k.box(x, y, zf + 0.05, w, h, 0.06, color);
-  if (o.glass) k.box(x, y + h * 0.5, zf + 0.085, w * 0.6, h * 0.35, 0.02, P.glass, 'glass');
+  if (o.glass) k.pane(x, y + h * 0.5, zf + 0.096, w * 0.6, h * 0.35, 'home', h * 0.5);
   if (o.double) k.box(x, y, zf + 0.085, 0.04, h, 0.02, fr);
   k.box(x + w * 0.36, y + h * 0.45, zf + 0.1, 0.06, 0.14, 0.06, 0xc9b06a, 'metal');
 }
@@ -85,7 +87,7 @@ export function storefront(k: Kit, x0: number, x1: number, y: number, zf: number
   const cx = (x0 + x1) / 2;
   const dx = o.doorX ?? cx;
   const dw = o.doorW ?? 1.15;
-  k.box(cx, y, zf - 0.04, w, h, 0.1, P.glass, 'glass');
+  k.pane(cx, y, zf + 0.012, w, h, 'shop', 0.02);
   const kickH = 0.55;
   const segs: [number, number][] = [
     [x0, dx - dw / 2 - 0.1],
@@ -101,7 +103,7 @@ export function storefront(k: Kit, x0: number, x1: number, y: number, zf: number
     k.box(x, y, zf + 0.03, 0.1, h, 0.1, fr);
   }
   k.box(dx, y, zf + 0.02, dw + 0.2, 2.4, 0.1, fr);
-  k.box(dx, y + 0.08, zf + 0.06, dw - 0.12, 2.2, 0.04, P.glassLit, 'glass');
+  k.pane(dx, y + 0.08, zf + 0.082, dw - 0.12, 2.2, 'shop', 0.08);
   k.box(dx + dw * 0.32, y + 1.0, zf + 0.12, 0.05, 0.3, 0.05, 0xc0c3c6, 'metal');
 }
 

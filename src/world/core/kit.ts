@@ -33,6 +33,9 @@ export interface SignRef {
 const KEEP = new Set(['position', 'normal', 'uv', 'color']);
 const DEFAULT_SPEC: MatSpec = { bucket: 'world', layer: -1, tile: 1, rough: 0.9, metal: 0 };
 const _col = new THREE.Color();
+export const ROOM_STYLES = ['home', 'shop', 'office', 'shed'] as const;
+export type RoomStyle = (typeof ROOM_STYLES)[number];
+
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
 const _e = new THREE.Euler();
@@ -302,6 +305,28 @@ export class Kit {
   /** Vertical plane facing +Z centred at (x,y,z); UVs 0..1. */
   vplane(x: number, y: number, z: number, w: number, h: number, color: Col, mat = 'paint', o?: PartOpts) {
     this.add(new THREE.PlaneGeometry(w, h), color, mat, this.local(x, y, z, o), o?.cast ?? false);
+  }
+  /**
+   * Interior-mapped window pane facing +Z; (x, y) is the bottom centre of the glass. `style` picks the room
+   * behind it and `sill` is the height of the glass above that room's floor.
+   */
+  pane(x: number, y: number, z: number, w: number, h: number, style: RoomStyle = 'home', sill = 0.9, o?: PartOpts) {
+    const g = new THREE.PlaneGeometry(w, h);
+    const uv = g.attributes.uv as THREE.BufferAttribute;
+    const su = ROOM_STYLES.indexOf(style);
+    const sv = Math.round(clamp(sill, 0, 6) * 10);
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, su + 0.25 + uv.getX(i) * 0.5, sv + 0.25 + uv.getY(i) * 0.5);
+    this.add(g, 0xffffff, 'window', this.local(x, y + h / 2, z, o), false);
+  }
+  /** Glazing that fills a thin box (same arguments as `box`): interior-mapped panes on its two large faces. */
+  glazing(x: number, y: number, z: number, w: number, h: number, d: number, style: RoomStyle = 'home', sill = 0.9) {
+    if (d <= w) {
+      this.pane(x, y, z + d / 2 + 0.004, w, h, style, sill);
+      this.pane(x, y, z - d / 2 - 0.004, w, h, style, sill, { ry: Math.PI });
+    } else {
+      this.pane(x + w / 2 + 0.004, y, z, d, h, style, sill, { ry: Math.PI / 2 });
+      this.pane(x - w / 2 - 0.004, y, z, d, h, style, sill, { ry: -Math.PI / 2 });
+    }
   }
   /** Shape (in local XY) extruded along +Z by depth, centred on z. */
   extrude(shape: THREE.Shape, depth: number, color: Col, mat = 'paint', x = 0, y = 0, z = 0, o?: PartOpts) {
