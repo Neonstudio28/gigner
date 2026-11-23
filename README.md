@@ -93,6 +93,20 @@ URL options:
 - `W`/`S` throttle and brake (hold `S` to reverse) · `A`/`D` steer · `Space` handbrake · `Shift` boost.
 - `C` cycles the camera: chase, far chase, cockpit. Drag the mouse to look around.
 - `R` resets to the nearest road · `M` full map.
+- `F` (or `E`) steps out of the car where it stands, and gets back in when you are next to it.
+
+**On foot (`G` to start walking where the camera looks):**
+- `W`/`A`/`S`/`D` move relative to the camera · `Shift` run · `Space` jump · drag the mouse (or `←`/`→`) to look, wheel to zoom.
+- Walk through any open door: every Main Street shopfront, the diner, the gas-station mart, the sheriff's office and jail, the courthouse (up the front steps) and the ranch houses are furnished rooms behind real glass.
+- You wade, then swim, in the river and lake. `V` or `Esc` returns to the free camera.
+
+**Driving model.** Each vehicle has an engine torque curve, an automatic gearbox with shift delay and engine braking, a friction-circle tyre model with slip angles and weight transfer, rear- or four-wheel drive, a handbrake, suspension travel, and wet-road grip that follows the weather. Cars can drive into the river and lake: they wade with drag, float and drift with the current, and throw spray.
+
+**Weather and time.** By default the clock runs dawn → day → golden hour → dusk → moonlit night while fronts (clear, mist, drizzle, rain, fog) drift through. Rain soaks the roads and dries slowly, with wind, lightning and thunder; lamps, windows and headlights come on at dusk. The panel's presets still pin a fixed look (`?weather=0` or any `?atmo=` does the same).
+
+**People and edges.** Townsfolk walk the sidewalks with a jointed walk cycle. Old Highway 10 and I-90 leave the valley through tunnel portals under wooded ridges instead of stopping at the map edge.
+
+**Vehicles.** The sedan, wagon, coupe, pickup, SUV and van are modelled in Blender (`tools/blender/cars.py` → `public/assets/models/vehicles.glb`; regenerate with `blender -b --python tools/blender/cars.py -- public/assets/models/vehicles.glb`). The service vehicles stay procedural, and everything falls back to the procedural bodies if the GLB is missing.
 
 There are 15 vehicles, each with its own handling. Cars collide with buildings, props, parked cars, trees, bridge parapets and traffic. Vehicles follow the road decks, so you can drive over the viaduct, bridges and ramps. AI traffic runs on I-90 and the old highway through town.
 

@@ -337,9 +337,9 @@ export const PRESETS: AtmoPreset[] = [
   {
     name: 'Dusk',
     sun: { azimuth: 258, elevation: 2.5, intensity: 0.5, tint: 0xff9a6a },
-    env: 0.38,
+    env: 0.6,
     sky: { intensity: 0.42, tint: 0x9fb2cf, horizon: 0.2, horizonMix: 0.9 },
-    hemi: 0.2,
+    hemi: 0.85,
     fog: { color: 0x3c4a5c, density: 0.0021, falloff: 0.01, haze: 0.00006, max: 0.93, inscatter: 0.55 },
     mist: { opacity: 0.45, color: 0x6f7f92 },
     grade: { saturation: 0.82, contrast: 1.1, lift: [0.0, 0.015, 0.035], gain: [0.95, 0.98, 1.05], split: 0.7, shadowTint: 0x1f3f5f, highTint: 0xffc890 },
@@ -405,11 +405,11 @@ export const PRESETS: AtmoPreset[] = [
   {
     // the "sun" here is the moon: high, cold and faint; the lamps and windows do the rest
     name: 'Night',
-    sun: { azimuth: 165, elevation: 40, intensity: 1.0, tint: 0xa9c0ff },
-    env: 0.45,
-    sky: { intensity: 0.07, tint: 0x9db0dd, horizon: 0.2, horizonMix: 0.85 },
-    hemi: 0.6,
-    fog: { color: 0x0c131f, density: 0.0018, falloff: 0.01, haze: 0.00005, max: 0.92, inscatter: 0.2 },
+    sun: { azimuth: 165, elevation: 40, intensity: 1.7, tint: 0xa9c0ff },
+    env: 0.6,
+    sky: { intensity: 0.12, tint: 0x9db0dd, horizon: 0.2, horizonMix: 0.85 },
+    hemi: 0.95,
+    fog: { color: 0x1b2942, density: 0.0012, falloff: 0.01, haze: 0.00004, max: 0.8, inscatter: 0.2 },
     mist: { opacity: 0.25, color: 0x27313f },
     grade: { saturation: 0.74, contrast: 1.12, lift: [0.0, 0.008, 0.022], gain: [0.9, 0.96, 1.08], split: 0.7, shadowTint: 0x16304f, highTint: 0xffd29a },
     wet: 0.6,
