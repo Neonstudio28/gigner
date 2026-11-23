@@ -149,15 +149,17 @@ export class Weather {
     p.wet = this.wet;
     p.windows = Math.max(p.windows, 0.55 * this.rain);
     // one light serves as sun and moon; it changes places while it is dark below the horizon
-    if (el > -5.5) {
+    if (el > -4.5) {
       p.sun.azimuth = sun.azimuth;
-      p.sun.elevation = Math.max(-3, el);
-      p.sun.intensity *= ss(el, -5.5, -1);
+      // twilight: the sky keeps glowing from just over the horizon after the disc has gone
+      p.sun.elevation = Math.max(1.5, el);
+      p.sun.intensity *= ss(el, -4.5, -1.5);
     } else {
       const moon = preset('Night').sun;
       p.sun.azimuth = moon.azimuth + (((this.hour + 12) % 24) - 12) * 6;
       p.sun.elevation = moon.elevation;
-      p.sun.intensity *= ss(-el, 5.5, 10);
+      p.sun.tint = moon.tint;
+      p.sun.intensity = Math.max(p.sun.intensity, 0.9) * ss(-el, 4.5, 6.5);
     }
     p.volume.lampsOn = Math.max(ss(-el, -6, 2), Math.min(1, p.windows * 1.3));
 

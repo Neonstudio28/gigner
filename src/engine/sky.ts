@@ -122,7 +122,7 @@ export class SkyRig {
       this.physical.set(this.dir, this.clouds, this.fog.color, this.horizon, this.horizonMix, this.skyIntensity * e, this.sunIntensity * e);
       this.sun.color.copy(this.physical.sunColor).multiply(this.sunTint);
       this.sun.intensity = this.sunIntensity * e;
-      this.hemi.color.copy(this.physical.skyTop).multiplyScalar(1 / Math.max(0.05, Math.max(this.physical.skyTop.r, this.physical.skyTop.g, this.physical.skyTop.b)));
+      this.hemi.color.copy(this.physical.skyTop).multiplyScalar(1 / Math.max(0.006, Math.max(this.physical.skyTop.r, this.physical.skyTop.g, this.physical.skyTop.b)));
     } else {
       this.sun.color.setRGB(1, 0.86 + 0.1 * low, 0.72 + 0.2 * low).multiply(this.sunTint);
       // the sun fades out as it sets (time of day can put it below the horizon)
