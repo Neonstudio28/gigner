@@ -8,6 +8,7 @@ import { createTerrain, groundHeight, heightAt as groundHeightPre, MAP_RADIUS, s
 import { createVegetation, type Vegetation, type TreeIndex } from './vegetation';
 import { Traffic } from './traffic';
 import { Pedestrians } from './pedestrians';
+import { roadEnds } from './plan/edges';
 import { clearZones, zoneAt, rooms, type Zone } from './buildings/interiors';
 import { loadFonts } from './fonts';
 import { SHOTS, type Shot } from './shots';
@@ -187,6 +188,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   zone('industry', () => industry(pl, padY));
   zone('furnish', () => furnishRoads(pl));
   zone('dressing', () => dressing(pl));
+  zone('edges', () => roadEnds(pl));
   // paved after the lots are laid out, so the curbs leave cuts where the driveways cross
   await progress(0.44, 'Paving roads, bridges and the I-90 viaduct');
   net.build(kit, solids);
