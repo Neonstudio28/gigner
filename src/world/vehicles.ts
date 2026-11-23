@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Kit, Col } from './core/kit';
 import type { SignBook } from './signs';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 export type VehicleType =
   | 'sedan'
@@ -34,6 +35,64 @@ const LAMP = 0xf1eedd;
 const TAIL = 0xa3221d;
 
 type Pt = [number, number];
+
+/**
+ * Bodies modelled in Blender (tools/blender/cars.py). Each mesh is split by material slot; the slot name says
+ * what the part is, and `SLOTS` maps it to a colour and a world material so one mesh serves every paint job.
+ */
+interface ModelPart {
+  geo: THREE.BufferGeometry;
+  slot: string;
+}
+const MODELS = new Map<string, ModelPart[]>();
+const SLOTS: Record<string, [Col | null, string]> = {
+  body: [null, 'gloss'],
+  accent: [null, 'gloss'],
+  glass: [GLASS, 'glass'],
+  chrome: [CHROME, 'chrome'],
+  trim: [DARK, 'paint'],
+  under: [0x121214, 'paint'],
+  lamp: [LAMP, 'gloss'],
+  tail: [TAIL, 'gloss'],
+  amber: [0xe0882e, 'gloss'],
+  plate: [0xf2efe6, 'paint'],
+  rubber: [TIRE, 'rubber'],
+  steel: [0x9a9ea2, 'metal'],
+  stripe: [0xf4f1ea, 'gloss'],
+};
+
+/** Loads the Blender-built vehicle meshes; without them the procedural bodies below are used instead. */
+export async function loadVehicleModels(base: string): Promise<void> {
+  if (MODELS.size) return;
+  try {
+    const gltf = await new GLTFLoader().loadAsync(`${base}assets/models/vehicles.glb`);
+    gltf.scene.updateMatrixWorld(true);
+    for (const node of gltf.scene.children) {
+      const parts: ModelPart[] = [];
+      node.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh) return;
+        parts.push({ geo: m.geometry.clone().applyMatrix4(m.matrixWorld), slot: (m.material as THREE.Material).name });
+      });
+      MODELS.set(node.name, parts);
+    }
+  } catch (err) {
+    console.warn('Vehicle models unavailable; using procedural bodies.', err);
+  }
+}
+
+function model(k: Kit, name: string, color: Col, accent?: Col, stripes = false, local?: THREE.Matrix4): boolean {
+  const parts = MODELS.get(name);
+  if (!parts) return false;
+  for (const p of parts) {
+    if (p.slot === 'stripe' && !stripes) continue;
+    const [c, mat] = SLOTS[p.slot] ?? SLOTS.trim;
+    k.add(p.geo, c ?? (p.slot === 'accent' ? (accent ?? color) : color), mat, local);
+  }
+  return true;
+}
+const _wm = new THREE.Matrix4();
+const _wq = new THREE.Quaternion();
 
 /** Side silhouette: bottom edge with wheel arches, then the given upper outline from front to rear. */
 function profile(upper: Pt[], bottom: number, arches: { x: number; r: number }[], xr: number, xf: number): THREE.Shape {
@@ -69,6 +128,12 @@ export function drawWheel(k: Kit, r: number, width: number, side: number, dual: 
 function wheel(k: Kit, x: number, z: number, r: number, width: number, side: number, dual = false, y = r) {
   if (wheelSink) {
     wheelSink(x, z, r, width, side, dual);
+    return;
+  }
+  if (MODELS.has('wheel')) {
+    _wq.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, side > 0 ? 0 : Math.PI);
+    model(k, 'wheel', TIRE, undefined, false, _wm.compose(new THREE.Vector3(x, y, z), _wq, new THREE.Vector3(r, r, width)).clone());
+    if (dual) k.cylZ(x, y, z - side * (width + 0.02), r, width, 12, TIRE, 'rubber');
     return;
   }
   k.cylZ(x, y, z, r, width, 12, TIRE, 'rubber');
@@ -122,6 +187,7 @@ function mirrors(k: Kit, x: number, y: number, W: number) {
 
 function sedanLike(k: Kit, color: Col, wagon: boolean, roofColor?: Col) {
   const W = 1.95;
+  if (model(k, wagon ? 'wagon' : 'sedan', color, roofColor)) return wheels(k, [-1.5, 1.55], 0.36, W);
   const xf = 2.62;
   const xr = -2.62;
   const body = profile(
@@ -211,6 +277,7 @@ function sedanLike(k: Kit, color: Col, wagon: boolean, roofColor?: Col) {
 
 function coupe(k: Kit, color: Col, stripes: boolean) {
   const W = 1.9;
+  if (model(k, 'coupe', color, undefined, stripes)) return wheels(k, [-1.45, 1.5], 0.35, W);
   const xf = 2.45;
   const xr = -2.45;
   const body = profile(
@@ -258,6 +325,12 @@ function pickupLike(k: Kit, color: Col, mode: 'pickup' | 'suv' | 'tow', accent?:
   const W = 2.0;
   const xf = 2.72;
   const xr = -2.72;
+  if (model(k, mode === 'suv' ? 'suv' : 'pickup', color, accent)) {
+    if (accent !== undefined && mode !== 'suv') for (const s of [-1, 1]) k.box(0.0, 0.73, s * (W / 2 + 0.01), 2.2, 0.14, 0.012, accent, 'gloss', { cast: false });
+    wheels(k, [-1.65, 1.7], 0.4, W);
+    if (mode === 'tow') towRig(k);
+    return;
+  }
   const bedTop = mode === 'suv' ? 1.16 : 0.86;
   const body = profile(
     [
@@ -301,18 +374,24 @@ function pickupLike(k: Kit, color: Col, mode: 'pickup' | 'suv' | 'tow', accent?:
   carRear(k, xr, W, 0.5, bedTop - 0.02);
   mirrors(k, 1.05, 1.25, W);
   wheels(k, [-1.65, 1.7], 0.4, W);
-  if (mode === 'tow') {
-    k.box(-1.0, 0.88, 0, 0.3, 1.4, 1.6, 0x2a2a2a, 'metal');
-    k.beam({ x: -1.0, y: 2.2, z: 0 }, { x: -3.2, y: 2.8, z: 0 }, 0.22, 0.22, 0xe0b23a, 'metal');
-    k.beam({ x: -1.0, y: 1.2, z: 0 }, { x: -2.2, y: 2.4, z: 0 }, 0.12, 0.12, 0x3a3a3a, 'metal');
-    k.box(-3.2, 1.6, 0, 0.04, 1.2, 0.04, 0x3a3a3a, 'metal');
-    k.box(-3.2, 1.45, 0, 0.18, 0.18, 0.1, 0x3a3a3a, 'metal');
-    k.box(0.1, 1.8, 0, 0.3, 0.1, 1.2, 0xe0882e, 'light');
-  }
+  if (mode === 'tow') towRig(k);
+}
+
+function towRig(k: Kit) {
+  k.box(-1.0, 0.88, 0, 0.3, 1.4, 1.6, 0x2a2a2a, 'metal');
+  k.beam({ x: -1.0, y: 2.2, z: 0 }, { x: -3.2, y: 2.8, z: 0 }, 0.22, 0.22, 0xe0b23a, 'metal');
+  k.beam({ x: -1.0, y: 1.2, z: 0 }, { x: -2.2, y: 2.4, z: 0 }, 0.12, 0.12, 0x3a3a3a, 'metal');
+  k.box(-3.2, 1.6, 0, 0.04, 1.2, 0.04, 0x3a3a3a, 'metal');
+  k.box(-3.2, 1.45, 0, 0.18, 0.18, 0.1, 0x3a3a3a, 'metal');
+  k.box(0.1, 1.8, 0, 0.3, 0.1, 1.2, 0xe0882e, 'light');
 }
 
 function van(k: Kit, color: Col, accent?: Col) {
   const W = 2.0;
+  if (model(k, 'van', color)) {
+    if (accent !== undefined) for (const s of [-1, 1]) k.box(-0.4, 0.98, s * (W / 2 + 0.008), 3.6, 0.2, 0.012, accent, 'gloss', { cast: false });
+    return wheels(k, [-1.55, 1.75], 0.38, W);
+  }
   const xf = 2.52;
   const xr = -2.5;
   const body = profile(

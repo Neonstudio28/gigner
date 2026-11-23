@@ -6,6 +6,7 @@ import { createUI } from './ui';
 import { DriveMode, DRIVABLE } from './drive';
 import { DriveHUD } from './hud';
 import { createTownWorld } from '../world';
+import { loadVehicleModels } from '../world/vehicles';
 import { applyAtmosphereTo, Mist, PRESETS } from './atmosphere';
 import { PhysicalSky } from './physicalSky';
 import { WaterFX } from './water';
@@ -70,6 +71,7 @@ export async function startApp(container: HTMLElement) {
   sky.physical = physical;
   await sky.load(import.meta.env.BASE_URL);
 
+  await loadVehicleModels(import.meta.env.BASE_URL);
   const world = await createTownWorld({ traffic: params.get('traffic') !== '0', onProgress: (f, t) => setProgress(0.05 + f * 0.85, t) });
   scene.add(world.root);
   // dev-only handle for inspecting the generated town from the browser console
