@@ -9,6 +9,7 @@ export class EngineAudio {
   private filter?: BiquadFilterNode;
   private squeal?: GainNode;
   private noise?: AudioBuffer;
+  private rain?: GainNode;
 
   start() {
     if (!this.ctx) {
@@ -50,6 +51,18 @@ export class EngineAudio {
       this.squeal.gain.value = 0;
       src.connect(band).connect(this.squeal).connect(this.master);
       src.start();
+      // rain on the roof: the same noise, high-passed
+      const hiss = ctx.createBufferSource();
+      hiss.buffer = this.noise;
+      hiss.loop = true;
+      hiss.playbackRate.value = 0.83;
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 1800;
+      this.rain = ctx.createGain();
+      this.rain.gain.value = 0;
+      hiss.connect(hp).connect(this.rain).connect(this.master);
+      hiss.start();
     }
     void this.ctx.resume();
     this.master!.gain.setTargetAtTime(this.enabled ? 0.8 : 0, this.ctx.currentTime, 0.2);
@@ -74,6 +87,32 @@ export class EngineAudio {
     this.filter.frequency.setTargetAtTime(260 + rpm * 700 + load * 900, t, 0.05);
     this.engineGain.gain.setTargetAtTime(0.035 + load * 0.06 + rpm * 0.02, t, 0.06);
     this.squeal.gain.setTargetAtTime(Math.min(0.09, Math.max(0, skid - 2.5) * 0.012), t, 0.05);
+  }
+
+  /** Rain intensity 0..1. */
+  setRain(amount: number) {
+    if (this.ctx && this.rain) this.rain.gain.setTargetAtTime(amount * 0.05, this.ctx.currentTime, 0.4);
+  }
+
+  /** A long low rumble, `delay` seconds from now. */
+  thunder(delay: number) {
+    if (!this.ctx || !this.noise || !this.master || !this.enabled) return;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noise;
+    src.loop = true;
+    src.playbackRate.value = 0.5;
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 130;
+    const g = this.ctx.createGain();
+    const t = this.ctx.currentTime + delay;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.85, t + 0.12);
+    g.gain.exponentialRampToValueAtTime(0.25, t + 0.9);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 4.5);
+    src.connect(lp).connect(g).connect(this.master);
+    src.start(t);
+    src.stop(t + 4.6);
   }
 
   impact(strength: number) {

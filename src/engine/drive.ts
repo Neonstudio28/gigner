@@ -144,6 +144,7 @@ export class DriveMode {
   private surface: 'paved' | 'dirt' | 'grass' = 'paved';
   private fxAcc = 0;
   readonly spray = new Spray();
+  readonly headlight = new THREE.SpotLight(0xfff0d2, 0, 85, 0.48, 0.7, 1.5);
 
   constructor(
     private world: TownWorld,
@@ -155,6 +156,10 @@ export class DriveMode {
     this.car.visible = false;
     this.car.add(this.body);
     this.car.rotation.order = 'YZX';
+    // one spot stands in for both headlamps; it is always in the scene (dark by day) so shaders compile once
+    this.headlight.position.set(1.8, 0.75, 0);
+    this.headlight.target.position.set(24, -0.2, 0);
+    this.car.add(this.headlight, this.headlight.target);
     scene.add(this.car, this.spray.points);
     window.addEventListener('keydown', (e) => {
       if (!this.active) return;
@@ -227,6 +232,8 @@ export class DriveMode {
     this.height = box.max.y;
     this.wheelbase = Math.max(1.6, maxX - minX);
     this.frontX = box.max.x;
+    this.headlight.position.set(box.max.x - 0.15, Math.min(1.0, this.height * 0.45), 0);
+    this.headlight.target.position.set(box.max.x + 24, -0.2, 0);
     this.cx = (box.max.x + box.min.x) / 2;
     this.track = Math.max(1.2, Math.max(...infos.map((w) => Math.abs(w.z))) * 2);
   }

@@ -7,9 +7,11 @@ import { DriveMode, DRIVABLE } from './drive';
 import { DriveHUD } from './hud';
 import { createTownWorld } from '../world';
 import { loadVehicleModels } from '../world/vehicles';
-import { applyAtmosphereTo, Mist, PRESETS } from './atmosphere';
+import { applyAtmosphereTo, Mist, PRESETS, type AtmoPreset } from './atmosphere';
 import { PhysicalSky } from './physicalSky';
 import { WaterFX } from './water';
+import { Weather, type SkyKind } from './weather';
+import { Rain, Stars } from './rain';
 import { VolumetricFogPass } from './volumetric';
 import { isWater } from '../world/terrain';
 import { surfaceUniforms } from '../world/materials';
@@ -27,6 +29,8 @@ export interface AppHandle {
   /** Place the orbit camera (captures / debugging). */
   look: (pos: [number, number, number], target: [number, number, number], fov?: number) => void;
   info: () => Record<string, number | string>;
+  /** The weather and clock (scripts can set `hour`, `rate`, or call `set('rain', true)`). */
+  weather: Weather;
 }
 
 declare global {
@@ -122,9 +126,18 @@ export async function startApp(container: HTMLElement) {
   scene.add(mist.mesh);
   applyAtmosphereTo(scene);
   const preset = { name: PRESETS.find((p) => p.name.toLowerCase().replace(/\s+/g, '') === (params.get('atmo') ?? '').toLowerCase())?.name ?? PRESETS[0].name };
-  const setPreset = (name: string) => {
-    const p = PRESETS.find((q) => q.name === name) ?? PRESETS[0];
-    preset.name = p.name;
+  // dynamic weather and the clock drive the same look a preset does; picking a preset by hand freezes them
+  const weather = new Weather();
+  weather.enabled = params.get('weather') === '1' || (!params.has('atmo') && params.get('still') !== '1' && params.get('weather') !== '0');
+  weather.hour = Number(params.get('hour') ?? 9.5);
+  weather.set((params.get('front') as SkyKind | null) ?? 'mist', true);
+  weather.onThunder = (delay) => drive.audio.thunder(delay);
+  const rain = new Rain(quality === 'low' ? 4000 : 9000);
+  const stars = new Stars();
+  const lightning = new THREE.AmbientLight(0xcfd8ff, 0);
+  scene.add(rain.mesh, stars.points, lightning);
+  const STATIC_RAIN: Record<string, number> = { Rain: 1, 'Overcast Drizzle': 0.28 };
+  const applyLook = (p: AtmoPreset) => {
     sky.applyPreset(p);
     post.applyGrade(p.grade, p.bloom, p.grain);
     mist.uniforms.uOpacity.value = p.mist.opacity;
@@ -135,12 +148,21 @@ export async function startApp(container: HTMLElement) {
     // street lamps come on in gloomy weather and after dark, unless the preset sets them
     fog.lampsOn = lampsOn ?? Math.min(1, p.windows * 1.3);
   };
+  const setPreset = (name: string) => {
+    const p = PRESETS.find((q) => q.name === name) ?? PRESETS[0];
+    preset.name = p.name;
+    weather.enabled = false;
+    applyLook(p);
+  };
+  const dynamic = weather.enabled;
   setPreset(preset.name);
+  weather.enabled = dynamic;
+  if (dynamic) applyLook(weather.update(0));
 
   setProgress(0.94, 'Compiling shaders');
   await renderer.compileAsync(scene, camera);
 
-  const ui = showUI ? createUI({ sky, post, director, world, renderer, drive, driveState, enterDrive, exitDrive, mist, setPreset, preset, fog, physical }) : null;
+  const ui = showUI ? createUI({ sky, post, director, world, renderer, drive, driveState, enterDrive, exitDrive, mist, setPreset, preset, fog, physical, weather }) : null;
   if (!ui) document.body.classList.add('no-ui');
 
   const hudShot = document.getElementById('hud-shot');
@@ -219,13 +241,22 @@ export async function startApp(container: HTMLElement) {
       drive.spray.setLight(sky.sun.color, sky.sun.intensity * 0.28 + sky.hemi.intensity * 1.3, renderer.domElement.height, camera.fov);
       drive.update(dt);
       drive.focus(focus);
-      hud.update(drive.pos.x, drive.pos.z, drive.heading, drive.speed, drive.onRoad, drive.gear);
+      hud.update(drive.pos.x, drive.pos.z, drive.heading, drive.speed, drive.onRoad, drive.gear, weather.enabled ? weather.label : '');
       sky.updateShadows(focus, 70);
     } else {
       director.update(dt);
       director.focus(focus);
       sky.updateShadows(focus, THREE.MathUtils.clamp(director.viewDistance() * 1.1, 45, 280));
     }
+    if (weather.enabled) applyLook(weather.update(dt));
+    const raining = weather.enabled ? weather.rain : (STATIC_RAIN[preset.name] ?? 0);
+    const cover = THREE.MathUtils.smoothstep(sky.clouds.coverage, 0.3, 0.85);
+    rain.update(dt, camera, raining, weather.wind, sky.sun.intensity * 0.25 + sky.hemi.intensity * 1.6);
+    stars.update(camera, (weather.enabled ? weather.night : preset.name === 'Night' ? 1 : 0) * (1 - cover) * 0.9);
+    lightning.intensity = weather.enabled ? weather.flash * 6 : 0;
+    if (physical && lightning.intensity > 0.05) physical.uniforms.uExposure.value *= 1 + weather.flash * 3;
+    drive.audio.setRain(raining);
+    drive.headlight.intensity = drive.active ? 320 * THREE.MathUtils.smoothstep(fog.lampsOn, 0.3, 0.7) : 0;
     world.update(dt, elapsed, camera.position, drive.active ? drive.pos : null);
     mist.update(elapsed);
     fog.tick(dt);
@@ -318,6 +349,7 @@ export async function startApp(container: HTMLElement) {
       camera.updateProjectionMatrix();
       director.orbit.update();
     },
+    weather,
     info: () => ({
       fps,
       calls,

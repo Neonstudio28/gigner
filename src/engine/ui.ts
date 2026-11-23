@@ -8,6 +8,7 @@ import type { CameraDirector } from './controls';
 import type { TownWorld } from '../world';
 import { DRIVABLE, type DriveMode } from './drive';
 import { PRESETS, type Mist } from './atmosphere';
+import type { Weather, SkyKind } from './weather';
 import { surfaceUniforms } from '../world/materials';
 import { fogUniforms } from './atmosphere';
 import type { VolumetricFogPass } from './volumetric';
@@ -43,6 +44,7 @@ export function createUI(o: {
   preset: { name: string };
   fog: VolumetricFogPass;
   physical: PhysicalSky | null;
+  weather: Weather;
 }) {
   const { sky, post, director, world, renderer, drive, driveState, fog } = o;
   const gui = new GUI({ title: 'Pine Hollow' });
@@ -90,6 +92,20 @@ export function createUI(o: {
   fDrive.add(drive, 'camMode', { Chase: 0, 'Far chase': 1, Cockpit: 2 }).name('Camera (C)').listen();
   fDrive.add(dv, 'sound').name('Engine sound').onChange((v: boolean) => drive.audio.setEnabled(v));
   fDrive.open();
+
+  const fWeather = gui.addFolder('Weather & time');
+  const front = { now: 'mist' };
+  fWeather.add(o.weather, 'enabled').name('Dynamic (fronts + day/night)').listen();
+  fWeather.add(o.weather, 'hour', 0, 24, 0.05).name('Clock (h)').listen();
+  fWeather.add(o.weather, 'rate', 0, 30, 0.1).name('Game hours per minute');
+  fWeather
+    .add(front, 'now', ['clear', 'mist', 'overcast', 'rain', 'fog'])
+    .name('Bring in a front')
+    .onChange((k: SkyKind) => {
+      o.weather.enabled = true;
+      o.weather.set(k);
+    });
+  fWeather.open();
 
   const fAtmo = gui.addFolder('Atmosphere');
   fAtmo

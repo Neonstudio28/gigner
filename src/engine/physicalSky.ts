@@ -418,7 +418,8 @@ export class PhysicalSky {
   /** Seconds since the environment map was baked, and the sun direction it was baked for. */
   private envAge = 0;
   private envSun = new THREE.Vector3();
-  private lastClouds = '';
+  private lastCover = -1;
+  private lastBase = -1;
   private scale = 0.5;
 
   constructor(
@@ -520,9 +521,11 @@ export class PhysicalSky {
     const shade = 1 - Math.max(0, clouds.coverage - 0.55) * 1.6;
     this.sunColor.multiplyScalar(Math.max(0.15, shade));
     // only a new cloud deck drops the temporal history (a moving sun keeps it, so the sky doesn't sparkle)
-    const key = `${clouds.coverage},${clouds.density},${clouds.base},${clouds.top}`;
-    if (key !== this.lastClouds) {
-      this.lastClouds = key;
+    // (weather drifting in changes the deck a hair every frame: that is not a new deck)
+    const jump = Math.abs(clouds.coverage - this.lastCover) > 0.04 || Math.abs(clouds.base - this.lastBase) > 150;
+    this.lastCover = clouds.coverage;
+    this.lastBase = clouds.base;
+    if (jump) {
       u.uBlend.value = 0;
       this.envAge = Infinity;
     }

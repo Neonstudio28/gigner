@@ -4,6 +4,7 @@ import type { FogSettings } from './volumetric';
 import { heightAt, forestDensity, valley, river, LAKE, MAP_RADIUS } from '../world/terrain';
 
 /** Shared uniforms injected into every scene material (height fog with sun in-scattering). */
+export const SURFACE_LAMPS = 12;
 export const fogUniforms = {
   uFogHF: { value: 0.012 },
   uFogBase: { value: 0 },
@@ -14,6 +15,10 @@ export const fogUniforms = {
   uInscatter: { value: 0.35 },
   /** Distance where this haze begins (the volumetric fog pass covers the stretch in front of it). */
   uFogStart: { value: 0 },
+  /** The lamps nearest the camera, in view space (xyz) with colour and power: they light surfaces at night. */
+  uLampV: { value: Array.from({ length: SURFACE_LAMPS }, () => new THREE.Vector4()) },
+  uLampC: { value: Array.from({ length: SURFACE_LAMPS }, () => new THREE.Vector4()) },
+  uLampN: { value: 0 },
 };
 
 const patched = new WeakSet<THREE.Material>();
@@ -47,7 +52,24 @@ export function applyAtmosphere(mat: THREE.Material) {
         `#include <fog_pars_fragment>
         varying vec3 vAtmoWorld;
         uniform float uFogHF; uniform float uFogBase; uniform float uFogHaze; uniform float uFogMax;
-        uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uInscatter; uniform float uFogStart;`,
+        uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uInscatter; uniform float uFogStart;
+        uniform vec4 uLampV[${SURFACE_LAMPS}]; uniform vec4 uLampC[${SURFACE_LAMPS}]; uniform int uLampN;`,
+      )
+      .replace(
+        '#include <opaque_fragment>',
+        `#ifdef STANDARD
+          // street lamps, canopies and neon: inverse-square pools of light on whatever is near them
+          vec3 lampSum = vec3(0.0);
+          for (int i = 0; i < ${SURFACE_LAMPS}; i++) {
+            if (i >= uLampN) break;
+            vec3 lampL = uLampV[i].xyz + vViewPosition;
+            float lampD2 = dot(lampL, lampL);
+            float lampNL = max(dot(normal, lampL * inversesqrt(max(lampD2, 1e-4))), 0.0);
+            lampSum += uLampC[i].rgb * (uLampC[i].w * (0.25 + 0.75 * lampNL) / (lampD2 + 5.0) * smoothstep(1100.0, 250.0, lampD2));
+          }
+          outgoingLight += lampSum * diffuseColor.rgb;
+        #endif
+        #include <opaque_fragment>`,
       )
       .replace(
         '#include <fog_fragment>',
@@ -362,5 +384,40 @@ export const PRESETS: AtmoPreset[] = [
     grain: 0.05,
     clouds: { coverage: 0.6, density: 1.0, base: 1700, top: 3300 },
     volume: { density: 0.08, falloff: 0.08, base: 150, noise: 1, noiseScale: 60, windSpeed: 0.4, windDir: 70, sun: 0, anisotropy: 0.6, penetration: 0.65, ambient: 0.15, shafts: 1, lamps: 0.79, range: 3000, steps: 64, lampsOn: 1 },
+  },
+  {
+    name: 'Rain',
+    sun: { azimuth: 220, elevation: 34, intensity: 0.7, tint: 0xdfe6ee },
+    env: 0.8,
+    sky: { intensity: 0.6, tint: 0xc6cfd6, horizon: 0.26, horizonMix: 0.97 },
+    hemi: 0.42,
+    fog: { color: 0x7b878d, density: 0.0038, falloff: 0.008, haze: 0.0001, max: 0.95, inscatter: 0.1 },
+    mist: { opacity: 0.7, color: 0xb4bdc0 },
+    grade: { saturation: 0.66, contrast: 1.05, lift: [0.02, 0.03, 0.038], gain: [0.94, 0.98, 1.0], split: 0.55, shadowTint: 0x2a565f, highTint: 0xd8dedf },
+    wet: 1,
+    windows: 0.6,
+    bloom: 0.4,
+    exposure: 1.04,
+    grain: 0.08,
+    clouds: { coverage: 1.0, density: 1.6, base: 1400, top: 3400 },
+    volume: { density: 0.018, falloff: 0.026, base: 34, noise: 0.5, sun: 0.35, anisotropy: 0.45, penetration: 0.35, ambient: 0.9, shafts: 0.2, lamps: 1 },
+  },
+  {
+    // the "sun" here is the moon: high, cold and faint; the lamps and windows do the rest
+    name: 'Night',
+    sun: { azimuth: 165, elevation: 40, intensity: 1.0, tint: 0xa9c0ff },
+    env: 0.45,
+    sky: { intensity: 0.07, tint: 0x9db0dd, horizon: 0.2, horizonMix: 0.85 },
+    hemi: 0.6,
+    fog: { color: 0x0c131f, density: 0.0018, falloff: 0.01, haze: 0.00005, max: 0.92, inscatter: 0.2 },
+    mist: { opacity: 0.25, color: 0x27313f },
+    grade: { saturation: 0.74, contrast: 1.12, lift: [0.0, 0.008, 0.022], gain: [0.9, 0.96, 1.08], split: 0.7, shadowTint: 0x16304f, highTint: 0xffd29a },
+    wet: 0.6,
+    windows: 1.0,
+    bloom: 0.9,
+    exposure: 1.3,
+    grain: 0.09,
+    clouds: { coverage: 0.4, density: 0.85, base: 1900, top: 3700 },
+    volume: { density: 0.008, falloff: 0.04, base: 16, noise: 0.55, sun: 0.5, anisotropy: 0.6, penetration: 0.6, ambient: 0.6, shafts: 0.3, lamps: 1, lampsOn: 1 },
   },
 ];

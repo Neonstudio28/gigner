@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Pass } from 'postprocessing';
 import type { SkyRig } from './sky';
 import type { Lamp } from '../world';
-import { fogUniforms } from './atmosphere';
+import { fogUniforms, SURFACE_LAMPS } from './atmosphere';
 
 /**
  * Volumetric fog: a half-resolution raymarch through exponential height fog with drifting 3D noise banks.
@@ -454,9 +454,15 @@ export class VolumetricFogPass extends Pass {
       for (const [, l] of scored.slice(0, MAX_LAMPS)) {
         u.uLampPos.value[n].set(l.x, l.y, l.z, 1);
         u.uLampCol.value[n].set(l.r, l.g, l.b, l.power * amt * 12);
+        if (n < SURFACE_LAMPS) {
+          this.v.set(l.x, l.y, l.z).applyMatrix4(cam.matrixWorldInverse);
+          fogUniforms.uLampV.value[n].set(this.v.x, this.v.y, this.v.z, 1);
+          fogUniforms.uLampC.value[n].set(l.r, l.g, l.b, l.power * this.lampsOn * 16);
+        }
         n++;
       }
     }
+    fogUniforms.uLampN.value = Math.min(n, SURFACE_LAMPS);
     u.uLampCount.value = n;
     // the per-material haze starts where the raymarch stops
     fogUniforms.uFogStart.value = s.enabled ? s.range : 0;
