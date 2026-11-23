@@ -3,6 +3,8 @@ import { Batcher, Kit } from '../world/core/kit';
 import { vehicleBody, drawWheel, type VehicleType, type VehicleOpts, type WheelInfo } from '../world/vehicles';
 import type { TownWorld } from '../world';
 import { EngineAudio } from './audio';
+import { Spray } from './spray';
+import { surfaceUniforms } from '../world/materials';
 
 interface DriveSpec {
   top: number; // m/s
@@ -16,7 +18,7 @@ interface DriveSpec {
 
 const SPECS: Partial<Record<VehicleType, DriveSpec>> = {
   sedan: { top: 44, accel: 7, brake: 14, grip: 9, offroad: 0.55, steer: 0.6, gears: 4 },
-  coupe: { top: 52, accel: 9.5, brake: 15, grip: 8, offroad: 0.45, steer: 0.58, gears: 5 },
+  coupe: { top: 52, accel: 9.5, brake: 15, grip: 9.6, offroad: 0.45, steer: 0.58, gears: 5 },
   pickup: { top: 42, accel: 7, brake: 13, grip: 8, offroad: 0.78, steer: 0.55, gears: 4 },
   jeep: { top: 36, accel: 7.5, brake: 13, grip: 9, offroad: 0.97, steer: 0.66, gears: 4 },
   suv: { top: 42, accel: 6.8, brake: 13, grip: 8, offroad: 0.82, steer: 0.55, gears: 4 },
@@ -58,6 +60,11 @@ export const DRIVABLE: Drivable[] = [
 ];
 
 interface WheelRig {
+  /** World position of the contact patch and the ground height there (updated every frame). */
+  wx: number;
+  wz: number;
+  g: number;
+  travel: number;
   pivot: THREE.Group;
   spin: THREE.Group;
   info: WheelInfo;
@@ -65,6 +72,8 @@ interface WheelRig {
 }
 
 const G = 9.81;
+/** Part-time four-wheel drive; everything else drives the rear axle. */
+const AWD = new Set<VehicleType>(['jeep', 'suv', 'sheriffSuv', 'pickup', 'tow', 'tractor']);
 const _v = new THREE.Vector3();
 
 /** Arcade vehicle controller: terrain-following suspension, slip/drift, collisions, chase cameras. */
@@ -113,6 +122,28 @@ export class DriveMode {
   private obstacles: { x: number; z: number; c: number; s: number; hl: number }[] = [];
   private time = 0;
   private slip = 0;
+  /** Last step's tyre state (handling tests). */
+  tele: Record<string, number> = {};
+  /** Ignore collisions (scripted handling tests). */
+  ghost = false;
+  /** Current gear: -1 reverse, 1..n forward. */
+  gear = 1;
+  /** Engine speed, 0..1 of the redline. */
+  rpm = 0.13;
+  private load = 0;
+  private shiftT = 0;
+  private ax = 0;
+  private spin = 0;
+  private airborne = false;
+  /** 0..1: how deep the car is wading. */
+  wade = 0;
+  /** Floating: the wheels no longer reach the bed. */
+  afloat = false;
+  private waterY = -1e9;
+  private current = new THREE.Vector2();
+  private surface: 'paved' | 'dirt' | 'grass' = 'paved';
+  private fxAcc = 0;
+  readonly spray = new Spray();
 
   constructor(
     private world: TownWorld,
@@ -124,7 +155,7 @@ export class DriveMode {
     this.car.visible = false;
     this.car.add(this.body);
     this.car.rotation.order = 'YZX';
-    scene.add(this.car);
+    scene.add(this.car, this.spray.points);
     window.addEventListener('keydown', (e) => {
       if (!this.active) return;
       this.keys.add(e.code);
@@ -188,7 +219,7 @@ export class DriveMode {
       pivot.position.set(info.x, info.r, info.z);
       pivot.add(spin);
       this.car.add(pivot);
-      this.wheels.push({ pivot, spin, info, front: info.x > (maxX + minX) / 2 + 0.1 });
+      this.wheels.push({ wx: 0, wz: 0, g: 0, travel: 0, pivot, spin, info, front: info.x > (maxX + minX) / 2 + 0.1 });
     }
     const box = new THREE.Box3().setFromObject(this.body);
     this.len = box.max.x - box.min.x;
@@ -213,6 +244,7 @@ export class DriveMode {
   exit() {
     this.active = false;
     this.car.visible = false;
+    this.spray.points.visible = false;
     this.keys.clear();
     this.audio.stop();
   }
@@ -222,6 +254,10 @@ export class DriveMode {
     this.heading = heading;
     this.vel.set(0, 0);
     this.speed = 0;
+    this.yawRate = 0;
+    this.gear = 1;
+    this.rpm = 0.13;
+    this.ax = this.spin = this.shiftT = 0;
     this.steer = 0;
     this.y = this.lastGround = this.world.groundAt(x, z);
     this.vy = 0;
@@ -241,6 +277,7 @@ export class DriveMode {
   }
 
   private blocked(x: number, z: number, h: number): boolean {
+    if (this.ghost) return false;
     const c = Math.cos(h);
     const s = Math.sin(h);
     const hl = this.len / 2 - 0.15;
@@ -269,46 +306,153 @@ export class DriveMode {
     return false;
   }
 
+  /** Speed at the redline in a gear (1-based); the ratios close up towards top gear like a real box. */
+  private gearTop(g: number) {
+    return this.spec.top * 1.04 * Math.pow(g / this.spec.gears, 0.82);
+  }
+
+  /**
+   * One physics step. Longitudinal: engine torque curve through an automatic gearbox, brakes, drag and
+   * rolling resistance. Lateral: a two-axle (bicycle) model with slip angles, a Pacejka-style tyre curve,
+   * a friction circle shared between traction and cornering, and weight transfer under power and braking.
+   */
   private step(h: number) {
     const k = this.keys;
-    const thr = k.has('KeyW') || k.has('ArrowUp') ? 1 : 0;
-    const brk = k.has('KeyS') || k.has('ArrowDown') ? 1 : 0;
+    const up = k.has('KeyW') || k.has('ArrowUp');
+    const down = k.has('KeyS') || k.has('ArrowDown');
     const st = (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0) - (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0);
     const hb = k.has('Space');
     const boost = k.has('ShiftLeft') || k.has('ShiftRight');
     const sp = this.spec;
     const road = this.world.roadAt(this.pos.x, this.pos.z, this.y);
-    this.onRoad = !!road && road.kind !== 'dirt';
-    const surfTop = road ? (road.kind === 'dirt' ? 0.8 : 1) : 0.45 + 0.5 * sp.offroad;
-    const surfGrip = road ? (road.kind === 'dirt' ? 0.8 : 1) : 0.55 + 0.45 * sp.offroad;
-    const top = sp.top * surfTop * (boost ? 1.2 : 1);
+    const paved = !!road && road.kind !== 'dirt';
+    this.onRoad = paved;
+    this.surface = paved ? 'paved' : road ? 'dirt' : 'grass';
+    const wet = surfaceUniforms.uWet.value;
+    const surfTop = road ? (paved ? 1 : 0.8) : 0.45 + 0.5 * sp.offroad;
+    // tyre grip: tarmac, gravel, grass; rain takes a fifth off tarmac; nothing while airborne
+    let mu = (road ? (paved ? 1 : 0.74) : 0.5 + 0.38 * sp.offroad) * (1 - (paved ? 0.22 : 0.1) * wet) * (sp.grip / 8.5);
+    if (this.airborne) mu = 0.02;
+    mu *= this.afloat ? 0.03 : 1 - 0.6 * this.wade;
     const c = Math.cos(this.heading);
     const s = Math.sin(this.heading);
-    let fwd = this.vel.x * c - this.vel.y * s;
-    let lat = this.vel.x * s + this.vel.y * c;
-    let a = 0;
-    if (thr) a += fwd < -0.5 ? sp.brake : sp.accel * (boost ? 1.35 : 1) * Math.max(0, 1 - Math.max(0, fwd) / top);
-    if (brk) a -= fwd > 0.5 ? sp.brake : sp.accel * 0.55 * Math.max(0, 1 + fwd / (sp.top * 0.25));
-    a -= 0.0012 * fwd * Math.abs(fwd);
-    a -= G * Math.sin(this.pitch) * 0.9;
-    const coast = (road ? 0.6 : 2.2) + (!thr && !brk ? 1.1 : 0) + (hb ? 7 : 0) + (fwd > top ? 3 : 0);
-    const prev = fwd;
-    fwd += a * h;
-    const decel = coast * h;
-    if (Math.abs(fwd) <= decel && !thr && !brk) fwd = 0;
-    else fwd -= Math.sign(fwd) * decel;
-    if (!thr && !brk && Math.sign(fwd) !== Math.sign(prev) && prev !== 0) fwd = 0;
-    lat *= Math.exp(-sp.grip * surfGrip * (hb ? 0.2 : 1) * h);
-    this.slip = Math.abs(lat);
-    const maxSteer = sp.steer / (1 + Math.abs(fwd) * 0.05);
-    this.steer += (st * maxSteer - this.steer) * Math.min(1, h * 7);
-    let yaw = (fwd / this.wheelbase) * Math.tan(this.steer);
-    if (hb) yaw *= 1.45;
-    this.yawRate = yaw;
-    this.vel.set(fwd * c + lat * s, -fwd * s + lat * c);
+    let vx = this.vel.x * c - this.vel.y * s;
+    let vy = -(this.vel.x * s + this.vel.y * c); // left-positive
+    let r = this.yawRate;
+
+    // --- driver → gearbox
+    let throttle = 0;
+    let brake = 0;
+    if (up && !down) {
+      if (vx < -0.6) brake = 1;
+      else {
+        if (this.gear < 1) this.gear = 1;
+        throttle = 1;
+      }
+    } else if (down) {
+      if (vx > 0.6) brake = 1;
+      else {
+        this.gear = -1;
+        throttle = 1;
+      }
+    }
+    const av = Math.abs(vx);
+    if (this.shiftT > 0) this.shiftT -= h;
+    else if (this.gear >= 1) {
+      if (this.gear < sp.gears && av / this.gearTop(this.gear) > (throttle ? 0.93 : 0.6)) {
+        this.gear++;
+        this.shiftT = 0.24;
+      } else if (this.gear > 1 && av / this.gearTop(this.gear - 1) < (throttle ? 0.62 : 0.4)) {
+        this.gear--;
+        this.shiftT = 0.16;
+      }
+    }
+    const first = this.gearTop(1);
+    const gTop = this.gear < 0 ? first * 0.8 : this.gearTop(Math.max(1, this.gear));
+    const ratio = first / gTop;
+    const re = av / gTop;
+    const torque = re > 1.03 ? 0 : 0.62 + 1.5 * re - 1.32 * re * re;
+    const peak = sp.accel * 1.25;
+    let drive = this.shiftT > 0 ? 0 : throttle * peak * torque * ratio * (boost ? 1.35 : 1) * (this.gear < 0 ? -0.75 : 1);
+    drive *= this.afloat ? 0.25 : 1 - 0.75 * this.wade; // afloat, the wheels only paddle
+    // the tach: clutch slip off the line, a dip on each shift
+    const rpmT = this.shiftT > 0 ? re * 0.75 : Math.max(re, throttle ? 0.34 : 0.13);
+    this.rpm += (Math.min(1.02, rpmT) - this.rpm) * Math.min(1, h * 9);
+    this.load = throttle;
+
+    // --- axle loads and the friction circle
+    const L = this.wheelbase;
+    const a = L * 0.47;
+    const b = L - a;
+    const wf = THREE.MathUtils.clamp(b / L - ((this.height * 0.3) / L) * (this.ax / G), 0.25, 0.75);
+    const wr = 1 - wf;
+    const Df = mu * G * wf;
+    const Dr = mu * G * wr;
+    const awd = AWD.has(this.type);
+    let fxf = awd ? drive * 0.45 : 0;
+    let fxr = awd ? drive * 0.55 : drive;
+    const bf = brake * sp.brake * 0.62;
+    const br = hb ? Dr : brake * sp.brake * 0.38;
+    const useF = (Math.abs(fxf) + bf) / Math.max(Df, 0.01);
+    const useR = (Math.abs(fxr) + br) / Math.max(Dr, 0.01);
+    this.spin = fxr !== 0 && !this.airborne ? Math.max(0, Math.abs(fxr) - Dr) * Math.sign(fxr) : 0;
+    fxf = THREE.MathUtils.clamp(fxf, -Df, Df);
+    fxr = THREE.MathUtils.clamp(fxr, -Dr, Dr);
+    const share = (u: number) => (u <= 0.8 ? 1 : Math.max(0.55, 1 - (u - 0.8) * 0.9));
+    // cornering grip sits a little above traction grip (it is a game), and the rear axle gets the extra
+    // bite that makes a road car push its nose wide before it lets go at the back
+    const latF = Df * share(useF) * 1.2;
+    const latR = Dr * (hb ? 0.3 : share(useR)) * 1.38;
+
+    // --- tyres
+    const maxSteer = sp.steer / (1 + (av / 13) ** 2 * 0.9);
+    this.steer += (st * maxSteer - this.steer) * Math.min(1, h * (st ? 5.5 : 8));
+    const dl = this.steer;
+    const vxa = Math.max(av, 2);
+    const dir = vx < 0 ? -1 : 1;
+    const af = Math.atan2(vy + a * r, vxa) - dl * dir;
+    const ar = Math.atan2(vy - b * r, vxa);
+    const fyf = -latF * Math.sin(1.45 * Math.atan(7.5 * af));
+    const fyr = -latR * Math.sin(1.45 * Math.atan(7.5 * ar));
+    const cd = Math.cos(dl);
+    const sd = Math.sin(dl);
+    // velocity is kept in world space and re-projected every step, so no rotating-frame terms here
+    const ax = fxr + fxf * cd - fyf * sd - G * Math.sin(this.pitch) * 0.9;
+    const ay = fyr + fyf * cd + fxf * sd;
+    const rd = (a * (fyf * cd + fxf * sd) - b * fyr) / (a * b * 1.15);
+    this.ax += (fxr + fxf - dir * Math.min(bf, Df) - dir * Math.min(br, Dr) * (av > 0.5 ? 1 : 0) - this.ax) * Math.min(1, h * 10);
+
+    // --- integrate; things that only ever oppose motion are applied so they cannot reverse it
+    const prev = vx;
+    vx += ax * h;
+    const drag = Math.max(0.0004, (peak * 0.8 * (first / this.gearTop(sp.gears)) - 0.3) / (sp.top * sp.top)) / (surfTop * surfTop) / (boost ? 1.4 : 1);
+    const rolling = paved ? 0.3 : road ? 0.7 : 1.1 + 2.2 * (1 - sp.offroad);
+    const engineBrake = throttle || this.shiftT > 0 ? 0 : (0.3 + 1.5 * re) * Math.min(1.6, ratio);
+    const water = this.afloat ? 0.3 + 0.35 * vx * vx : this.wade * (1.5 + 0.25 * vx * vx);
+    const res = (rolling + drag * vx * vx + engineBrake + Math.min(bf, Df) + Math.min(br, Dr) + water) * (this.airborne ? 0.05 : 1) * h;
+    if (Math.abs(vx) <= res && (!throttle || brake || hb)) vx = 0;
+    else vx -= Math.sign(vx) * res;
+    if (!throttle && prev !== 0 && Math.sign(vx) !== Math.sign(prev)) vx = 0;
+    // below walking pace the slip-angle model is ill-conditioned: blend into plain kinematic steering
+    const w = THREE.MathUtils.smoothstep(Math.abs(vx), 1.5, 5.5);
+    if (this.afloat) {
+      // a hull, not a car: the water damps everything and the front wheels make a poor rudder
+      r = r * Math.exp(-1.5 * h) + dl * vx * 0.5 * h;
+      vy *= Math.exp(-1.4 * h);
+    } else {
+      r = THREE.MathUtils.lerp((vx / L) * Math.tan(dl) * (hb ? 1.3 : 1), r + rd * h, w);
+      vy = THREE.MathUtils.lerp(vy * Math.exp(-10 * h), vy + ay * h, w);
+    }
+    if (this.airborne) r *= Math.exp(-0.4 * h);
+    this.yawRate = r;
+    this.slip = this.airborne ? 0 : Math.max(0, Math.abs(ar) - 0.09) * vxa * 1.6 + Math.max(0, Math.abs(af) - 0.14) * vxa + Math.abs(this.spin) * 0.35 + (hb && av > 2 ? av * 0.25 : 0);
+    this.tele = { af, ar, fyf, fyr, mu, wf, air: this.airborne ? 1 : 0, steer: dl, vy, r, w };
+    this.vel.set(vx * c - vy * s, -vx * s - vy * c);
+    const yaw = r;
     const nh = this.heading + yaw * h;
-    const nx = this.pos.x + this.vel.x * h;
-    const nz = this.pos.z + this.vel.y * h;
+    // afloat, `vel` is relative to the water, which is itself going somewhere
+    const nx = this.pos.x + (this.vel.x + (this.afloat ? this.current.x : 0)) * h;
+    const nz = this.pos.z + (this.vel.y + (this.afloat ? this.current.y : 0)) * h;
     // already overlapping something (spawned into it): let the car drive out
     if (this.blocked(this.pos.x, this.pos.z, this.heading) || !this.blocked(nx, nz, nh)) {
       this.pos.x = nx;
@@ -328,6 +472,7 @@ export class DriveMode {
         if (!this.blocked(this.pos.x, this.pos.z, nh)) this.heading = nh;
         this.vel.multiplyScalar(-0.22);
       }
+      this.yawRate *= 0.4;
       const hit = before - this.vel.length();
       if (hit > 2.5) {
         this.shake = Math.min(1, hit / 15);
@@ -335,6 +480,74 @@ export class DriveMode {
       }
     }
     this.speed = this.vel.x * Math.cos(this.heading) - this.vel.y * Math.sin(this.heading);
+  }
+
+  /** A car hitting the water at speed: a wall of spray, a jolt, and the brakes it never asked for. */
+  private splash(waterY: number, speed: number) {
+    const n = Math.min(140, 30 + speed * 5);
+    const c = Math.cos(this.heading);
+    const s = Math.sin(this.heading);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const out = 1 + Math.random() * (2 + speed * 0.22);
+      const fx = this.pos.x + c * this.len * 0.3 + Math.cos(a) * this.width * 0.5;
+      const fz = this.pos.z - s * this.len * 0.3 + Math.sin(a) * this.width * 0.5;
+      this.spray.emit(fx, waterY + 0.1, fz, Math.cos(a) * out + this.vel.x * 0.35, 2.5 + Math.random() * (2 + speed * 0.3), Math.sin(a) * out + this.vel.y * 0.35, 0.7 + Math.random() * 0.7, 0.3 + Math.random() * 0.45, 0xe6eef0, 0.55, 2.2);
+    }
+    this.shake = Math.max(this.shake, Math.min(0.8, speed / 28));
+    this.audio.impact(speed * 0.5);
+    this.vel.multiplyScalar(0.72);
+  }
+
+  /** Spray in water, rooster tails on wet tarmac, dust off gravel and grass, smoke from sliding tyres. */
+  private effects(dt: number) {
+    const v = Math.abs(this.speed);
+    const wet = surfaceUniforms.uWet.value;
+    let rate = 0;
+    let kind = 0;
+    if (this.wade > 0.03) {
+      rate = Math.min(110, (v + Math.abs(this.spin)) * 10) * (0.35 + this.wade);
+      kind = 1;
+    } else if (!this.airborne && this.surface !== 'paved' && v > 3.5) {
+      rate = Math.min(42, v * 1.7) * (1 - 0.8 * wet);
+      kind = 2;
+    } else if (!this.airborne && this.slip > 2.2) {
+      rate = Math.min(60, this.slip * 9);
+      kind = wet > 0.5 ? 4 : 3;
+    } else if (!this.airborne && wet > 0.35 && v > 8) {
+      rate = Math.min(50, v * 1.4) * wet;
+      kind = 4;
+    }
+    if (!kind) {
+      this.fxAcc = 0;
+      return;
+    }
+    this.fxAcc += rate * dt;
+    const R = Math.random;
+    while (this.fxAcc >= 1) {
+      this.fxAcc -= 1;
+      const rear = this.wheels.filter((w) => !w.front);
+      const pool = kind === 1 || !rear.length ? this.wheels : rear;
+      const w = pool[Math.floor(R() * pool.length)];
+      if (!w) return;
+      const side = Math.sign(w.info.z) || 1;
+      // sideways unit vector (towards this wheel's side of the car) in world space
+      const ox = Math.sin(this.heading) * side;
+      const oz = Math.cos(this.heading) * side;
+      const jx = (R() - 0.5) * 0.3;
+      const jz = (R() - 0.5) * 0.3;
+      if (kind === 1) {
+        const out = 0.6 + R() * (1.2 + v * 0.16);
+        this.spray.emit(w.wx + jx, this.waterY + 0.05, w.wz + jz, ox * out + this.vel.x * 0.45, 1.2 + R() * (1.2 + v * 0.16), oz * out + this.vel.y * 0.45, 0.45 + R() * 0.5, 0.2 + R() * 0.3, 0xe2ebee, 0.5, 2.4);
+      } else if (kind === 2) {
+        const dirt = this.surface === 'dirt' ? 0x9c8c70 : 0x8a8466;
+        this.spray.emit(w.wx + jx, w.g + 0.15, w.wz + jz, this.vel.x * 0.12 + ox * R() * 0.6, 0.5 + R() * 0.7, this.vel.y * 0.12 + oz * R() * 0.6, 1.1 + R() * 0.9, 0.45 + R() * 0.35, dirt, 0.2, 3.6, -0.25);
+      } else if (kind === 3) {
+        this.spray.emit(w.wx + jx, w.g + 0.12, w.wz + jz, this.vel.x * 0.1 + ox * R() * 0.5, 0.4 + R() * 0.5, this.vel.y * 0.1 + oz * R() * 0.5, 1.0 + R() * 0.8, 0.4 + R() * 0.3, 0xdcdcdc, 0.2, 4.2, -0.5);
+      } else {
+        this.spray.emit(w.wx + jx, w.g + 0.1, w.wz + jz, this.vel.x * 0.3 + ox * R() * 0.8, 0.8 + R() * (0.8 + v * 0.05), this.vel.y * 0.3 + oz * R() * 0.8, 0.5 + R() * 0.4, 0.35 + R() * 0.3, 0xcdd5d9, 0.13, 3.2, 3);
+      }
+    }
   }
 
   private pose(dt: number) {
@@ -352,6 +565,9 @@ export class DriveMode {
       const gx = this.pos.x + w.info.x * c + w.info.z * s;
       const gz = this.pos.z - w.info.x * s + w.info.z * c;
       const g = this.world.groundAt(gx, gz, this.y + 0.3);
+      w.wx = gx;
+      w.wz = gz;
+      w.g = g;
       if (w.front) {
         hf += g;
         nf++;
@@ -371,14 +587,35 @@ export class DriveMode {
     hr /= Math.max(1, nr);
     hl /= Math.max(1, nl);
     hrt /= Math.max(1, nrt);
-    const ground = (hf + hr) / 2;
-    const pitchT = Math.atan2(hf - hr, this.wheelbase);
-    const rollT = Math.atan2(hl - hrt, this.track);
+    const bed = (hf + hr) / 2;
+    let ground = bed;
+    let pitchT = Math.atan2(hf - hr, this.wheelbase);
+    let rollT = Math.atan2(hl - hrt, this.track);
+    // water: wade while the wheels reach the bed, float (and drift with the current) once they do not
+    const wa = this.world.waterAt(this.pos.x, this.pos.z);
+    const draft = Math.min(0.62, this.height * 0.34);
+    const wasAfloat = this.afloat;
+    this.afloat = !!wa && wa.y - draft > bed + (wasAfloat ? 0 : 0.05);
+    if (wa && this.afloat) {
+      ground = wa.y - draft + Math.sin(this.time * 1.9) * 0.025;
+      pitchT = Math.sin(this.time * 1.3) * 0.02 - this.ax * 0.004;
+      rollT = Math.sin(this.time * 1.05 + 1) * 0.03;
+      this.current.set(wa.fx, wa.fz);
+    }
+    const wade = wa ? THREE.MathUtils.clamp((wa.y - this.y) / 0.8, 0, 1) : 0;
+    if (wa && wade > 0.12 && this.wade <= 0.12 && Math.abs(this.speed) > 5) this.splash(wa.y, Math.abs(this.speed));
+    this.wade = wade;
+    this.waterY = wa ? wa.y : -1e9;
     // suspension: follow the ground, but launch off crests faster than gravity can pull us down
     const groundVel = (ground - this.lastGround) / Math.max(dt, 1e-3);
     this.lastGround = ground;
     const airborne = this.y > ground + 0.04;
-    if (airborne) {
+    this.airborne = this.y > ground + 0.12;
+    if (this.afloat) {
+      this.airborne = false;
+      this.y += (ground - this.y) * Math.min(1, dt * (this.y > ground ? 6 : 3));
+      this.vy = 0;
+    } else if (airborne) {
       this.vy -= G * dt;
       this.y += this.vy * dt;
       if (this.y <= ground) {
@@ -407,9 +644,18 @@ export class DriveMode {
     this.car.rotation.set(this.roll, this.heading, this.pitch, 'YZX');
     this.body.rotation.set(this.lean, 0, this.dip);
     for (const w of this.wheels) {
-      w.spin.rotation.z -= (this.speed * dt) / w.info.r;
+      // driven wheels show wheelspin; the handbrake locks the rears
+      const locked = !w.front && this.keys.has('Space');
+      const extra = w.front && !AWD.has(this.type) ? 0 : this.spin * 2.5;
+      if (!locked) w.spin.rotation.z -= ((this.speed + extra) * dt) / w.info.r;
       if (w.front) w.pivot.rotation.y = this.steer;
+      // each wheel follows its own patch of ground; the body rides on the average
+      const rest = this.y + w.info.x * Math.sin(this.pitch) - w.info.z * Math.sin(this.roll);
+      const t = this.airborne || this.afloat ? -0.08 : THREE.MathUtils.clamp(w.g - rest, -0.1, 0.1);
+      w.travel += (t - w.travel) * Math.min(1, dt * 16);
+      w.pivot.position.y = w.info.r + w.travel;
     }
+    this.effects(dt);
   }
 
   private updateCamera(dt: number) {
@@ -468,13 +714,8 @@ export class DriveMode {
     const n = Math.max(1, Math.ceil(dt / (1 / 90)));
     for (let i = 0; i < n; i++) this.step(dt / n);
     this.pose(dt);
+    this.spray.update(dt);
     this.updateCamera(dt);
-    const sp = this.spec;
-    const v = Math.abs(this.speed);
-    const gearSpan = sp.top / sp.gears;
-    const gear = Math.min(sp.gears - 1, Math.floor(v / gearSpan));
-    const rpm = THREE.MathUtils.clamp(0.12 + ((v - gear * gearSpan) / gearSpan) * 0.85, 0, 1);
-    const thr = this.keys.has('KeyW') || this.keys.has('ArrowUp') || this.keys.has('KeyS') || this.keys.has('ArrowDown');
-    this.audio.update(v < 0.3 ? 0.08 : rpm, thr ? 1 : 0.2, this.slip);
+    this.audio.update(Math.abs(this.speed) < 0.3 && !this.load ? 0.08 : this.rpm, this.load ? 1 : 0.2, this.slip);
   }
 }

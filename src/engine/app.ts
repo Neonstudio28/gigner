@@ -22,7 +22,7 @@ export interface AppHandle {
   /** Enter the drivable car at a spot (scripted captures / game hooks). */
   drive: (type?: string, x?: number, z?: number, heading?: number) => void;
   /** Hold keys and simulate `seconds` of driving at 60 Hz without rendering. */
-  simulate: (seconds: number, keys: string[]) => void;
+  simulate: (seconds: number, keys: string[], ghost?: boolean) => void;
   exitDrive: () => void;
   /** Place the orbit camera (captures / debugging). */
   look: (pos: [number, number, number], target: [number, number, number], fov?: number) => void;
@@ -216,9 +216,10 @@ export async function startApp(container: HTMLElement) {
     last = now;
     elapsed += dt;
     if (drive.active) {
+      drive.spray.setLight(sky.sun.color, sky.sun.intensity * 0.28 + sky.hemi.intensity * 1.3, renderer.domElement.height, camera.fov);
       drive.update(dt);
       drive.focus(focus);
-      hud.update(drive.pos.x, drive.pos.z, drive.heading, drive.speed, drive.onRoad);
+      hud.update(drive.pos.x, drive.pos.z, drive.heading, drive.speed, drive.onRoad, drive.gear);
       sky.updateShadows(focus, 70);
     } else {
       director.update(dt);
@@ -297,13 +298,15 @@ export async function startApp(container: HTMLElement) {
       exitDrive();
       enterDrive(x !== undefined && z !== undefined ? { x, z, heading: heading ?? 0 } : undefined);
     },
-    simulate: (seconds, keys) => {
+    simulate: (seconds, keys, ghost = false) => {
+      drive.ghost = ghost;
       drive.setKeys(keys);
       for (let i = 0; i < Math.round(seconds * 60); i++) {
         drive.update(1 / 60);
         world.update(1 / 60, (elapsed += 1 / 60), camera.position, drive.pos);
       }
       drive.setKeys([]);
+      drive.ghost = false;
     },
     exitDrive,
     look: (p, t, fov) => {
@@ -326,6 +329,10 @@ export async function startApp(container: HTMLElement) {
       speed: drive.speed,
       x: drive.pos.x,
       z: drive.pos.z,
+      heading: drive.heading,
+      gear: drive.gear,
+      rpm: drive.rpm,
+      tele: JSON.stringify(drive.tele, (_k, v) => (typeof v === 'number' ? +v.toFixed(3) : v)),
     }),
   };
   window.__town = handle;

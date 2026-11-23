@@ -155,6 +155,9 @@ export interface RiverHit {
   hw: number;
   water: number;
   bed: number;
+  /** Unit direction of the current. */
+  tx: number;
+  tz: number;
 }
 
 class RiverPath {
@@ -202,7 +205,8 @@ class RiverPath {
       const d = Math.hypot(x - (a.x + dx * t), z - (a.z + dz * t));
       if (!best || d < best.dist) {
         const water = lerp(a.water, b.water, t);
-        best = { dist: d, s: lerp(a.s, b.s, t), hw: lerp(a.hw, b.hw, t), water, bed: water - 1.9 };
+        const L = Math.sqrt(L2);
+        best = { dist: d, s: lerp(a.s, b.s, t), hw: lerp(a.hw, b.hw, t), water, bed: water - 1.9, tx: dx / L, tz: dz / L };
       }
     }
     return best;
@@ -239,6 +243,32 @@ export function isWater(x: number, z: number) {
   if (lakeEllipse(x, z) < 0.98) return true;
   const r = river.query(x, z);
   return !!r && r.dist < r.hw;
+}
+
+export interface WaterHit {
+  /** Height of the surface. */
+  y: number;
+  /** Current, m/s. */
+  fx: number;
+  fz: number;
+}
+const _water: WaterHit = { y: 0, fx: 0, fz: 0 };
+
+/** The water surface over (x, z) and the current there, or null on dry land. The result is reused between calls. */
+export function waterAt(x: number, z: number): WaterHit | null {
+  if (lakeEllipse(x, z) < 0.98) {
+    _water.y = LAKE.level;
+    _water.fx = _water.fz = 0;
+    return _water;
+  }
+  const r = river.query(x, z);
+  if (!r || r.dist >= r.hw) return null;
+  const u = r.dist / r.hw;
+  const v = 1.3 * (1 - 0.6 * u * u);
+  _water.y = r.water;
+  _water.fx = r.tx * v;
+  _water.fz = r.tz * v;
+  return _water;
 }
 
 // ------------------------------------------------------------------ height pipeline: raw → roads → river → pads

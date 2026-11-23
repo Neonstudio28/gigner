@@ -196,10 +196,10 @@ export class DriveHUD {
     this.big.classList.toggle('show', v);
   }
 
-  update(x: number, z: number, heading: number, speed: number, onRoad: boolean) {
+  update(x: number, z: number, heading: number, speed: number, onRoad: boolean, gear = 0) {
     const mph = Math.abs(speed) * 2.23694;
     this.spd.textContent = mph.toFixed(0);
-    this.gear.textContent = speed < -0.3 ? 'R' : mph < 0.5 ? 'N' : 'D';
+    this.gear.textContent = gear < 0 ? 'R' : mph < 0.5 ? 'N' : gear > 0 ? String(gear) : 'D';
     this.loc.textContent = locationName(this.world, x, z);
     this.surface.textContent = onRoad ? '' : 'OFF-ROAD';
     // minimap: heading-up, zooms out with speed

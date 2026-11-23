@@ -4,7 +4,7 @@ import { Rng } from './core/rng';
 import { createLayers, loadPhotoSet } from './textures';
 import { MaterialLib, windUniform } from './materials';
 import { SignBook } from './signs';
-import { createTerrain, groundHeight, heightAt as groundHeightPre, isWater, MAP_RADIUS, setDevelopment } from './terrain';
+import { createTerrain, groundHeight, heightAt as groundHeightPre, MAP_RADIUS, setDevelopment, waterAt, type WaterHit } from './terrain';
 import { createVegetation, type Vegetation, type TreeIndex } from './vegetation';
 import { Traffic } from './traffic';
 import { loadFonts } from './fonts';
@@ -63,8 +63,10 @@ export interface TownWorld {
   heightAt: (x: number, z: number) => number;
   /** Drivable ground: terrain, roads, sidewalks, bridges and viaduct decks (closest to nearY when stacked). */
   groundAt: (x: number, z: number, nearY?: number) => number;
-  /** Buildings, props, parked cars, tree trunks, water and the map edge (y-aware for decks/piers). */
+  /** Buildings, props, parked cars, tree trunks and the map edge (y-aware for decks/piers). Water is not solid. */
   solidAt: (x: number, z: number, y?: number) => boolean;
+  /** River or lake surface over a point (height and current), or null. */
+  waterAt: (x: number, z: number) => WaterHit | null;
   /** Road carriageway under (x, z), if any. */
   roadAt: (x: number, z: number, nearY?: number) => RoadHit | null;
   /** Closest drivable lane point and its heading (radians, 0 = +X). */
@@ -212,10 +214,9 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
     heightAt: groundHeight,
     groundAt,
     solidAt: (x, z, y) => {
-      if (solids.blocked(x, z, 0, y) || (trees as TreeIndex).hit(x, z) || Math.hypot(x, z) > MAP_RADIUS) return true;
-      if (isWater(x, z)) return !net.roadAt(x, z, y);
-      return false;
+      return solids.blocked(x, z, 0, y) || (trees as TreeIndex).hit(x, z) || Math.hypot(x, z) > MAP_RADIUS;
     },
+    waterAt,
     roadAt: (x, z, nearY) => net.roadAt(x, z, nearY),
     nearestRoad: (x, z, prefer) => net.nearestLane(x, z, prefer),
     isOccupied: (x, z, pad = 0) => occ.blocked(x, z, pad),
