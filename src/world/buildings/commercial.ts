@@ -82,10 +82,12 @@ export function brickStore(c: Ctx, o: StoreOpts) {
     }
     k.box(0, sfH + 0.4, zf + 0.06, o.w - 1.2, 1.2, 0.12, trim);
     if (o.sign || o.signRef) {
-      const sh = o.signH ?? 0.95;
-      k.sign(0, sfH + 1.0, zf + 0.13, Math.min(o.signW ?? o.w * 0.78, o.w - 1.6), sh, o.signRef ?? c.signs.get(o.sign!));
+      // the fascia sits in the band between the shopfront head and the cornice dentils
+      const top = Math.min(sfH + 1.0 + (o.signH ?? 0.95) / 2, H - 0.9);
+      const sh = Math.min(o.signH ?? 0.95, top - sfH - 0.12);
+      k.sign(0, top - sh / 2, zf + 0.13, Math.min(o.signW ?? o.w * 0.78, o.w - 1.6), sh, o.signRef ?? c.signs.get(o.sign!));
     }
-    if (o.awning) awning(k, 0, sfH + 0.32, zf, o.w - 1.5, 1.7, 0.75, o.awning);
+    if (o.awning) awning(k, 0, sfH + (H < 5.9 ? 0.12 : 0.32), zf, o.w - 1.5, 1.7, 0.75, o.awning);
     for (let f = 1; f < st; f++) {
       const fy = 5.55 + (f - 1) * 3.6;
       k.box(0, fy - 0.7, zf + 0.06, o.w, 0.22, 0.16, trim);

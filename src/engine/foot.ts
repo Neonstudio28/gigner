@@ -17,6 +17,8 @@ export class FootMode {
   /** Facing angle: 0 looks down +Z. */
   heading = 0;
   speed = 0;
+  /** Ground speed actually covered (m/s): zero when walking into a wall. */
+  pace = 0;
   indoors = false;
   swimming = false;
   /** Extra obstacles (the parked car), tested in world space. */
@@ -127,7 +129,7 @@ export class FootMode {
     g.position.copy(this.pos);
     if (this.swimming) g.position.y += Math.sin(this.time * 2.4) * 0.04;
     g.rotation.y = this.heading;
-    this.fig.animate(dt, this.speed);
+    this.fig.animate(dt, Math.min(Math.abs(this.speed), this.pace) * Math.sign(this.speed));
   }
 
   update(dt: number) {
@@ -168,12 +170,15 @@ export class FootMode {
       dx += water.fx * dt * 0.6;
       dz += water.fz * dt * 0.6;
     }
+    const ox = this.pos.x;
+    const oz = this.pos.z;
     if (!this.blocked(this.pos.x + dx, this.pos.z + dz)) {
       this.pos.x += dx;
       this.pos.z += dz;
     } else if (!this.blocked(this.pos.x + dx, this.pos.z)) this.pos.x += dx;
     else if (!this.blocked(this.pos.x, this.pos.z + dz)) this.pos.z += dz;
-    else this.speed *= 0.5;
+    else this.speed = 0;
+    this.pace = dt > 0 ? Math.hypot(this.pos.x - ox, this.pos.z - oz) / dt : 0;
 
     const ground = this.floor(this.pos.x, this.pos.z, this.pos.y + STEP);
     this.indoors = this.ceil !== undefined;

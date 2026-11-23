@@ -38,6 +38,8 @@ const LANDMARK_ORDER = ['emergency', 'civic', 'school', 'industrial', 'park', 'b
 export class DriveHUD {
   readonly el: HTMLDivElement;
   private spd: HTMLElement;
+  private keys: HTMLElement;
+  private footKeys: boolean | null = null;
   private gear: HTMLElement;
   private loc: HTMLElement;
   private surface: HTMLElement;
@@ -54,10 +56,11 @@ export class DriveHUD {
       <canvas class="minimap" width="440" height="440"></canvas>
       <div class="speedo"><span class="spd">0</span><span class="unit">MPH</span><span class="gear">D</span></div>
       <div class="loc"></div><div class="surface"></div>
-      <div class="drive-keys">W/S drive · A/D steer · Space handbrake · Shift boost · C camera · R reset · M map · drag to look · V/Esc exit</div>
+      <div class="drive-keys"></div>
       <canvas class="bigmap" width="${BIG_W}" height="${BIG_H}"></canvas>`;
     document.body.appendChild(this.el);
     this.spd = this.el.querySelector('.spd')!;
+    this.keys = this.el.querySelector('.drive-keys')!;
     this.gear = this.el.querySelector('.gear')!;
     this.loc = this.el.querySelector('.loc')!;
     this.surface = this.el.querySelector('.surface')!;
@@ -199,6 +202,13 @@ export class DriveHUD {
   update(x: number, z: number, heading: number, speed: number, onRoad: boolean, gear = 0, weather = '', onFoot = false) {
     const mph = Math.abs(speed) * 2.23694;
     this.spd.textContent = mph.toFixed(0);
+    if (onFoot !== this.footKeys) {
+      this.footKeys = onFoot;
+      this.keys.textContent = onFoot
+        ? 'W/A/S/D walk · Shift run · Space jump · F get in car · M map · drag to look · V/Esc exit'
+        : 'W/S drive · A/D steer · Space handbrake · Shift boost · C camera · R reset · F get out · M map · drag to look · V/Esc exit';
+      this.el.classList.toggle('on-foot', onFoot);
+    }
     this.gear.textContent = onFoot ? '' : gear < 0 ? 'R' : mph < 0.5 ? 'N' : gear > 0 ? String(gear) : 'D';
     this.loc.textContent = locationName(this.world, x, z);
     this.surface.textContent = [weather, onRoad ? '' : 'OFF-ROAD'].filter(Boolean).join('  ·  ');

@@ -291,7 +291,7 @@ export async function startApp(container: HTMLElement) {
     } else if (foot.active) {
       foot.update(dt);
       foot.focus(focus);
-      hud.update(foot.pos.x, foot.pos.z, foot.heading - Math.PI / 2, foot.speed, true, 0, weather.enabled ? weather.label : '', true);
+      hud.update(foot.pos.x, foot.pos.z, foot.heading - Math.PI / 2, foot.pace, true, 0, weather.enabled ? weather.label : '', true);
       sky.updateShadows(focus, 45);
     } else {
       director.update(dt);
