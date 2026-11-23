@@ -5,7 +5,8 @@ import { CameraDirector } from './controls';
 import { createUI } from './ui';
 import { DriveMode, DRIVABLE } from './drive';
 import { DriveHUD } from './hud';
-import { createTownWorld } from '../world';
+import { FootMode } from './foot';
+import { createTownWorld, type TownWorld } from '../world';
 import { loadVehicleModels } from '../world/vehicles';
 import { applyAtmosphereTo, Mist, PRESETS, type AtmoPreset } from './atmosphere';
 import { PhysicalSky } from './physicalSky';
@@ -26,11 +27,16 @@ export interface AppHandle {
   /** Hold keys and simulate `seconds` of driving at 60 Hz without rendering. */
   simulate: (seconds: number, keys: string[], ghost?: boolean) => void;
   exitDrive: () => void;
+  /** Start walking at a spot (heading 0 faces +Z), or where the camera looks. */
+  walk: (x?: number, z?: number, heading?: number) => void;
+  /** Step out of the car / get back in. */
+  swapSeat: () => void;
   /** Place the orbit camera (captures / debugging). */
   look: (pos: [number, number, number], target: [number, number, number], fov?: number) => void;
   info: () => Record<string, number | string>;
   /** The weather and clock (scripts can set `hour`, `rate`, or call `set('rain', true)`). */
   weather: Weather;
+  world: TownWorld;
 }
 
 declare global {
@@ -99,15 +105,46 @@ export async function startApp(container: HTMLElement) {
     hud.setVisible(true);
     document.body.classList.add('driving');
   };
+  const foot = new FootMode(world, scene, camera, renderer.domElement);
+  foot.blocker = (x, z) => drive.car.visible && drive.contains(x, z, 0.05);
   const exitDrive = () => {
-    if (!drive.active) return;
+    if (!drive.active && !foot.active) return;
+    const at = foot.active ? foot.pos : drive.pos;
+    foot.exit();
     drive.exit();
     hud.setVisible(false);
-    document.body.classList.remove('driving');
-    // hand the camera back to the orbit controls, looking at the car's last spot
+    document.body.classList.remove('driving', 'walking');
+    // hand the camera back to the orbit controls, looking at the last spot
     director.orbit.enabled = true;
-    director.orbit.target.copy(drive.pos).setY(drive.pos.y + 1);
+    director.orbit.target.copy(at).setY(at.y + 1);
     director.orbit.update();
+  };
+  /** Start walking: at a given spot, or wherever the camera is looking. */
+  const enterFoot = (at?: { x: number; z: number; heading?: number }) => {
+    let p = at ?? { x: director.orbit.target.x, z: director.orbit.target.z };
+    if (!at && world.solidAt(p.x, p.z)) p = world.nearestRoad(p.x, p.z, 0);
+    exitDrive();
+    director.tour = false;
+    director.setMode('orbit');
+    director.orbit.enabled = false;
+    const look = camera.getWorldDirection(new THREE.Vector3());
+    foot.enter(p.x, p.z, at?.heading ?? Math.atan2(look.x, look.z));
+    hud.setVisible(true);
+    document.body.classList.add('driving', 'walking');
+  };
+  /** F: step out of the car, or get back into it when standing next to it. */
+  const swapSeat = () => {
+    if (drive.active) {
+      if (Math.abs(drive.speed) > 3) return;
+      drive.park();
+      const p = drive.doorSpot();
+      foot.enter(p.x, p.z, drive.heading + Math.PI / 2);
+      document.body.classList.add('walking');
+    } else if (foot.active && drive.car.visible && drive.contains(foot.pos.x, foot.pos.z, 2.2)) {
+      foot.exit();
+      drive.resume();
+      document.body.classList.remove('walking');
+    }
   };
 
   const post = new PostFX(renderer, scene, camera, quality);
@@ -162,7 +199,7 @@ export async function startApp(container: HTMLElement) {
   setProgress(0.94, 'Compiling shaders');
   await renderer.compileAsync(scene, camera);
 
-  const ui = showUI ? createUI({ sky, post, director, world, renderer, drive, driveState, enterDrive, exitDrive, mist, setPreset, preset, fog, physical, weather }) : null;
+  const ui = showUI ? createUI({ sky, post, director, world, renderer, drive, driveState, enterDrive, exitDrive, enterFoot: () => enterFoot(), mist, setPreset, preset, fog, physical, weather }) : null;
   if (!ui) document.body.classList.add('no-ui');
 
   const hudShot = document.getElementById('hud-shot');
@@ -175,10 +212,18 @@ export async function startApp(container: HTMLElement) {
 
   window.addEventListener('keydown', (e) => {
     if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
-    if (e.code === 'KeyV') return drive.active ? exitDrive() : enterDrive();
+    if (e.code === 'KeyV') return drive.active || foot.active ? exitDrive() : enterDrive();
     if (e.code === 'KeyH') return document.body.classList.toggle('no-ui');
+    if (e.code === 'KeyG' && !drive.active && !foot.active) return enterFoot();
+    if (foot.active) {
+      if (e.code === 'Escape') exitDrive();
+      else if (e.code === 'KeyF' || e.code === 'KeyE' || e.code === 'Enter') swapSeat();
+      else if (e.code === 'KeyM') hud.setBig(!hud.bigMap);
+      return;
+    }
     if (drive.active) {
       if (e.code === 'Escape') exitDrive();
+      else if (e.code === 'KeyF' || e.code === 'KeyE' || e.code === 'Enter') swapSeat();
       else if (e.code === 'KeyC') drive.camMode = (drive.camMode + 1) % 3;
       else if (e.code === 'KeyR') drive.reset();
       else if (e.code === 'KeyM') hud.setBig(!hud.bigMap);
@@ -243,6 +288,11 @@ export async function startApp(container: HTMLElement) {
       drive.focus(focus);
       hud.update(drive.pos.x, drive.pos.z, drive.heading, drive.speed, drive.onRoad, drive.gear, weather.enabled ? weather.label : '');
       sky.updateShadows(focus, 70);
+    } else if (foot.active) {
+      foot.update(dt);
+      foot.focus(focus);
+      hud.update(foot.pos.x, foot.pos.z, foot.heading - Math.PI / 2, foot.speed, true, 0, weather.enabled ? weather.label : '', true);
+      sky.updateShadows(focus, 45);
     } else {
       director.update(dt);
       director.focus(focus);
@@ -251,17 +301,18 @@ export async function startApp(container: HTMLElement) {
     if (weather.enabled) applyLook(weather.update(dt));
     const raining = weather.enabled ? weather.rain : (STATIC_RAIN[preset.name] ?? 0);
     const cover = THREE.MathUtils.smoothstep(sky.clouds.coverage, 0.3, 0.85);
-    rain.update(dt, camera, raining, weather.wind, sky.sun.intensity * 0.25 + sky.hemi.intensity * 1.6);
+    rain.update(dt, camera, foot.active && foot.indoors ? 0 : raining, weather.wind, sky.sun.intensity * 0.25 + sky.hemi.intensity * 1.6);
     stars.update(camera, (weather.enabled ? weather.night : preset.name === 'Night' ? 1 : 0) * (1 - cover) * 0.9);
     lightning.intensity = weather.enabled ? weather.flash * 6 : 0;
     if (physical && lightning.intensity > 0.05) physical.uniforms.uExposure.value *= 1 + weather.flash * 3;
-    drive.audio.setRain(raining);
+    drive.audio.setRain(foot.active && foot.indoors ? raining * 0.35 : raining);
     drive.headlight.intensity = drive.active ? 320 * THREE.MathUtils.smoothstep(fog.lampsOn, 0.3, 0.7) : 0;
-    world.update(dt, elapsed, camera.position, drive.active ? drive.pos : null);
+    const player = drive.active ? drive.pos : foot.active ? foot.pos : null;
+    world.update(dt, elapsed, camera.position, player);
     mist.update(elapsed);
     fog.tick(dt);
     ui?.update(dt);
-    water.update(dt, elapsed, focus, surfaceUniforms.uWet.value, isWater, drive.active ? drive.pos : null);
+    water.update(dt, elapsed, focus, surfaceUniforms.uWet.value, isWater, player);
     renderer.info.reset();
     physical?.render(camera, dt);
     post.render(dt);
@@ -332,13 +383,18 @@ export async function startApp(container: HTMLElement) {
     simulate: (seconds, keys, ghost = false) => {
       drive.ghost = ghost;
       drive.setKeys(keys);
+      foot.setKeys(keys);
       for (let i = 0; i < Math.round(seconds * 60); i++) {
         drive.update(1 / 60);
-        world.update(1 / 60, (elapsed += 1 / 60), camera.position, drive.pos);
+        foot.update(1 / 60);
+        world.update(1 / 60, (elapsed += 1 / 60), camera.position, foot.active ? foot.pos : drive.pos);
       }
       drive.setKeys([]);
+      foot.setKeys([]);
       drive.ghost = false;
     },
+    walk: (x, z, heading) => enterFoot(x !== undefined && z !== undefined ? { x, z, heading } : undefined),
+    swapSeat,
     exitDrive,
     look: (p, t, fov) => {
       exitDrive();
@@ -350,6 +406,7 @@ export async function startApp(container: HTMLElement) {
       director.orbit.update();
     },
     weather,
+    world,
     info: () => ({
       fps,
       calls,
@@ -361,6 +418,10 @@ export async function startApp(container: HTMLElement) {
       speed: drive.speed,
       x: drive.pos.x,
       z: drive.pos.z,
+      footX: foot.pos.x,
+      footY: foot.pos.y,
+      footZ: foot.pos.z,
+      indoors: foot.indoors ? 1 : 0,
       heading: drive.heading,
       gear: drive.gear,
       rpm: drive.rpm,

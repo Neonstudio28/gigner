@@ -7,6 +7,8 @@ import { SignBook } from './signs';
 import { createTerrain, groundHeight, heightAt as groundHeightPre, MAP_RADIUS, setDevelopment, waterAt, type WaterHit } from './terrain';
 import { createVegetation, type Vegetation, type TreeIndex } from './vegetation';
 import { Traffic } from './traffic';
+import { Pedestrians } from './pedestrians';
+import { clearZones, zoneAt, rooms, type Zone } from './buildings/interiors';
 import { loadFonts } from './fonts';
 import { SHOTS, type Shot } from './shots';
 import type { Ctx } from './buildings/common';
@@ -18,6 +20,8 @@ import type { RoadNetwork, RoadHit } from './roads/network';
 
 export interface TownWorldOptions {
   traffic?: boolean;
+  /** How many townsfolk walk the sidewalks (0 for none). */
+  pedestrians?: number;
   onProgress?: (fraction: number, label: string) => void;
 }
 
@@ -54,6 +58,8 @@ export interface Lamp {
   g: number;
   b: number;
   power: number;
+  /** Ceiling light inside a walk-in building. */
+  indoor?: boolean;
 }
 
 export interface TownWorld {
@@ -67,6 +73,10 @@ export interface TownWorld {
   solidAt: (x: number, z: number, y?: number) => boolean;
   /** River or lake surface over a point (height and current), or null. */
   waterAt: (x: number, z: number) => WaterHit | null;
+  /** Floor (and ceiling, when indoors) of a walk-in building, porch or stair under a point. */
+  floorAt: (x: number, z: number, y?: number) => { floor: number; ceil?: number } | null;
+  /** The rooms you can walk into. */
+  rooms: Zone[];
   /** Road carriageway under (x, z), if any. */
   roadAt: (x: number, z: number, nearY?: number) => RoadHit | null;
   /** Closest drivable lane point and its heading (radians, 0 = +X). */
@@ -77,6 +87,7 @@ export interface TownWorld {
   shots: Shot[];
   spawn: THREE.Vector3;
   traffic: Traffic;
+  pedestrians: Pedestrians;
   materials: MaterialLib;
   signs: SignBook;
   vegetation: Vegetation;
@@ -107,16 +118,16 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   const occ = new Occupancy();
   const solids = new Occupancy(16);
   occ.solids = solids;
-  kit.onSolid = (x, z, w, d, ry) => solids.add(x, z, w, d, ry, 0, false);
+  kit.onSolid = (x, z, w, d, ry, top) => solids.add(x, z, w, d, ry, 0, false, -Infinity, top ?? Infinity);
   // light sources for the volumetric fog, merged per ~4 m cell (a canopy of panels is one glow, not twenty)
   const lightCells = new Map<string, Lamp>();
-  kit.onLight = (p, color, power) => {
+  kit.onLight = (p, color, power, indoor) => {
     // well above the ground only: skips the lit screens and signs at knee height
     if (p.y - groundHeightPre(p.x, p.z) < 2.2) return;
-    const key = `${Math.floor(p.x / 4)},${Math.floor(p.y / 4)},${Math.floor(p.z / 4)}`;
+    const key = `${Math.floor(p.x / 4)},${Math.floor(p.y / 4)},${Math.floor(p.z / 4)}${indoor ? 'i' : ''}`;
     const l = lightCells.get(key);
     if (!l) {
-      lightCells.set(key, { x: p.x, y: p.y, z: p.z, r: color.r, g: color.g, b: color.b, power });
+      lightCells.set(key, { x: p.x, y: p.y, z: p.z, r: color.r, g: color.g, b: color.b, power, indoor });
       return;
     }
     const t = power / (l.power + power);
@@ -149,6 +160,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
     },
   };
 
+  clearZones();
   await progress(0.08, 'Grading the valley and laying out roads');
   const padY = registerPads();
   registerFarmPads();
@@ -197,6 +209,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   const traffic = new Traffic(materials, signs, net);
   traffic.enabled = opts.traffic ?? true;
   root.add(terrain, statics, dynamic, vegetation.group, traffic.group);
+  let pedestrians: Pedestrians | null = null;
 
   // the drawn ground mesh (not the analytic terrain), so cars ride exactly on what is on screen
   const groundAt = (x: number, z: number, nearY?: number) => {
@@ -209,6 +222,13 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
     return ok.length ? Math.max(...ok) : Math.min(...c);
   };
 
+  try {
+    pedestrians = new Pedestrians(materials, net, groundAt, opts.pedestrians ?? 70);
+    root.add(pedestrians.group);
+  } catch (err) {
+    console.error('[pedestrians] failed', err);
+  }
+
   return {
     root,
     heightAt: groundHeight,
@@ -217,6 +237,8 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
       return solids.blocked(x, z, 0, y) || (trees as TreeIndex).hit(x, z) || Math.hypot(x, z) > MAP_RADIUS;
     },
     waterAt,
+    floorAt: zoneAt,
+    rooms: rooms(),
     roadAt: (x, z, nearY) => net.roadAt(x, z, nearY),
     nearestRoad: (x, z, prefer) => net.nearestLane(x, z, prefer),
     isOccupied: (x, z, pad = 0) => occ.blocked(x, z, pad),
@@ -230,6 +252,9 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
     shots: SHOTS,
     spawn: new THREE.Vector3(-60, 1.7, 2.5),
     traffic,
+    get pedestrians() {
+      return pedestrians!;
+    },
     materials,
     signs,
     vegetation,
@@ -238,6 +263,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
       windUniform.value = elapsed;
       for (const a of pl.animated) a.update(dt, elapsed);
       traffic.update(dt, camera, player);
+      pedestrians?.update(dt, camera, player);
       vegetation.update(camera);
     },
     dispose() {

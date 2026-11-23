@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Ctx, windowAt, doorAt, flatRoof, rooftop, downspout, flagPole, storefront } from './common';
 import { P } from '../palette';
 import type { Kit, Col } from '../core/kit';
+import { shell, room, addZone, furnishSheriff } from './interiors';
 
 export function church(c: Ctx, x: number, z: number, ry: number) {
   const { kit: k, signs } = c;
@@ -50,20 +51,38 @@ export function sheriffOffice(c: Ctx, x: number, z: number, ry: number) {
   const H = 7.0;
   const wall = 0xe3d48d;
   const zf = d / 2;
-  c.occ.add(x, z + 1.5, w, d + 3, ry, 1.5);
+  c.occ.add(x, z + 1.5, w, d + 3, ry, 1.5, false);
   k.at(x, z, ry, () => {
-    k.box(0, 0.5, 0, w, H, d, wall, 'siding');
+    // ground floor: front office, squad room and two holding cells; the floor above stays solid
+    const y0 = 0.52;
+    const cols = [-10.5, -7, -3.5, 3.5, 7, 10.5];
+    const { a, b } = shell(k, {
+      w,
+      d,
+      y0,
+      h: 3.1,
+      wall,
+      wallMat: 'siding',
+      lining: 0xe6e2d2,
+      floor: 0xcfc9b8,
+      floorMat: 'concrete',
+      frame: P.trimWhite,
+      front: [{ x: 0, w: 1.9, h: 2.4, door: true }, ...cols.map((wx) => ({ x: wx, w: 1.3, y: 0.88, h: 1.6 }))],
+      left: [-3, 3].map((wx) => ({ x: wx, w: 1.2, y: 0.88, h: 1.6 })),
+    });
+    room(k, y0, () => furnishSheriff(k, rng, a, b, 0));
+    k.box(0, y0 + 3.1, 0, w, H + 0.5 - y0 - 3.1, d, wall, 'siding');
+    addZone(k, 0, zf + 1.5, w - 0.6, 3.0, 0.5);
+    addZone(k, 0, zf + 3.55, 4, 1.1, 0.5, 0);
     k.box(0, 0, 0, w + 0.1, 0.5, d + 0.1, 0x9b9893, 'concrete');
     k.roof(0, H + 0.5, 0, w, [[d / 2, 0], [0, 2.6], [-d / 2, 0]], P.roofNavy, 'roofMetal', { trim: P.trimWhite, fill: wall, fillMat: 'siding', ridge: P.roofNavy, eaveOH: 0.6 });
     for (const [cx, cz] of [[-w / 2, -d / 2], [w / 2, -d / 2], [-w / 2, d / 2], [w / 2, d / 2]]) k.box(cx, 0.5, cz, 0.24, H, 0.24, P.trimWhite);
     k.box(0, 3.85, zf + 0.03, w, 0.16, 0.08, P.trimWhite);
-    const cols = [-10.5, -7, -3.5, 3.5, 7, 10.5];
     for (const wx of cols) {
-      windowAt(k, wx, 1.4, zf, 1.3, 1.6, { mx: 2, my: 2, frame: P.trimWhite });
+      windowAt(k, wx, 1.4, zf, 1.3, 1.6, { mx: 2, my: 2, frame: P.trimWhite, open: true });
       windowAt(k, wx, 4.6, zf, 1.3, 1.5, { mx: 2, my: 2, frame: P.trimWhite, ac: rng.chance(0.25) });
     }
     windowAt(k, 0, 4.6, zf, 2.2, 1.5, { mx: 3, my: 2, frame: P.trimWhite });
-    doorAt(k, 0, 0.5, zf, 1.9, 2.4, 0x31445a, { glass: true, double: true, frame: P.trimWhite });
     // long porch canopy
     k.box(0, 3.2, zf + 1.4, w - 1, 0.25, 2.8, 0x9ea4aa, 'roofMetal');
     k.box(0, 3.45, zf + 1.4, w - 0.9, 0.1, 2.9, 0x8a9096, 'metal');
@@ -77,7 +96,7 @@ export function sheriffOffice(c: Ctx, x: number, z: number, ry: number) {
     }
     k.at(-w / 2, 0, -Math.PI / 2, () => {
       for (const wx of [-3, 3]) {
-        windowAt(k, wx, 1.4, 0, 1.2, 1.6, { mx: 2, my: 2, frame: P.trimWhite });
+        windowAt(k, wx, 1.4, 0, 1.2, 1.6, { mx: 2, my: 2, frame: P.trimWhite, open: true });
         windowAt(k, wx, 4.6, 0, 1.2, 1.5, { mx: 2, my: 2, frame: P.trimWhite });
       }
     });

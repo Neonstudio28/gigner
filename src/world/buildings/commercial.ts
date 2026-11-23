@@ -4,6 +4,7 @@ import { cafeTable, barberPole, planter } from '../props';
 import { P } from '../palette';
 import type { SignId } from '../signs';
 import type { Col, SignRef } from '../core/kit';
+import { shell, room, furnishStore, furnishBar, furnishCafe, furnishOffice, furnishDiner, type Opening } from './interiors';
 
 export interface StoreOpts {
   x: number;
@@ -38,6 +39,8 @@ export interface StoreOpts {
   fireEscape?: boolean;
   planters?: boolean;
   roofSign?: SignId;
+  /** What you find when you walk in (default: a shop); 'none' leaves the block solid. */
+  inside?: 'store' | 'bar' | 'cafe' | 'office' | 'none';
 }
 
 /** Classic brick main-street block: storefront, sign band, cornice, flat roof with clutter. */
@@ -49,13 +52,26 @@ export function brickStore(c: Ctx, o: StoreOpts) {
   const wc = o.wallColor ?? 0xffffff;
   const trim = o.trim ?? P.trimCream;
   const zf = o.d / 2;
-  c.occ.add(o.x, o.z, o.w, o.d, o.ry, 1.5);
+  const inside = o.inside ?? 'store';
+  c.occ.add(o.x, o.z, o.w, o.d, o.ry, 1.5, inside === 'none');
   k.at(o.x, o.z, o.ry, () => {
-    k.box(0, 0, 0, o.w, H, o.d, wc, wall);
+    if (inside === 'none') k.box(0, 0, 0, o.w, H, o.d, wc, wall);
     k.box(0, 0, 0, o.w + 0.08, 0.4, o.d + 0.08, 0x8f8c87, 'concrete');
     for (const sx of [-1, 1]) k.box(sx * (o.w / 2 - 0.3), 0.4, zf + 0.07, 0.62, H - 1.4, 0.14, wc, wall);
     const sfH = 3.4;
-    storefront(k, -o.w / 2 + 0.75, o.w / 2 - 0.75, 0.4, zf, sfH, { frame: o.frame ?? 0x37322e, doorX: o.door ?? o.w * 0.25 });
+    if (inside === 'none') storefront(k, -o.w / 2 + 0.75, o.w / 2 - 0.75, 0.4, zf, sfH, { frame: o.frame ?? 0x37322e, doorX: o.door ?? o.w * 0.25 });
+    else {
+      // ground floor is a real room behind real glass; the storeys above stay a solid block
+      const y0 = 0.42;
+      const hh = 3.5;
+      const dx = o.door ?? o.w * 0.25;
+      k.box(0, y0 + hh, 0, o.w, H - y0 - hh, o.d, wc, wall);
+      const front: Opening[] = [{ x: dx, w: 1.5, h: 2.45, door: true }];
+      for (const [x0, x1] of [[-o.w / 2 + 0.75, dx - 0.95], [dx + 0.95, o.w / 2 - 0.75]]) if (x1 - x0 > 0.8) front.push({ x: (x0 + x1) / 2, w: x1 - x0, y: 0.5, h: 2.75 });
+      const dark = inside === 'bar';
+      const { a, b } = shell(k, { w: o.w, d: o.d, y0, h: hh, wall: wc, wallMat: wall, front, frame: o.frame ?? 0x37322e, lining: dark ? 0x6b5a48 : inside === 'cafe' ? 0xefe4cf : 0xe9e6dc, floor: inside === 'store' ? 0xd9d4c6 : 0xffffff, floorMat: inside === 'store' ? 'concrete' : 'planks' });
+      room(k, y0, () => (inside === 'bar' ? furnishBar : inside === 'cafe' ? furnishCafe : inside === 'office' ? furnishOffice : furnishStore)(k, rng, a, b, dx));
+    }
     // brick piers split long storefronts into bays
     const bays = Math.max(1, Math.round((o.w - 1.5) / 6.5));
     for (let i = 1; i < bays; i++) {
@@ -159,7 +175,7 @@ export function gasStation(c: Ctx, x: number, z: number, ry: number) {
   // the forecourt stays drivable: only the store, canopy posts, islands and pylon are solid
   c.occ.add(x, z, 42, 36, ry, 1, false);
   k.at(x, z, ry, () => {
-    k.solid(-6, -11.5, 22, 11);
+    k.solid(-0.75, -11.5, 11.5, 11);
     for (const ix of [-4.2, 4.2]) k.solid(-3 + ix, 5.5, 1.5, 7.4);
     for (const px of [-8.5, 8.5]) for (const pz of [-2.6, 2.6]) k.solid(-3 + px, 5.5 + pz, 0.7, 0.7);
     k.solid(17.5, 15.5, 3.8, 1.0);
@@ -193,9 +209,14 @@ export function gasStation(c: Ctx, x: number, z: number, ry: number) {
     }
     // store + service bays
     const sz = -11.5;
-    k.box(-6, 0.05, sz, 22, 4.8, 11, 0xffffff, 'brickRed');
+    k.box(-0.75, 0.05, sz, 11.5, 4.8, 11, 0xffffff, 'brickRed');
+    // the mini-mart is a real room: shelves, coolers and a till
+    k.at(-11.75, sz, 0, () => {
+      const { a, b } = shell(k, { w: 10.5, d: 11, y0: 0.12, h: 3.2, wall: 0xffffff, wallMat: 'brickRed', lining: 0xeeeae0, floor: 0xd9d4c6, floorMat: 'concrete', frame: 0x2e2a27, front: [{ x: 2.95, w: 1.3, h: 2.4, door: true }, { x: -1.2, w: 6.5, y: 0.5, h: 2.3 }] });
+      k.box(0, 3.32, 0, 10.5, 4.85 - 3.32, 11, 0xffffff, 'brickRed');
+      room(k, 0.12, () => furnishStore(k, c.rng, a, b, 2.95, true));
+    });
     k.at(-6, sz + 5.5, 0, () => {
-      storefront(k, -10.2, -1.5, 0.05, 0, 3.0, { frame: 0x2e2a27, doorX: -2.8 });
       k.box(0, 3.3, 0.06, 22, 1.2, 0.12, 0xf4f1ea);
       k.sign(-4.5, 3.9, 0.14, 9.5, 1.0, signs.get('gasStore'));
       for (const bx of [3.2, 7.6]) {
@@ -274,19 +295,37 @@ export function diner(c: Ctx, x: number, z: number, ry: number) {
   const d = 12;
   const H = 4.4;
   const zf = d / 2;
-  c.occ.add(x, z, w, d, ry, 1.5);
+  const doorX = -6.6;
+  c.occ.add(x, z, w, d, ry, 1.5, false);
   k.at(x, z, ry, () => {
-    k.box(0, 0, 0, w, H, d, 0xf2efe6, 'paint');
-    k.box(0, 0, 0, w + 0.05, 0.9, d + 0.05, 0x1f6f6a);
-    k.box(0, 0.9, 0, w + 0.08, 0.12, d + 0.08, 0xd5d8db, 'metal');
-    k.box(0, 2.85, 0, w + 0.08, 0.14, d + 0.08, 0xd5d8db, 'metal');
-    k.box(0, 3.0, 0, w + 0.06, 0.55, d + 0.06, 0xc8262c);
-    k.pane(0, 1.05, zf + 0.032, w - 1.2, 1.7, 'shop', 1.05);
-    for (let i = 0; i <= 9; i++) k.box(-w / 2 + 0.6 + i * ((w - 1.2) / 9), 1.0, zf + 0.04, 0.08, 1.8, 0.06, 0xd5d8db, 'metal');
-    k.at(w / 2, 0, Math.PI / 2, () => {
-      k.pane(0, 1.05, 0.032, d - 1.5, 1.7, 'shop', 1.05);
-      doorAt(k, 3.6, 0.05, 0.02, 1.1, 2.3, 0xd5d8db, { glass: true });
+    const y0 = 0.14;
+    const { a, b } = shell(k, {
+      w,
+      d,
+      y0,
+      h: 3.4,
+      wall: 0xf2efe6,
+      wallMat: 'paint',
+      lining: 0xf4efe2,
+      floor: 0xcfd6d4,
+      floorMat: 'concrete',
+      frame: 0xd5d8db,
+      front: [{ x: doorX, w: 1.3, h: 2.4, door: true }, { x: 1.2, w: 13.6, y: 0.91, h: 1.7 }],
+      right: [{ x: 0, w: d - 2.6, y: 0.91, h: 1.7 }],
     });
+    room(k, y0, () => furnishDiner(k, a, b, doorX));
+    k.box(0, 0, 0, w, y0, d, 0x8f8c87, 'concrete');
+    k.box(0, y0 + 3.4, 0, w, H - y0 - 3.4, d, 0xf2efe6);
+    // enamel bands wrap the walls, broken at the door
+    const band = (y: number, h: number, col: Col, mat: string, out: number) => {
+      for (const [x0, x1] of y < 2.4 ? [[-w / 2 - out, doorX - 0.65], [doorX + 0.65, w / 2 + out]] : [[-w / 2 - out, w / 2 + out]]) k.box((x0 + x1) / 2, y, zf + out / 2, x1 - x0, h, out, col, mat);
+      k.box(0, y, -zf - out / 2, w + out * 2, h, out, col, mat);
+      for (const s of [-1, 1]) k.box(s * (w / 2 + out / 2), y, 0, out, h, d, col, mat);
+    };
+    band(0, 0.9, 0x1f6f6a, 'paint', 0.03);
+    band(0.9, 0.12, 0xd5d8db, 'metal', 0.05);
+    band(2.85, 0.14, 0xd5d8db, 'metal', 0.05);
+    band(3.0, 0.55, 0xc8262c, 'paint', 0.04);
     flatRoof(k, w, d, H, 0.3, 0xd5d8db);
     rooftop(k, rng, w, d, H, 1);
     for (const s of [-1, 1]) k.box(s * 3.5, H - 0.1, 0.5, 0.2, 1.4, 0.2, P.metalGrey, 'metal');

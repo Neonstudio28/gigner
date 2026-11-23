@@ -70,7 +70,7 @@ const L = {
   bait: legacy('bait', 18, 16, (c, x, z, ry) => woodStore(c, x, z, ry, 'bait', 0x7a5a3c), 0),
   feed: legacy('feed', 18, 16, (c, x, z, ry) => woodStore(c, x, z, ry, 'feed', 0x9b7653), 0),
   warehouse: legacy('warehouse', 34, 24, warehouse, 0),
-  bank: legacy('bankBldg', 30, 24, (c, x, z, ry) => brickStore(c, { x, z, ry, w: 30, d: 24, sign: 'bank', stories: 2, eyebrow: true, sideWindows: 1, chimneys: 2 }), 0),
+  bank: legacy('bankBldg', 30, 24, (c, x, z, ry) => brickStore(c, { x, z, ry, w: 30, d: 24, sign: 'bank', inside: 'office', stories: 2, eyebrow: true, sideWindows: 1, chimneys: 2 }), 0),
 };
 
 /* ------------------------------------------------------------------------- helpers */
@@ -158,12 +158,15 @@ interface Shop {
   fixed?: boolean;
   make: (c: Ctx, x: number, z: number, ry: number, w: number) => void;
 }
-const st = (sign: SignId, w: number, d: number, o: Partial<StoreOpts> = {}): Shop => ({ w, d, make: (c, x, z, ry, ww) => brickStore(c, { x, z, ry, w: ww, d, sign, ...o }) });
+/** What is behind a shopfront, going by its name. */
+const insideOf = (key: string): StoreOpts['inside'] =>
+  /saloon|tavern|spur|steak/.test(key) ? 'bar' : /cafe|bakery|pizza|chinese|icecream|kettle|espresso|lunch|deli|donut/.test(key) ? 'cafe' : /bank|union|realty|mutual|credit|bell|gazette|printing|travel|bail|hotel|loan|salon|barber|optical|tailor|law|title|dental|clinic|insur/.test(key) ? 'office' : 'store';
+const st = (sign: SignId, w: number, d: number, o: Partial<StoreOpts> = {}): Shop => ({ w, d, make: (c, x, z, ry, ww) => brickStore(c, { x, z, ry, w: ww, d, sign, inside: insideOf(sign), ...o }) });
 /** Brick storefront with a custom painted sign. */
 const cs = (key: string, title: string, bg: string, fg: string, w: number, d: number, o: Partial<StoreOpts> = {}, font?: string): Shop => ({
   w,
   d,
-  make: (c, x, z, ry, ww) => brickStore(c, { x, z, ry, w: ww, d, signRef: board(c, `shop.${key}`, title, '', bg, fg, { font, w: 1024, h: 100, border: bg }), ...o }),
+  make: (c, x, z, ry, ww) => brickStore(c, { x, z, ry, w: ww, d, signRef: board(c, `shop.${key}`, title, '', bg, fg, { font, w: 1024, h: 100, border: bg }), inside: insideOf(key), ...o }),
 });
 const fx = (w: number, d: number, fn: (c: Ctx, x: number, z: number, ry: number) => void): Shop => ({ w, d, fixed: true, make: (c, x, z, ry) => fn(c, x, z, ry) });
 const falseFrontShop = (sign: SignId, w: number, d: number, color: Col) =>

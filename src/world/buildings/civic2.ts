@@ -4,6 +4,7 @@ import type { Ctx } from './common';
 import { windowAt, doorAt, flatRoof, rooftop, flagPole, balustrade, pedWindow, chimney, downspout } from './common';
 import type { Col, Kit, SignRef } from '../core/kit';
 import { Rng } from '../core/rng';
+import { shell, room, addZone, furnishCourt } from './interiors';
 import { P } from '../palette';
 import { vehicle, VEHICLE_LENGTH, type VehicleType } from '../vehicles';
 import { acornLamp, bench, planter, securityFence, trashCan, streetLight, hydrant } from '../props';
@@ -191,14 +192,39 @@ function courthouse(c: Ctx, x: number, z: number, ry: number, seed: number) {
   c.occ.add(x, z, 58, 42, ry, 1, false);
   const frieze = sgn(c, 'ch.frieze', () => textOnly(640, 64, [{ text: 'PINE COUNTY COURT HOUSE', font: F_OSW, weight: '700', color: '#7a6a3c', y: 0.52, size: 0.74, maxW: 0.97, letter: 3 }]));
   k.at(x, z, ry, () => {
-    k.solid(0, ZC, W + 1, D + 1);
-    k.solid(0, ZC + zb - BP / 2, BW, BP + 0.5);
+    for (const s of [-1, 1]) k.solid(s * (BW / 4 + 0.85), ZC + zb - BP / 2, BW / 2 - 1.7, BP + 0.5);
     k.at(0, ZC, 0, () => {
       // raised basement, walls, bay
       k.box(0, 0, 0, W + 0.8, B, D + 0.8, BASE, 'stone');
       k.box(0, B - 0.4, 0, W + 1.2, 0.4, D + 1.2, TRIM, 'stone');
-      k.box(0, B, 0, W, FH * 3, D, WALL, 'stucco');
-      k.box(0, B, zf + BP / 2 - 0.2, BW, FH * 3, BP + 0.4, WALL, 'stucco');
+      // first floor: the courtroom and the clerks' wings, entered through the central bay
+      const y0 = B + 0.02;
+      const CH = FH - 0.3;
+      const wing = [10.9, 13.9, 16.9, 19.9].flatMap((px) => [-px, px]);
+      const { a, b } = shell(k, {
+        w: W,
+        d: D,
+        y0,
+        h: CH,
+        t: 0.4,
+        wall: WALL,
+        wallMat: 'stucco',
+        lining: 0xeee8d8,
+        floor: 0xc9b89a,
+        frame: 0x4b3020,
+        lights: 5.5,
+        front: [{ x: 0, w: 3.4, h: 3.0, door: true }, ...wing.map((px) => ({ x: px, w: 1.5, y: 0.88, h: 2.8 }))],
+        back: [-16, -12, -8, -4, 4, 8, 12, 16].map((px) => ({ x: px, w: 1.5, y: 0.88, h: 2.8 })),
+        left: [0, 1, 2, 3, 4, 5].map((n) => ({ x: -9.4 + n * 3.76, w: 1.5, y: 0.88, h: 2.8 })),
+        right: [0, 1, 2, 3, 4, 5].map((n) => ({ x: -9.4 + n * 3.76, w: 1.5, y: 0.88, h: 2.8 })),
+      });
+      room(k, y0, () => furnishCourt(k, a, b));
+      k.box(0, y0 + CH, 0, W, B + FH * 3 - y0 - CH, D, WALL, 'stucco');
+      k.box(0, s2, zf + BP / 2 - 0.2, BW, FH * 2, BP + 0.4, WALL, 'stucco');
+      for (const s of [-1, 1]) k.box(s * (BW / 4 + 0.85), B, zf + BP / 2 - 0.2, BW / 2 - 1.7, FH, BP + 0.4, WALL, 'stucco');
+      k.box(0, B + 3.1, zf + BP / 2 - 0.2, 3.4, FH - 3.1, BP + 0.4, WALL, 'stucco');
+      k.box(0, B + 3.02, zf + BP / 2, 3.4, 0.08, BP, 0xeee8d8, 'paint', { cast: false });
+      addZone(k, 0, zf + BP / 2 - 0.1, 3.4, BP + 0.8, y0, y0, B + 3.0);
       k.box(0, 0, zf + BP / 2 - 0.2, BW + 0.8, B, BP + 1.2, BASE, 'stone');
       k.box(0, B - 0.4, zf + BP / 2 - 0.2, BW + 1.2, 0.4, BP + 1.6, TRIM, 'stone');
       for (const y of [s2, s3]) {
@@ -230,16 +256,22 @@ function courthouse(c: Ctx, x: number, z: number, ry: number, seed: number) {
         for (const px of [8.5, 12.4, 15.4, 18.4, 22.0]) pilaster(k, s * px, B, zf, px === 22.0 ? 1.1 : 0.7, TOP - 2.0 - B, TRIM);
         for (const px of wx) {
           windowAt(k, s * px, 1.0, zf, 1.3, 1.0, { frame: TRIM, mx: 2, my: 1, glass: GL });
-          pedWindow(k, s * px, B + 0.9, zf, 1.5, 2.8, TRIM, GL);
+          pedWindow(k, s * px, B + 0.9, zf, 1.5, 2.8, TRIM, GL, true);
           windowAt(k, s * px, s2 + 0.9, zf, 1.5, 3.0, { frame: TRIM, mx: 2, my: 3, glass: GL });
           windowAt(k, s * px, s3 + 0.7, zf, 1.5, 1.8, { frame: TRIM, mx: 2, my: 2, glass: GL });
         }
       }
       // central bay: paired pilasters, two-storey arched windows, entrance, balcony
       for (const s of [-1, 1]) for (const px of [5.7, 6.9]) pilaster(k, s * px, B, zb, 0.8, TOP - 2.0 - B, TRIM);
-      archWin(k, 0, B, zb, 3.4, 4.2, { glass: 0x3a2a1e, trim: TRIM, mx: 0 });
-      doorAt(k, -0.82, B, zb + 0.1, 1.5, 3.0, 0x4b3020, { glass: true, frame: TRIM });
-      doorAt(k, 0.82, B, zb + 0.1, 1.5, 3.0, 0x4b3020, { glass: true, frame: TRIM });
+      // open double doors under a fanlight
+      k.box(0, B + 3.0, zb + 0.02, 3.6, 0.22, 0.3, TRIM, 'stone');
+      k.box(0, B + 3.22, zb + 0.03, 3.2, 0.9, 0.06, 0x2b3a4a, 'glass');
+      for (let i = -2; i <= 2; i++) k.box(i * 0.64, B + 3.22, zb + 0.07, 0.06, 0.9, 0.04, TRIM);
+      for (const s of [-1, 1]) {
+        k.box(s * 1.75, B, zb + 0.02, 0.22, 3.0, 0.3, TRIM, 'stone');
+        k.box(s * 1.62, B, zb - 0.72, 0.08, 2.95, 1.5, 0x4b3020, 'gloss');
+        k.box(s * 1.57, B + 1.2, zb - 0.72, 0.03, 1.4, 1.0, 0x2b3a4a, 'glass', { cast: false });
+      }
       for (const s of [-1, 1]) {
         archWin(k, s * 3.8, B + 0.5, zb, 1.7, 3.9, { glass: GL, trim: TRIM, mx: 1, bars: [1.6] });
         archWin(k, s * 3.8, s2 + 1.0, zb, 1.7, 5.9, { glass: GL, trim: TRIM, mx: 1, bars: [2.1, 4.2] });
@@ -259,7 +291,7 @@ function courthouse(c: Ctx, x: number, z: number, ry: number, seed: number) {
         for (let i = 0; i < 6; i++) {
           const px = -9.4 + i * 3.76;
           windowAt(k, px, 1.0, f, 1.3, 1.0, { frame: TRIM, mx: 2, my: 1, glass: GL });
-          windowAt(k, px, B + 0.9, f, 1.5, 2.8, { frame: TRIM, mx: 2, my: 3, glass: GL });
+          windowAt(k, px, B + 0.9, f, 1.5, 2.8, { frame: TRIM, mx: 2, my: 3, glass: GL, open: true });
           windowAt(k, px, s2 + 0.9, f, 1.5, 3.0, { frame: TRIM, mx: 2, my: 3, glass: GL });
           windowAt(k, px, s3 + 0.7, f, 1.5, 1.8, { frame: TRIM, mx: 2, my: 2, glass: GL });
         }
@@ -270,7 +302,7 @@ function courthouse(c: Ctx, x: number, z: number, ry: number, seed: number) {
           const px = -16 + i * 4;
           if (px === 0) continue;
           windowAt(k, px, 1.0, f, 1.3, 1.0, { frame: TRIM, mx: 2, my: 1, glass: GL });
-          windowAt(k, px, B + 0.9, f, 1.5, 2.8, { frame: TRIM, mx: 2, my: 3, glass: GL, ac: i === 1 || i === 7 });
+          windowAt(k, px, B + 0.9, f, 1.5, 2.8, { frame: TRIM, mx: 2, my: 3, glass: GL, ac: i === 1 || i === 7, open: true });
           windowAt(k, px, s2 + 0.9, f, 1.5, 3.0, { frame: TRIM, mx: 2, my: 3, glass: GL });
           windowAt(k, px, s3 + 0.7, f, 1.5, 1.8, { frame: TRIM, mx: 2, my: 2, glass: GL });
         }
@@ -286,6 +318,8 @@ function courthouse(c: Ctx, x: number, z: number, ry: number, seed: number) {
 
     // ---- approach: landing, grand stair with cheek walls, lamps, lawn
     const zl = ZC + zb;
+    addZone(k, 0, zl + 1.2, 12.6, 2.6, B);
+    addZone(k, 0, zl + 2.4 + 3.3, 12.0, 6.6, B, 0);
     k.box(0, 0, zl + 1.2, 12.6, B, 2.4, BASE, 'stone');
     steps(k, 0, zl + 2.4, 12.0, B, 11, 0xcfc8b8, 0.6);
     for (const s of [-1, 1]) {

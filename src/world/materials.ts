@@ -93,6 +93,7 @@ export class MaterialLib implements MatResolver {
       ['decal', 'decal', 0.86, 0],
       ['glass', 'glass', 0.08, 0.4],
       ['window', 'window', 0.06, 0],
+      ['clear', 'clear', 0.05, 0.2],
       ['light', 'light', 1, 0],
       ['wire', 'wire', 0.6, 0],
       ['water', 'water', 0.05, 0.3],
@@ -124,6 +125,8 @@ export class MaterialLib implements MatResolver {
     glass.customProgramCacheKey = () => 'pinehollow-glass';
     this.set('glass', glass);
     this.set('window', windowMaterial(surfaceUniforms.uWindowGlow));
+    // real see-through glazing for the buildings you can walk into
+    this.set('clear', new THREE.MeshStandardMaterial({ vertexColors: true, transparent: true, opacity: 0.16, roughness: 0.05, metalness: 0.1, envMapIntensity: 1.0, depthWrite: false }));
     // Unlit, pushed above 1.0 so bloom picks up lamps and neon.
     this.set('light', new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(2.2, 2.2, 2.2) }));
     this.set('wire', new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }));

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Ctx, windowAt, doorAt, chimney, downspout } from './common';
 import { P } from '../palette';
 import type { Col, Kit } from '../core/kit';
+import { shell, room, addZone, furnishHouse } from './interiors';
 
 export interface HouseOpts {
   color: Col;
@@ -100,7 +101,7 @@ export function colonial(c: Ctx, x: number, z: number, ry: number, o: HouseOpts)
 
 /** Single-storey ranch house with a long porch, metal roof, string lights and carport. */
 export function ranch(c: Ctx, x: number, z: number, ry: number, o: HouseOpts & { carport?: boolean; flag?: boolean; lights?: boolean }) {
-  const { kit: k, signs } = c;
+  const { kit: k, signs, rng } = c;
   const w = 14;
   const d = 9;
   const H = 3.2;
@@ -109,9 +110,29 @@ export function ranch(c: Ctx, x: number, z: number, ry: number, o: HouseOpts & {
   const roof = o.roof ?? P.roofNavy;
   const mat = o.wallMat ?? 'siding';
   const zf = d / 2;
-  c.occ.add(x + (o.carport ? 2.5 : 0), z + 1.2, w + (o.carport ? 6 : 1), d + 4, ry, 1);
+  c.occ.add(x + (o.carport ? 2.5 : 0), z + 1.2, w + (o.carport ? 6 : 1), d + 4, ry, 1, false);
   k.at(x, z, ry, () => {
-    k.box(0, F, 0, w, H, d, o.color, mat);
+    // a real house: walk in through the front door
+    const y0 = F + 0.02;
+    const { a, b } = shell(k, {
+      w,
+      d,
+      y0,
+      h: H - 0.3,
+      t: 0.22,
+      wall: o.color,
+      wallMat: mat,
+      lining: 0xece6d8,
+      frame: trim,
+      lights: 7,
+      front: [{ x: -1.6, w: 1.0, h: 2.15, door: true }, { x: -4.6, w: 1.3, y: 0.88, h: 1.5 }, { x: 2.2, w: 1.1, y: 0.88, h: 1.5 }, { x: 5.0, w: 1.1, y: 0.88, h: 1.5 }],
+      left: [-1.8, 1.8].map((wz) => ({ x: wz, w: 1.0, y: 0.88, h: 1.3 })),
+      right: [-1.8, 1.8].map((wz) => ({ x: wz, w: 1.0, y: 0.88, h: 1.3 })),
+      back: [-3, 3].map((wx) => ({ x: wx, w: 1.2, y: 0.98, h: 1.2 })),
+    });
+    room(k, y0, () => furnishHouse(k, rng, a, b, -1.6));
+    k.box(0, y0 + H - 0.3, 0, w, 0.28, d, o.color, mat);
+    addZone(k, 0, zf + 1.3, w - 0.4, 2.6, F);
     k.box(0, 0, 0, w + 0.1, F, d + 0.1, 0x9b9893, 'concrete');
     for (const [cx, cz] of [[-w / 2, -d / 2], [w / 2, -d / 2], [-w / 2, d / 2], [w / 2, d / 2]]) k.box(cx, F, cz, 0.2, H, 0.2, trim);
     k.roof(0, F + H, 0, w, [[zf + 2.6, -0.55], [0, 2.3], [-zf, 0]], roof, 'roofMetal', { trim, fill: o.color, fillMat: mat, ridge: roof, eaveOH: 0.35 });
@@ -119,10 +140,9 @@ export function ranch(c: Ctx, x: number, z: number, ry: number, o: HouseOpts & {
     for (let i = 0; i < 2; i++) k.box(-1.6, 0, zf + 2.75 + i * 0.3, 1.6, F - i * 0.22, 0.3, P.concrete, 'concrete');
     const posts = [-w / 2 + 0.3, -w / 6, w / 6, w / 2 - 0.3];
     for (const px of posts) k.box(px, F, zf + 2.4, 0.22, H - 0.5, 0.22, 0x5d6168);
-    doorAt(k, -1.6, F, zf, 1.0, 2.15, 0x1e1e20, { frame: trim });
-    windowAt(k, -4.6, F + 0.9, zf, 1.3, 1.5, { mx: 2, my: 2, frame: trim, shutters: o.shutters ?? 0x3b4048 });
-    windowAt(k, 2.2, F + 0.9, zf, 1.1, 1.5, { mx: 2, my: 2, frame: trim, shutters: o.shutters ?? 0x3b4048 });
-    windowAt(k, 5.0, F + 0.9, zf, 1.1, 1.5, { mx: 2, my: 2, frame: trim, shutters: o.shutters ?? 0x3b4048 });
+    windowAt(k, -4.6, F + 0.9, zf, 1.3, 1.5, { mx: 2, my: 2, frame: trim, shutters: o.shutters ?? 0x3b4048, open: true });
+    windowAt(k, 2.2, F + 0.9, zf, 1.1, 1.5, { mx: 2, my: 2, frame: trim, shutters: o.shutters ?? 0x3b4048, open: true });
+    windowAt(k, 5.0, F + 0.9, zf, 1.1, 1.5, { mx: 2, my: 2, frame: trim, shutters: o.shutters ?? 0x3b4048, open: true });
     if (o.lights !== false) {
       for (let i = 0; i < posts.length - 1; i++) stringLights(k, posts[i], F + H - 0.7, zf + 2.4, posts[i + 1], F + H - 0.7, zf + 2.4, 7);
     }
@@ -132,13 +152,13 @@ export function ranch(c: Ctx, x: number, z: number, ry: number, o: HouseOpts & {
     }
     for (const s of [-1, 1])
       k.at((s * w) / 2, 0, (s * Math.PI) / 2, () => {
-        windowAt(k, -1.8, F + 0.9, 0, 1.0, 1.3, { mx: 2, my: 2, frame: trim });
-        windowAt(k, 1.8, F + 0.9, 0, 1.0, 1.3, { mx: 2, my: 2, frame: trim });
+        windowAt(k, -1.8, F + 0.9, 0, 1.0, 1.3, { mx: 2, my: 2, frame: trim, open: true });
+        windowAt(k, 1.8, F + 0.9, 0, 1.0, 1.3, { mx: 2, my: 2, frame: trim, open: true });
         windowAt(k, 0, -0.05, 0, 0.6, 0.35, { mx: 1, my: 1, frame: 0x9b9893 });
       });
     k.at(0, -zf, Math.PI, () => {
-      windowAt(k, -3, F + 1.0, 0, 1.2, 1.2, { frame: trim });
-      windowAt(k, 3, F + 1.0, 0, 1.2, 1.2, { frame: trim });
+      windowAt(k, -3, F + 1.0, 0, 1.2, 1.2, { frame: trim, open: true });
+      windowAt(k, 3, F + 1.0, 0, 1.2, 1.2, { frame: trim, open: true });
     });
     chimney(k, -3.5, F + H, -1.0, 3.2, 0xf3f1ea, 'brickPaint');
     downspout(k, w / 2 + 0.05, zf + 0.1, F + H);

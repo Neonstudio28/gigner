@@ -256,6 +256,37 @@ export class DriveMode {
     this.audio.stop();
   }
 
+  /** Step out: the car stays where it stopped, engine off. */
+  park() {
+    this.active = false;
+    this.keys.clear();
+    this.vel.set(0, 0);
+    this.speed = 0;
+    this.audio.stop();
+  }
+
+  /** Get back in the parked car. */
+  resume() {
+    this.active = true;
+    this.snapCam = true;
+    this.audio.start();
+  }
+
+  /** Is a world point inside the car's footprint (plus `pad`)? */
+  contains(x: number, z: number, pad = 0) {
+    const dx = x - this.pos.x;
+    const dz = z - this.pos.z;
+    const c = Math.cos(this.heading);
+    const s = Math.sin(this.heading);
+    return Math.abs(dx * c - dz * s - this.cx) < this.len / 2 + pad && Math.abs(dx * s + dz * c) < this.width / 2 + pad;
+  }
+
+  /** Where the driver stands after getting out. */
+  doorSpot() {
+    const k = this.width / 2 + 0.75;
+    return { x: this.pos.x - Math.sin(this.heading) * k, z: this.pos.z - Math.cos(this.heading) * k };
+  }
+
   place(x: number, z: number, heading: number) {
     this.pos.set(x, 0, z);
     this.heading = heading;

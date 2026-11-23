@@ -39,6 +39,7 @@ export function createUI(o: {
   driveState: { vehicle: string; color: string };
   enterDrive: () => void;
   exitDrive: () => void;
+  enterFoot: () => void;
   mist: Mist;
   setPreset: (name: string) => void;
   preset: { name: string };
@@ -71,9 +72,11 @@ export function createUI(o: {
   const fDrive = gui.addFolder('Drive');
   const dv = {
     toggle: () => (drive.active ? o.exitDrive() : o.enterDrive()),
+    walk: () => o.enterFoot(),
     sound: true,
   };
   fDrive.add(dv, 'toggle').name('Enter / exit car (V)');
+  fDrive.add(dv, 'walk').name('Walk around (G)');
   fDrive
     .add(driveState, 'vehicle', DRIVABLE.map((d) => d.name))
     .name('Vehicle')

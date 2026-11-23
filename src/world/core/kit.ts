@@ -161,9 +161,11 @@ export class Batcher {
 export class Kit {
   private stack: THREE.Matrix4[] = [new THREE.Matrix4()];
   /** Receives world-space collision rectangles registered with `solid()`. */
-  onSolid?: (x: number, z: number, w: number, d: number, ry: number) => void;
+  onSolid?: (x: number, z: number, w: number, d: number, ry: number, top?: number) => void;
   /** Receives light sources (lamp heads, lit panels, neon) for the volumetric fog: world position, colour, power. */
-  onLight?: (p: THREE.Vector3, color: THREE.Color, power: number) => void;
+  onLight?: (p: THREE.Vector3, color: THREE.Color, power: number, indoor: boolean) => void;
+  /** Set while building a room: its lights shine on the furniture but do not glow in the street's fog. */
+  indoor = false;
 
   constructor(
     public batch: Batcher,
@@ -208,14 +210,27 @@ export class Kit {
     return Math.atan2(-(e[2] * lx + e[10] * lz), e[0] * lx + e[8] * lz);
   }
   /** Registers a solid footprint (local coordinates) for vehicle collisions. */
-  solid(x: number, z: number, w: number, d: number, ry = 0) {
+  solid(x: number, z: number, w: number, d: number, ry = 0, h?: number) {
     if (!this.onSolid) return;
-    const p = this.toWorld(x, 0, z);
-    this.onSolid(p.x, p.z, w, d, this.worldYaw(ry));
+    const p = this.toWorld(x, h ?? 0, z);
+    this.onSolid(p.x, p.z, w, d, this.worldYaw(ry), h === undefined ? undefined : p.y);
+  }
+
+  /** Multiplies every colour added while set: warm lamplight on rooms the sun never reaches. */
+  tint: THREE.Color | null = null;
+  tinted(r: number, g: number, b: number, fn: () => void) {
+    const prev = this.tint;
+    this.tint = new THREE.Color(r, g, b);
+    try {
+      fn();
+    } finally {
+      this.tint = prev;
+    }
   }
 
   add(geo: THREE.BufferGeometry, color: Col, mat = 'paint', local?: THREE.Matrix4, cast = true) {
     const spec = this.lib.spec(mat);
+    if (this.tint && mat !== 'light' && mat !== 'clear' && mat !== 'glass') color = new THREE.Color(color).multiply(this.tint);
     const g = prepare(geo, color, spec);
     geo.dispose();
     g.applyMatrix4(local ? _m.multiplyMatrices(this.matrix, local) : this.matrix);
@@ -224,13 +239,13 @@ export class Kit {
       g.computeBoundingBox();
       const b = g.boundingBox!;
       const size = Math.max(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z);
-      if (size >= 0.25) this.onLight(b.getCenter(new THREE.Vector3()), new THREE.Color(color), clamp(size / 0.7, 0.4, 3));
+      if (size >= 0.25) this.onLight(b.getCenter(new THREE.Vector3()), new THREE.Color(color), clamp(size / 0.7, 0.4, 3), this.indoor);
     }
     this.batch.add(g, spec.bucket, cast);
   }
   /** A light source with no glowing part of its own (e.g. frosted globes), in local coordinates. */
   lamp(x: number, y: number, z: number, color: Col, power = 1) {
-    this.onLight?.(this.toWorld(x, y, z), new THREE.Color(color), power);
+    this.onLight?.(this.toWorld(x, y, z), new THREE.Color(color), power, this.indoor);
   }
 
   local(x: number, y: number, z: number, o?: PartOpts, sx = 1, sy = 1, sz = 1): THREE.Matrix4 {

@@ -435,7 +435,9 @@ export class VolumetricFogPass extends Pass {
     // the nearest, brightest lamps (in front of or close to the camera)
     const amt = s.lamps * this.lampsOn;
     let n = 0;
-    if (amt > 0.001 && this.lamps.length) {
+    let m = 0;
+    if (this.lamps.length) {
+      const day = amt <= 0.001;
       const fwd = this.v.set(0, 0, -1).applyQuaternion(cam.quaternion);
       const cx = cam.position.x;
       const cy = cam.position.y;
@@ -446,23 +448,28 @@ export class VolumetricFogPass extends Pass {
         const dy = l.y - cy;
         const dz = l.z - cz;
         const d = Math.hypot(dx, dy, dz);
-        if (d > 600) continue;
+        if (d > 600 || (day && (!l.indoor || d > 45))) continue;
         const ahead = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / Math.max(d, 1);
-        scored.push([d * (ahead < -0.3 && d > 25 ? 3 : 1) - l.power * 12, l]);
+        scored.push([d * (ahead < -0.3 && d > 25 ? 3 : 1) - l.power * 12 + (l.indoor ? 22 : 0), l]);
       }
       scored.sort((a, b) => a[0] - b[0]);
-      for (const [, l] of scored.slice(0, MAX_LAMPS)) {
-        u.uLampPos.value[n].set(l.x, l.y, l.z, 1);
-        u.uLampCol.value[n].set(l.r, l.g, l.b, l.power * amt * 12);
-        if (n < SURFACE_LAMPS) {
+      // room lights fall on the furniture but put no glow in the street's fog
+      for (const [, l] of scored) {
+        if (m < SURFACE_LAMPS) {
           this.v.set(l.x, l.y, l.z).applyMatrix4(cam.matrixWorldInverse);
-          fogUniforms.uLampV.value[n].set(this.v.x, this.v.y, this.v.z, 1);
-          fogUniforms.uLampC.value[n].set(l.r, l.g, l.b, l.power * this.lampsOn * 16);
+          fogUniforms.uLampV.value[m].set(this.v.x, this.v.y, this.v.z, 1);
+          fogUniforms.uLampC.value[m].set(l.r, l.g, l.b, l.power * (l.indoor ? 0.5 + this.lampsOn * 2.4 : this.lampsOn * 16));
+          m++;
         }
-        n++;
+        if (!l.indoor && n < MAX_LAMPS) {
+          u.uLampPos.value[n].set(l.x, l.y, l.z, 1);
+          u.uLampCol.value[n].set(l.r, l.g, l.b, l.power * amt * 12);
+          n++;
+        }
+        if (m >= SURFACE_LAMPS && n >= MAX_LAMPS) break;
       }
     }
-    fogUniforms.uLampN.value = Math.min(n, SURFACE_LAMPS);
+    fogUniforms.uLampN.value = m;
     u.uLampCount.value = n;
     // the per-material haze starts where the raymarch stops
     fogUniforms.uFogStart.value = s.enabled ? s.range : 0;

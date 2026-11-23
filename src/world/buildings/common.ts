@@ -36,6 +36,8 @@ export interface WinOpts {
   ac?: boolean;
   /** Room seen through the glass. */
   room?: RoomStyle;
+  /** The wall has a real opening here (walk-in buildings): draw the trim only. */
+  open?: boolean;
 }
 
 /** Window on a wall facing +Z whose surface is z = zf; (x, y) is the bottom centre of the glass. */
@@ -43,7 +45,7 @@ export function windowAt(k: Kit, x: number, y: number, zf: number, w: number, h:
   const fr = o.frame ?? P.windowFrame;
   const t = 0.1;
   const out = 0.07;
-  k.pane(x, y, zf + 0.012, w, h, o.room ?? 'home', h > 1.75 ? 0.35 : 0.9);
+  if (!o.open) k.pane(x, y, zf + 0.012, w, h, o.room ?? 'home', h > 1.75 ? 0.35 : 0.9);
   k.box(x, y + h, zf + out / 2 - 0.01, w + t * 2, t, out, fr);
   k.box(x, y - t, zf + 0.04, w + t * 2 + 0.1, t, out + 0.08, fr);
   k.box(x - w / 2 - t / 2, y, zf + out / 2 - 0.01, t, h, out, fr);
@@ -231,8 +233,8 @@ export function balustrade(k: Kit, x: number, y: number, z: number, len: number,
 }
 
 /** Window with a small triangular pediment cap (classical façades). */
-export function pedWindow(k: Kit, x: number, y: number, zf: number, w: number, h: number, trim: Col, glass?: Col) {
-  windowAt(k, x, y, zf, w, h, { frame: trim, mx: 2, my: 3, glass });
+export function pedWindow(k: Kit, x: number, y: number, zf: number, w: number, h: number, trim: Col, glass?: Col, open = false) {
+  windowAt(k, x, y, zf, w, h, { frame: trim, mx: 2, my: 3, glass, open });
   k.pediment(x, y + h + 0.12, zf + 0.08, w + 0.6, 0.45, 0.16, trim);
   k.box(x, y + h + 0.04, zf + 0.08, w + 0.6, 0.1, 0.16, trim);
 }
