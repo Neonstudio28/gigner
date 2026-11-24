@@ -13,6 +13,8 @@ const PI = Math.PI;
 /** The highway strip west of downtown: gas, motel, diner, supermarket, donut shop and a used-car lot, each on its own paved lot. */
 export function strip(pl: Placer) {
   const rng = new Rng(5150);
+  // zoning: the strip's back lots stay commercial, no homes between the highway and the Meadowbrook buffer
+  pl.noHomes.push([[-452, 10], [-262, 2], [-262, 72], [-300, 96], [-452, 104]]);
   const w = pl.net.byName('W Main St');
   const hwy = pl.net.byName('Old Hwy 10 W');
   const L = (f: { x: number; z: number; ry: number }, lx: number, lz: number) => Placer.world(f.x, f.z, f.ry, lx, lz);

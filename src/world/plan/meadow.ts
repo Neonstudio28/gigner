@@ -17,8 +17,7 @@ export function meadowbrook(pl: Placer) {
   const rng = new Rng(4646);
   const R = (n: string) => pl.net.byName(n);
   pl.clearings.push({ x: -350, z: 172, w: 240, d: 190 });
-  // the highway strip's back lots stay commercial; a planted buffer separates them from the new homes
-  pl.noHomes.push([[-452, 10], [-262, 2], [-262, 72], [-300, 96], [-452, 104]]);
+  // a planted buffer separates the highway strip's back lots from the new homes
   for (let x = -446; x < -300; x += 6.5) {
     const z = 104 + ((x + 446) / 146) * -6 + rng.range(-1.5, 1.5);
     if (!pl.c.occ.blocked(x, z, 1.5) && !pl.onStreet(x, z, 3)) pl.trees.push({ kind: rng.pick(['douglas_fir_tall', 'cedar_broad', 'maple_large', 'douglas_fir_medium']), x, z, s: rng.range(0.8, 1.1), ry: rng.range(0, 6) });
