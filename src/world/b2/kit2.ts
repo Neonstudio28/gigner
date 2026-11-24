@@ -14,6 +14,8 @@ export type Side = 'f' | 'b' | 'l' | 'r';
 export const WHITE = 0xf1ede2;
 export const STONE = 0xd9cfba;
 export const DARK = 0x2a2623;
+/** Display face used on every printed sign. */
+export const F_OS = 'Oswald';
 
 /** Runs `fn(len)` in the wall frame of one side of a w x d footprint centred on the origin (front = +Z). */
 export function face(k: Kit, side: Side, w: number, d: number, fn: (len: number) => void) {

@@ -370,6 +370,116 @@ function planks(): HTMLCanvasElement {
   return c;
 }
 
+/** Strip flooring: narrow boards with staggered butt joints and a little tone variation (tinted by vertex colour). */
+function woodFloor(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(S, S);
+  const rng = new Rng(77);
+  const n = 16;
+  const ph = S / n;
+  for (let i = 0; i < n; i++) {
+    let x = -rng.range(0, 200);
+    while (x < S) {
+      const len = rng.range(150, 330);
+      g.fillStyle = grey(rng.range(196, 246));
+      g.fillRect(x, i * ph, len, ph);
+      for (let k = 0; k < 5; k++) {
+        g.fillStyle = `rgba(0,0,0,${rng.range(0.02, 0.07)})`;
+        g.fillRect(x, i * ph + rng.range(2, ph - 2), len, 1);
+      }
+      g.fillStyle = grey(120);
+      g.fillRect(x + len - 2, i * ph, 2, ph);
+      x += len;
+    }
+    g.fillStyle = grey(125);
+    g.fillRect(0, i * ph + ph - 2, S, 2);
+  }
+  return c;
+}
+
+/** Suspended ceiling: 0.6 m acoustic tiles in a grid of T-bars. */
+function ceilTile(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(S, S);
+  const rng = new Rng(79);
+  g.fillStyle = grey(243);
+  g.fillRect(0, 0, S, S);
+  speckle(g, S, S, rng, 30000, 0.06);
+  const n = 4;
+  for (let i = 0; i < n; i++) {
+    g.fillStyle = grey(168);
+    g.fillRect((i * S) / n, 0, 5, S);
+    g.fillRect(0, (i * S) / n, S, 5);
+    g.fillStyle = grey(255);
+    g.fillRect((i * S) / n + 5, 0, 2, S);
+    g.fillRect(0, (i * S) / n + 5, S, 2);
+  }
+  return c;
+}
+
+/** Two-tone floor tiles (diner, kitchens, shops). */
+function checker(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(S, S);
+  const rng = new Rng(83);
+  const n = 8;
+  const q = S / n;
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < n; j++) {
+      g.fillStyle = grey((i + j) % 2 ? rng.range(236, 250) : rng.range(120, 138));
+      g.fillRect(i * q, j * q, q, q);
+      g.fillStyle = 'rgba(0,0,0,0.25)';
+      g.fillRect(i * q, j * q, q, 1.5);
+      g.fillRect(i * q, j * q, 1.5, q);
+    }
+  speckle(g, S, S, rng, 6000, 0.05);
+  return c;
+}
+
+/** Small square wall/floor tiles with grout lines. */
+function tiles(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(S, S);
+  const rng = new Rng(89);
+  const n = 16;
+  const q = S / n;
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < n; j++) {
+      g.fillStyle = grey(rng.range(232, 250));
+      g.fillRect(i * q, j * q, q, q);
+    }
+  g.fillStyle = grey(150);
+  for (let i = 0; i < n; i++) {
+    g.fillRect(i * q, 0, 2, S);
+    g.fillRect(0, i * q, S, 2);
+  }
+  return c;
+}
+
+/** Beadboard / tongue-and-groove panelling: vertical boards with a shadowed groove. */
+function beadboard(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(S, S);
+  const rng = new Rng(97);
+  const n = 16;
+  const q = S / n;
+  for (let i = 0; i < n; i++) {
+    g.fillStyle = grey(rng.range(226, 246));
+    g.fillRect(i * q, 0, q, S);
+    g.fillStyle = grey(150);
+    g.fillRect(i * q, 0, 2, S);
+    g.fillStyle = grey(255);
+    g.fillRect(i * q + 2, 0, 2, S);
+  }
+  speckle(g, S, S, rng, 5000, 0.04);
+  return c;
+}
+
+/** Short-pile carpet. */
+function carpet(): HTMLCanvasElement {
+  const [c, g] = makeCanvas(S, S);
+  const rng = new Rng(101);
+  g.fillStyle = grey(228);
+  g.fillRect(0, 0, S, S);
+  speckle(g, S, S, rng, 60000, 0.12);
+  return c;
+}
+
 function rollup(): HTMLCanvasElement {
   const [c, g] = makeCanvas(S, S);
   for (let i = 0; i < 16; i++) {
@@ -431,6 +541,12 @@ export function createLayers(photos: PhotoSet = {}): LayerDef[] {
     L('stucco', stucco(), 3.0, 0.95),
     L('gravel', photos.gravel ?? gravel(), 4.0, 0.97),
     L('field', field(), 6.0, 0.98),
+    L('woodFloor', woodFloor(), 2.4, 0.62),
+    L('ceilTile', ceilTile(), 2.4, 0.95),
+    L('checker', checker(), 2.4, 0.5),
+    L('tiles', tiles(), 1.6, 0.4),
+    L('beadboard', beadboard(), 1.6, 0.75),
+    L('carpet', carpet(), 1.5, 1.0),
   ];
 }
 

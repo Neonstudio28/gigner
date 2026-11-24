@@ -9,6 +9,7 @@ import { loadFonts } from '../world/fonts';
 import { patchFlatShadingNaN } from '../engine/post';
 import type { Ctx } from '../world/buildings/common';
 import type { BuildingDef } from '../world/buildings/catalog';
+import { loadAssets, atlases } from '../world/assets';
 
 /**
  * Standalone viewer for building catalogs (no terrain/post), fast enough for software GL.
@@ -19,6 +20,7 @@ const SETS: Record<string, () => Promise<BuildingDef[]>> = {
   strip: async () => (await import('../world/buildings/strip90s')).STRIP,
   civic: async () => (await import('../world/buildings/civic2')).CIVIC,
   town: async () => (await import('../world/buildings/town')).TOWN,
+  b2: async () => (await import('../world/b2')).B2,
 };
 
 async function main() {
@@ -45,6 +47,8 @@ async function main() {
   scene.add(sun, sun.target);
 
   const mats = new MaterialLib(createLayers());
+  await loadAssets(import.meta.env.BASE_URL, ['structures', 'streetprops', 'furniture', 'vegetation', 'vehicles', 'people']);
+  for (const [family, tex] of atlases()) mats.addAtlas(family, tex);
   const signs = new SignBook((i, t) => mats.addSignPage(i, t));
   const batch = new Batcher(1e6, false);
   const kit = new Kit(batch, mats);
@@ -90,6 +94,18 @@ async function main() {
   else camera.position.set(ctr.x - dist * 0.35, dist * 0.42, ctr.z + dist * 0.9);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.copy(ctr).setY(4);
+  // cam=x,y,z&tgt=x,y,z are relative to the first building's centre (interior and detail views)
+  const v3 = (key: string) => q.get(key)?.split(',').map(Number);
+  const cam = v3('cam');
+  if (cam && defs[0]) {
+    const o = new THREE.Vector3(defs[0].w / 2, 0, defs[0].d / 2);
+    camera.position.set(o.x + cam[0], cam[1], o.z + cam[2]);
+    const t = v3('tgt') ?? [0, 1.5, 0];
+    controls.target.set(o.x + t[0], t[1], o.z + t[2]);
+    camera.fov = Number(q.get('fov') ?? 60);
+    camera.near = 0.1;
+    camera.updateProjectionMatrix();
+  }
   controls.update();
   info.textContent = labels.join(' · ');
   const render = () => renderer.render(scene, camera);

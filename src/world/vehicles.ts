@@ -65,7 +65,7 @@ const SLOTS: Record<string, [Col | null, string]> = {
 export async function loadVehicleModels(base: string): Promise<void> {
   if (MODELS.size) return;
   try {
-    const gltf = await new GLTFLoader().loadAsync(`${base}assets/models/vehicles.glb`);
+    const gltf = await new GLTFLoader().loadAsync(`${base}assets/models/cars_v1.glb`);
     gltf.scene.updateMatrixWorld(true);
     for (const node of gltf.scene.children) {
       const parts: ModelPart[] = [];
