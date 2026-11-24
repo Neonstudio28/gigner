@@ -160,5 +160,3 @@ export function yards(pl: Placer) {
   }
 }
 
-/** Back lots of the commercial blocks (rewritten in the layout rework). */
-export function alleys(_pl: Placer) {}

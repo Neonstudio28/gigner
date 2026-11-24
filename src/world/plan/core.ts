@@ -9,7 +9,7 @@ import { LANDMARKS } from '../b2/landmarks';
 import { DISTRICT } from '../b2/district';
 import { CORE } from './roads';
 import { heightAt } from '../terrain';
-import { pave, prop, scatter, trashCorner, poleLine, backLot, carPark, treeEdge, lamps, fence, weedLine, OLD_ASPHALT, CONCRETE, RUBBISH, type BackKind } from './blocks';
+import { alleyEdge, wear, pave, prop, scatter, trashCorner, poleLine, backLot, carPark, treeEdge, lamps, fence, weedLine, OLD_ASPHALT, CONCRETE, RUBBISH, type BackKind } from './blocks';
 
 const PI = Math.PI;
 export const N = 1 as const; // frontage side of an eastbound street: 1 = north, -1 = south
@@ -95,7 +95,8 @@ function shopBacks(pl: Placer, rng: Rng, side: 1 | -1, xa: number, xb: number, u
   for (const u of units) {
     const zr = sg * (full + u.d);
     const room = Math.abs(zA - zr);
-    trashCorner(pl, rng, (u.x0 + u.x1) / 2, zr + sg * 0.15, sg > 0 ? 0 : PI, u.x1 - u.x0 - 0.8, room > 3.6);
+    const door = (u.x1 - u.x0) / 2 - 1.6;
+    trashCorner(pl, rng, (u.x0 + u.x1) / 2, zr + sg * 0.1, sg > 0 ? 0 : PI, u.x1 - u.x0 - 0.8, room > 2.4, [door, -door]);
     // a staff car nosed up to the back wall where the yard is deep enough
     if (room > 6.2 && rng.chance(0.6)) pl.car('sedan', u.x1 - 1.6, zr + sg * 3.1, PI / 2 * sg, rng.pick([0x8a2f2a, 0x2f4a6a, 0xd8d4c8, 0x4a5a48, 0x2a2a2c]), { model: rng.pick(['sedan_80s', 'hatch_compact', 'pickup_80s', 'coupe_80s']) });
   }
@@ -142,6 +143,8 @@ export function core(pl: Placer) {
       const w = xb - xa;
       (f.homes ?? []).forEach((id, n) => house(back, xa + w * (0.66 + n * 0.21), f.side === S ? N : S, id, 400 + f.i * 10 + n));
     });
+    alleyEdge(pl, rng, xa, xb, sg * (CORE.alley + 2.9), sg as 1 | -1);
+    wear(pl, rng, xa, Math.min(sg * (full + 14), sg * (CORE.alley + 2.8)), xb, Math.max(sg * (full + 14), sg * (CORE.alley + 2.8)));
   }
   // NE block east of Division: First Cascade Bank on the corner (inside the sidewalks), then shops to 2nd Ave E
   const [xa, xb] = span(pl, 3);
@@ -157,6 +160,8 @@ export function core(pl: Placer) {
   poleLine(pl, [xa + 3, xa + (xb - xa) * 0.36, xa + (xb - xa) * 0.68, xb - 3].map((x) => [x, -CORE.alley - 3.6] as [number, number]), { lamps: true, h: 9 });
   const zr = Math.max(pl.net.frontage(river, sAt(river, xa, 'x'), S, river.full + 0.3).z, pl.net.frontage(river, sAt(river, xb, 'x'), S, river.full + 0.3).z);
   backLot(pl, rng, xa, xb, -CORE.alley - 2.9, zr, -1, 'park');
+  alleyEdge(pl, rng, xa + bank.w + 8, xb, -CORE.alley - 2.9, -1);
+  wear(pl, rng, xa + bank.w + 8, -CORE.alley - 2.8, xb, -full - 14);
   townHallSquare(pl);
   courthouseSquare(pl);
   churchLot(pl);

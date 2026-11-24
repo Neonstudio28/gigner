@@ -6,21 +6,37 @@ Pine Hollow is a small 1980s lake town in a Pacific Northwest valley, built in *
 
 ## The town
 
-The town is a compact grid, about 720 m by 360 m, between the river to the north and the lake to the south. Old Highway 10 becomes Main Street through the middle. Farms, the lumber yard and the freight district sit out along the valley roads, and forest closes in around everything.
+The town sits between the river to the north and the lake to the south. Highway 10 comes in from both ends of the valley, slows into a commercial strip on the west side and becomes Main Street through four blocks of downtown. Around that core the streets bend with the ground: Riverside Dr loops round the north side, Alder St round the south, and the residential streets, the hillside drive and the lanes of the poor end all curve off them.
 
-- **East-west streets, north to south:** River St, Main St, Alder St, Maple St, Lakeshore Dr.
-- **Valley roads:** Old Hwy 10 east and west, County Rd 5, Orchard Rd, Hansen Rd, Mill Rd, Fairground Rd, Miller Dairy Rd, Ridgeview Ln, Cougar Creek Rd, Cannery Rd, Freight Rd, Depot Rd, Eastside Rd, Homestead Rd.
+**Road hierarchy.** Thirteen road classes, each with its own width, kerbs, markings and speed:
+
+| Class | Roads |
+|---|---|
+| **Highway** | Old Hwy 10 west and east (two lanes, double yellow, gravel shoulders) |
+| **Commercial strip** | W Main St |
+| **Downtown** | Main St, Division St (parking lanes, wide sidewalks, crosswalks) |
+| **Collectors** | Riverside Dr, Alder St, Lakeshore Dr, E Main St, 1st Ave E and W |
+| **Residential** | Maple St, Lake Hill Rd, 2nd and 3rd Aves, Division St S, Birch Ct, Heron Ct |
+| **Hillside** | Ridgecrest Dr, Lakeview Ct |
+| **Lane** | Tannery St |
+| **Alleys** | Alley S, Alley NW, Alley NE behind the Main Street blocks |
+| **Rural and gravel** | County Rd 5, Mill Rd, Cannery Rd, Freight Rd, Depot Rd, Slough Rd, Pine Loop and the farm roads |
 
 | District | What's there |
 |---|---|
-| **Main Street** | Two-storey brick shopfronts on both sides (hardware, barber, pharmacy, records, gazette, bakery, tavern, pawn, antiques, insurance, thrift, video, laundry, liquor), with awnings, globe lamps, benches and parking. Timberline Gas and Dottie's Diner stand at the west end, Hole Lotta Donuts, the Hollow County Sheriff and the Pine Rest Motel at the east end, with Hollow Foods Market and First Cascade Bank along the way. |
-| **Town Hall and the Green** | Pine Hollow Town Hall beside a green with a bandstand, fountain, war memorial, statue and flagpole. |
-| **Civic Row (Alder St)** | The Hollow County Courthouse and Pine Hollow Community Church. |
-| **Residential streets** | Houses on River, Alder, Maple and Lakeshore with driveways, parked cars, fences, sheds, clotheslines, bins, hedges and yard trees, backed by gravel alleys and overhead wires. |
+| **Main Street** | Continuous two-storey brick terraces on both sides (hardware, barber, pharmacy, records, gazette, bakery, tavern, pawn, antiques, insurance, thrift, video, laundry, liquor) and First Cascade Bank with its own customer lot. Behind every terrace: a service alley, a rear parking lot, back doors with fire escapes, dumpsters, wheelie bins, pallets, cardboard, bags and litter, patched and stained asphalt, drains, pole lines with overhead wires, fences and weeds. |
+| **Town Hall Square** | Pine Hollow Town Hall on its own block with lawns, paths, a flagpole, the bandstand, fountain, statue and war memorial, benches, old street lamps and a car park. |
+| **Courthouse Square** | The Hollow County Courthouse on a separate block with lawns, paths and its own car park, with the Hollow County Sheriff and its patrol cars alongside; the Community Church stands on its own lot. |
+| **West strip** | Timberline Gas, Dottie's Diner, the Pine Rest Motel, Hollow Foods Market behind a full car park, and the Hollow Motors used-car lot, each with pole signs, lot lighting and service yards. |
+| **Homes** | Curving residential streets with driveways, parked cars, fences, sheds, bins and yard trees. |
+| **Cedar Ridge** | The wealthy hillside: large houses on big wooded lots along Ridgecrest Dr and Lakeview Ct, with hedges, topiary, pools, patios and better cars. |
+| **The Flats** | The poor end on Tannery St and Slough Rd: small weathered houses close to a patched lane, cars on the verge, chain-link, junk and bare dirt in the yards. |
+| **Whispering Pines** | A trailer park on a gravel loop: single-wides with clotheslines, grills, bikes and kiddie pools, a propane tank, a payphone, a small playground and shared dumpsters. |
+| **Highway 10 east** | The working edge of town: Hollow Auto Wrecking, the Hwy 10 Truck Park, Cascade Builders Supply and Ridgeline Plant Hire, each a fenced yard with its own office, stock, plant and signs. |
 | **Lakefront** | The Loon Lakeside Café with its deck, Bait & Tackle, a pier with boats and buoys, the beach, a playground and picnic tables. |
 | **Farms** | Ten farms along the valley roads: barn, machine shed, farmhouse, silos or grain bins, windmill, paddock with cattle, corn field, hay, tractor and pickup. |
 | **Lumber yard (Mill Rd)** | Hollow Creek Lumber Co.: sawmill, office, drying sheds, stacked timber, log decks, a log loader and trucks inside a fenced gravel yard. |
-| **Freight district (east)** | Cascade Freight & Storage warehouses, a container yard, Pine Hollow Canning Co., the grain elevator and the water tower. |
+| **Freight district** | Cascade Freight & Storage warehouses, a container yard, Pine Hollow Canning Co., the grain elevator and the water tower. |
 
 **Interiors.** The landmarks, shops, houses and district buildings have furnished interiors behind real glass: wood floors, wainscot walls, tiled ceilings and furniture modelled for that kind of place (courtroom and clerk's office, diner booths and counter, bank counter and vault, jail cells, church pews, shop shelving, motel rooms, kitchens and living rooms, barn stalls and loft, warehouse racking).
 
@@ -36,13 +52,7 @@ The town is a compact grid, about 720 m by 360 m, between the river to the north
 
 **Town map.** Press `M` while driving. The map is hill-shaded and shows district outlines and names, every named place (colour-coded by type), street names, a legend and a scale bar. The HUD shows the street and district you're in.
 
-**Road types.** Each road class has its own cross-section and markings:
-- **Old Hwy 10:** a rural two-lane highway with a double yellow line and paved shoulders, becoming downtown Main Street with parking lanes and wide sidewalks.
-- **Collectors (River St, Alder St, Lakeshore Dr):** a double yellow line, edge lines, curbs and sidewalks.
-- **Local streets:** residential, with no centre line, a park strip and sidewalks.
-- **Gravel and dirt roads** and **alleys**.
-
-**Junctions.** Every T-junction and crossing has curb returns: the side street's asphalt flares into a rounded corner, and the curb, planting strip and sidewalk wrap round it. Roads are cut exactly at the edge of the road they meet, the through road keeps its markings, and stop signs, lamps and hydrants stay off the junction. Bridges carry roads over the river.
+**Junctions.** Every T-junction and crossing has curb returns: the side street's asphalt flares into a rounded corner, and the curb, planting strip and sidewalk wrap round it. Roads are cut exactly at the edge of the road they meet. Where two kerbed streets meet, every lane line stops at a zebra crosswalk and the junction box is left clear, with a stop bar on the minor approach; elsewhere the through road keeps its markings. Stop signs, lamps and hydrants stay off the junction. A layout audit at start-up checks every building footprint and its front steps against the streets and reports any overlap. Bridges carry roads over the river.
 
 **Terrain and collision.** The ground is graded to meet every road, and terrain cells beside roads are split to about 4 m so the ground follows cuts, fills and curbs; it is always kept just under the road surface so it never pokes through. Vehicles ride on the drawn ground mesh, not an invisible approximation of it, so there are no bumps where nothing is visible, and they drive on carriageways, curb returns, sidewalks and bridge decks.
 

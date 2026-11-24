@@ -6,7 +6,7 @@ import { heightAt, isWater } from '../terrain';
 import { put } from '../b2/hull';
 import { CAR_COLORS } from '../palette';
 import { D, front, sAt, N, S } from './core';
-import { pave, paveR, prop, scatter, trashCorner, poleLine, carPark, forecourt, treeEdge, fence, hedge, weedLine, parked, stalls, lamps, GRAVEL, OLD_ASPHALT, RUBBISH, BEATERS, LUXURY, CARS } from './blocks';
+import { hard, wear, worksYard, poleSign, level, type Rect, pave, paveR, prop, scatter, trashCorner, poleLine, carPark, forecourt, treeEdge, fence, hedge, weedLine, parked, stalls, lamps, GRAVEL, OLD_ASPHALT, RUBBISH, BEATERS, LUXURY, CARS } from './blocks';
 
 const PI = Math.PI;
 
@@ -90,7 +90,7 @@ export function strip(pl: Placer) {
     const [ex, ez] = L(gr, groc.w / 2 + 15, -groc.d / 2 - 6);
     pl.entrance(ex, ez, Math.cos(gr.ry), -Math.sin(gr.ry), 6, 40);
     const [sx, sz] = L(gr, -groc.w / 2 - 13, groc.d / 2 + 34);
-    prop(pl, 'pole_sign_rect', sx, sz, gr.ry, 0.5);
+    poleSign(pl, 'groc', sx, sz, gr.ry, 'HOLLOW FOODS', 'OPEN 7 – 10 DAILY', '#2e6b3c', '#f4efe2');
     const [a, b] = [L(gr, -groc.w / 2 - 15, -groc.d / 2 - 12.6), L(gr, groc.w / 2 + 15, -groc.d / 2 - 12.6)];
     treeEdge(pl, rng, a[0], a[1], b[0], b[1], ['douglas_fir_medium', 'maple_medium', 'cedar_broad'], 8);
   }
@@ -123,7 +123,7 @@ export function strip(pl: Placer) {
     const [x, z] = C(lx, 14.6);
     pl.k.at(x, z, 0, () => pl.k.box(0, 0, 0, 0.09, 4.3, 0.09, 0xd8d8d4, 'metal'), heightAt(x, z));
   }
-  prop(pl, 'pole_sign_rect', ...C(-21, 13), lot.ry, 0.5);
+  poleSign(pl, 'motors', ...C(-21, 13), lot.ry, 'HOLLOW MOTORS', 'USED CARS · WE FINANCE', '#27407a', '#f4efe2');
   const [ex, ez] = C(0, 15);
   pl.entrance(ex, ez, Math.sin(lot.ry), Math.cos(lot.ry), 7);
   fence(pl, 'chain', [C(-23, 12), C(-23, -15), C(23, -15), C(23, 12)]);
@@ -269,6 +269,26 @@ export function flats(pl: Placer) {
     for (let i = 0; i < 2; i++) drop(pl, rng.pick(JUNK), W(-side * (hw + rng.range(0.7, 2)), rng.range(-3, 3)), rng.range(0, 6), false);
     if (rng.chance(0.5)) drop(pl, rng.pick(['satellite_dish_yard', 'doghouse', 'kiddie_pool', 'lawn_mower', 'bicycle']), W(rng.range(-hw, hw), s.def.d / 2 + rng.range(1, 2.4)), rng.range(0, 6), 0.3);
     if (rng.chance(0.3)) drop(pl, 'sign_for_sale', W(-side * (hw - 1), s.def.d / 2 + 2.6), s.ry, false);
+    // out front: grass worn to dirt, junk by the step, a dead car on the verge, sagging chain-link
+    const fz = s.def.d / 2 + 1.4;
+    const loose = (q: [number, number], r = 0.25) => !isWater(q[0], q[1]) && !hard(pl, q[0], q[1], r) && !pl.onStreet(q[0], q[1], 0.3);
+    for (let i = 0; i < 2; i++) {
+      const q = W(rng.range(-hw * 0.6, hw * 0.6), fz + rng.range(-0.2, 0.6));
+      if (!pl.onStreet(q[0], q[1], 0.9)) paveR(pl, q[0], q[1], s.ry + rng.range(-0.25, 0.25), rng.range(2.4, 5), rng.range(1.4, 2.2), rng.pick([0x8a7c62, 0x7f7460, 0x93866c]), 'gravel', 0.06, false);
+    }
+    for (let i = 0; i < 5; i++) {
+      const q = W(rng.range(-hw - 1, hw + 1), fz + rng.range(-0.6, 2.6));
+      if (loose(q)) prop(pl, rng.pick(JUNK), q[0], q[1], rng.range(0, 6), false);
+    }
+    if (rng.chance(0.55)) {
+      const q = W(rng.range(-hw * 0.5, hw * 0.5), fz + 0.3);
+      if (loose(q, 0.5)) prop(pl, rng.pick(['patio_chair', 'bbq_grill', 'barrel_steel_rusty', 'tyre_stack', 'wheelie_bin', 'trash_can_metal', 'lawn_mower', 'bmx_bike']), q[0], q[1], rng.range(0, 6), 0.35);
+    }
+    if (rng.chance(0.45)) {
+      const a = W(-hw - 1.2, fz + 3.1);
+      const b = W(hw + 1.2, fz + 3.1);
+      if (!pl.onStreet(a[0], a[1], 0.4) && !pl.onStreet(b[0], b[1], 0.4) && !hard(pl, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 1.2)) fence(pl, 'chain', [a, b]);
+    }
     for (let i = 0; i < 7; i++) {
       const q = W(rng.range(-hw - 3, hw + 3), rng.range(zb - 8, s.def.d / 2 + 3));
       if (free(pl, q[0], q[1], 0.2)) pl.trees.push({ kind: rng.pick(['weeds_a', 'weeds_b', 'grass_tall_a', 'grass_tall_b', 'dandelion_patch']), x: q[0], z: q[1], s: rng.range(0.9, 1.5), ry: rng.range(0, 6) });
@@ -278,6 +298,14 @@ export function flats(pl: Placer) {
       if (free(pl, q[0], q[1], 1)) pl.trees.push({ kind: rng.pick(['dead_tree', 'snag_conifer', 'poplar_tall']), x: q[0], z: q[1], s: rng.range(0.6, 0.9), ry: rng.range(0, 6) });
     }
   }
+  // nobody has a driveway: the cars sit half on the verge along the lane
+  for (const r of [tan, sl])
+    for (const side of [N, S])
+      for (let d = rng.range(10, 18); d < r.length - 12; d += rng.range(8, 17)) {
+        const f = pl.net.frontage(r, d, side, r.full + 0.75);
+        if (rng.chance(0.3) || isWater(f.x, f.z) || hard(pl, f.x, f.z, 2.3)) continue;
+        parked(pl, rng, f.x, f.z, f.ry + (side > 0 ? 0 : PI) + rng.range(-0.06, 0.06), BEATERS);
+      }
   // sagging power line down the lane, a corner lot gone to weeds and dumped rubbish
   const pts: [number, number][] = [];
   for (let s = 8; s < tan.length - 6; s += 34) pts.push(xz(pl.net.frontage(tan, s, S, tan.full + 0.9)));
@@ -338,8 +366,97 @@ export function trailerCourt(pl: Placer) {
   // sign and lamp where the loop leaves Fairground Rd
   const fair = pl.net.byName('Fairground Rd');
   const g = pl.net.frontage(fair, 40, S, fair.full + 2.2);
-  prop(pl, 'pole_sign_rect', g.x, g.z, g.ry + PI / 2, 0.4);
+  poleSign(pl, 'pines', g.x, g.z, g.ry + PI / 2, 'WHISPERING PINES', 'MOBILE HOME PARK', '#f1e9cf', '#2f4f3a');
   const pts: [number, number][] = [];
   for (let s = 6; s < loop.length; s += 30) pts.push(xz(pl.net.frontage(loop, s, S, loop.full + 1)));
   poleLine(pl, pts, { h: 8.5, lamps: true });
+}
+
+/**
+ * Highway 10 east of town: the working edge. A wrecking yard and a truck stop on the north side, a builder's
+ * yard and a plant-hire yard on the south, each fenced, gated onto the highway and full of its own trade.
+ */
+export function industry(pl: Placer) {
+  const rng = new Rng(6161);
+  const hw = pl.net.byName('Old Hwy 10 E');
+  const e = hw.full + 5.5;
+  const office = D('lumberOffice');
+  const shed = D('machineShed');
+  // wreckers: rows of dead cars nose to tail, tyres and drums along the fence
+  {
+    const r: Rect = { x0: 608, z0: -64, x1: 674, z1: -e };
+    level(r);
+    pl.force(office, r.x1 - 11, r.z1 - 9.5, 0, 6162);
+    pl.force(shed, r.x0 + 13, r.z1 - 8, 0, 6163);
+    worksYard(pl, rng, r, 's');
+    for (let row = 0; row < 3; row++)
+      for (let x = r.x0 + 16; x < r.x1 - 6; x += 5.6) {
+        const z = r.z0 + 12 + row * 11;
+        if (rng.chance(0.8) && !hard(pl, x, z, 2.4)) parked(pl, rng, x + rng.range(-0.4, 0.4), z + rng.range(-0.5, 0.5), rng.pick([0, PI]) + rng.range(-0.2, 0.2), BEATERS);
+      }
+    scatter(pl, rng, ['tyre_stack', 'tyre', 'barrel_steel_rusty', 'tyre_rack', 'oil_rack', 'pallet', 'gas_can', 'toolbox'], r.x0 + 3, r.z0 + 4, r.x1 - 3, r.z1 - 3, 26, 0.4);
+    wear(pl, rng, r.x0 + 2, r.z0 + 2, r.x1 - 2, r.z1 - 2, 60);
+    pl.entrance((r.x0 + r.x1) / 2, r.z1, 0, 1, 6.5);
+    poleSign(pl, 'wreck', r.x0 + 26, r.z1 + 2.2, 0, 'HOLLOW AUTO WRECKING', 'USED PARTS · TOWING', '#e8d44a', '#1d1d1f');
+    parked(pl, rng, (r.x0 + r.x1) / 2 + 9, r.z1 - 5, PI / 2, [['pickup', 'tow_truck']]);
+    pl.landmarks.push({ name: 'Hollow Auto Wrecking', x: 641, z: -38, kind: 'business' });
+  }
+  // truck stop: a wide worn lot, rigs and dropped trailers in echelon, fuel tanks, a row of pumps' worth of clutter
+  {
+    const r: Rect = { x0: 692, z0: -62, x1: 778, z1: -e };
+    level(r);
+    pave(pl, r.x0, r.z0, r.x1, r.z1, OLD_ASPHALT, 'asphalt', 0.04);
+    wear(pl, rng, r.x0 + 1, r.z0 + 1, r.x1 - 1, r.z1 - 1, 40);
+    fence(pl, 'chain', [[r.x0, r.z1 - 2], [r.x0, r.z0], [r.x1, r.z0], [r.x1, r.z1 - 2]]);
+    const rigs: [string, boolean, number][] = [['semi_cabover', true, 0x2f5d8a], ['trailer_box', false, 0xe9e6dc], ['semi_conventional', true, 0xb3261e], ['trailer_tanker', false, 0xc9c4b6], ['flatbed_truck', false, 0xd9a21c], ['trailer_logs', false, 0x6b6f73]];
+    rigs.forEach(([model, trailer, col], i) => {
+      const x = r.x0 + 12 + i * 11.5;
+      if (x < r.x1 - 8) pl.car('semi', x + (trailer ? 4 : 0), r.z0 + 13 + (i % 2) * 2, PI / 2 + 0.5, col, { model, trailer });
+    });
+    for (const [name, x, z] of [['fuel_tank_stand', r.x1 - 7, r.z1 - 9], ['propane_tank_large', r.x1 - 7, r.z1 - 16], ['portable_toilet', r.x0 + 3, r.z1 - 8], ['ice_freezer', r.x0 + 3, r.z1 - 11], ['vending_soda', r.x0 + 3, r.z1 - 13.2], ['payphone_post', r.x0 + 3, r.z1 - 15.4], ['dumpster_green', r.x0 + 4, r.z0 + 3]] as [string, number, number][]) prop(pl, name, x, z, name === 'dumpster_green' ? 0 : PI / 2, true);
+    scatter(pl, rng, ['traffic_barrel', 'traffic_cone', 'tyre', 'pallet', 'jersey_barrier', 'barrel_steel', ...RUBBISH], r.x0 + 3, r.z0 + 3, r.x1 - 3, r.z1 - 3, 28);
+    lamps(pl, [[r.x0 + 20, r.z0 + 1.2, 0], [r.x1 - 20, r.z0 + 1.2, 0], [r.x0 + 30, r.z1 - 1.5, PI], [r.x1 - 30, r.z1 - 1.5, PI]]);
+    stalls(pl, rng, r.x0 + 26, r.z1 - 4, PI, 9, { fill: 0.5, list: CARS });
+    pl.entrance(r.x0 + 12, r.z1, 0, 1, 9);
+    pl.entrance(r.x1 - 14, r.z1, 0, 1, 9);
+    poleSign(pl, 'truck', r.x1 - 26, r.z1 + 2.2, 0, 'HWY 10 TRUCK PARK', 'DIESEL · SCALES · 24 HR', '#b3261e', '#f4efe2');
+    weedLine(pl, rng, r.x0, r.z0 - 0.5, r.x1, r.z0 - 0.5, 2.4);
+    pl.landmarks.push({ name: 'Hwy 10 Truck Park', x: 735, z: -38, kind: 'business' });
+  }
+  // builder's yard
+  {
+    const r: Rect = { x0: 664, z0: e, x1: 722, z1: 62 };
+    level(r);
+    pl.force(office, r.x1 - 12, r.z0 + 9.5, PI, 6164);
+    worksYard(pl, rng, r, 'n');
+    for (let x = r.x0 + 6; x < r.x1 - 10; x += rng.range(4.6, 6.2)) if (!hard(pl, x, r.z1 - 7.5, 2.2)) prop(pl, rng.pick(['lumber_stack_a', 'lumber_stack_b', 'lumber_stack_c', 'plywood_stack', 'lumber_shed']), x, r.z1 - 7.5, 0, true);
+    for (let x = r.x0 + 12; x < r.x1 - 12; x += rng.range(6, 8)) if (!hard(pl, x, r.z0 + 22, 2)) prop(pl, rng.pick(['pallet_stack', 'gravel_pile', 'cement_mixer', 'plywood_stack', 'scaffold_tower']), x, r.z0 + 22 + rng.range(-1, 1), rng.range(-0.2, 0.2), true);
+    pl.entrance((r.x0 + r.x1) / 2, r.z0, 0, -1, 6.5);
+    poleSign(pl, 'build', r.x0 + 12, r.z0 - 2.2, 0, 'CASCADE BUILDERS SUPPLY', 'LUMBER · CEMENT · HIRE', '#2f4f3a', '#f1e9cf');
+    parked(pl, rng, r.x0 + 12, r.z0 + 8, 0.1, [['pickup', 'flatbed_truck'], ['pickup', 'pickup_4x4'], ['van', 'step_van']]);
+    pl.landmarks.push({ name: 'Cascade Builders Supply', x: 693, z: 38, kind: 'business' });
+  }
+  // plant hire: loaders and tippers on packed dirt, spoil heaps, containers for stores
+  {
+    const r: Rect = { x0: 738, z0: e + 2, x1: 798, z1: 64 };
+    level(r);
+    pl.force(office, r.x0 + 9, r.z0 + 8.5, PI, 6165);
+    pl.force(shed, r.x1 - 24, r.z1 - 22, PI, 6166);
+    pave(pl, r.x0, r.z0, r.x1, r.z1, 0x8f8672, 'gravel', 0.04);
+    fence(pl, 'chain', [[r.x0 + 34, r.z0], [r.x1, r.z0], [r.x1, r.z1], [r.x0, r.z1], [r.x0, r.z0], [r.x0 + 26, r.z0]]);
+    pl.car('semi', r.x0 + 10, r.z0 + 22, 0.2, 0xd9a21c, { model: 'dump_truck' });
+    pl.car('semi', r.x0 + 10, r.z0 + 28, 0.1, 0xd9a21c, { model: 'dump_truck' });
+    pl.car('tractor', r.x0 + 30, r.z0 + 30, 0.9, 0xd9a21c, { model: 'wheel_loader' });
+    pl.car('tractor', r.x0 + 44, r.z0 + 14, -0.4, 0xd9a21c, { model: 'log_loader' });
+    for (const [x, z, ry] of [[r.x1 - 5, r.z0 + 10, PI / 2], [r.x1 - 5, r.z0 + 24, PI / 2], [r.x1 - 9, r.z1 - 4, 0]]) prop(pl, 'shipping_container', x, z, ry, true);
+    for (let x = r.x0 + 8; x < r.x1 - 22; x += rng.range(8, 11)) prop(pl, rng.pick(['gravel_pile', 'dirt_pile', 'dirt_pile']), x, r.z1 - 6 + rng.range(-1, 1), rng.range(0, 6), true);
+    scatter(pl, rng, ['traffic_barrel', 'traffic_cone', 'jersey_barrier', 'barricade_a', 'tyre', 'barrel_steel', 'pallet', 'sawhorse', 'wheelbarrow'], r.x0 + 3, r.z0 + 3, r.x1 - 8, r.z1 - 10, 20, 0.4);
+    prop(pl, 'portable_toilet', r.x0 + 20, r.z0 + 3, 0, true);
+    poleSign(pl, 'plant', r.x1 - 12, r.z0 - 4.2, 0, 'RIDGELINE PLANT HIRE', 'EXCAVATION · HAULAGE', '#d9a21c', '#1d1d1f');
+    prop(pl, 'fuel_tank_stand', r.x0 + 4, r.z0 + 34, PI / 2, true);
+    pl.entrance(r.x0 + 30, r.z0, 0, -1, 7.5);
+    lamps(pl, [[r.x0 + 20, r.z1 - 1.2, PI], [r.x1 - 16, r.z1 - 1.2, PI]]);
+    weedLine(pl, rng, r.x0, r.z1 + 0.5, r.x1, r.z1 + 0.5, 2.4);
+    pl.landmarks.push({ name: 'Ridgeline Plant Hire', x: 768, z: 40, kind: 'business' });
+  }
 }

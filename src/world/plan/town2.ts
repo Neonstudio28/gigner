@@ -11,12 +11,12 @@ import { HOUSES } from '../b2/houses';
 import { CIVIC_B2 } from '../b2/civic';
 import { LANDMARKS } from '../b2/landmarks';
 import { put } from '../b2/hull';
-import { yards, alleys } from './dress2';
+import { yards } from './dress2';
 import { townsfolk } from './folk';
 import { DISTRICT } from '../b2/district';
 import { farms, lumberYard, freight, lakefront } from './districts2';
 import { core } from './core';
-import { strip, homes, riverPark, ridge, flats, trailerCourt } from './quarters';
+import { strip, homes, riverPark, ridge, flats, trailerCourt, industry } from './quarters';
 
 const PI = Math.PI;
 void PI;
@@ -39,12 +39,12 @@ export function town(pl: Placer) {
   farms(pl);
   lumberYard(pl);
   freight(pl);
+  industry(pl);
   homes(pl);
   riverPark(pl);
   ridge(pl);
   flats(pl);
   trailerCourt(pl);
   yards(pl);
-  alleys(pl);
   townsfolk(pl);
 }
