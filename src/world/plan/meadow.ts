@@ -79,6 +79,11 @@ export function meadowbrook(pl: Placer) {
       const pz = z;
       if (pl.c.occ.blocked(px, pz, 7) || pl.onStreet(px, pz, 10) || pl.drives.blocked(px, pz, 6)) continue;
       if (pl.sites.some((st) => Math.hypot(st.x - px, st.z - pz) < 20)) continue;
+      const hs = [[-7, -6.5], [7, -6.5], [-7, 6.5], [7, 6.5]].map(([dx, dz]) => heightAt(px + dx, pz + dz));
+      if (Math.max(...hs) - Math.min(...hs) > 0.12) {
+        if (rng.chance(0.25)) prop(pl, 'dirt_pile', px, pz, rng.range(0, 6), 0.4);
+        continue;
+      }
       const ry = 0;
       k.at(px, pz, ry, () => k.box(0, -0.05, 0, 13.4, 0.1, 12.4, rng.pick([0x8a7458, 0x7d6a50, 0x947f62]), 'gravel', { cast: false }), heightAt(px, pz));
       if (rng.chance(0.3)) prop(pl, 'dirt_pile', px + rng.range(-3, 3), pz + rng.range(-3, 3), rng.range(0, 6), 0.4);
