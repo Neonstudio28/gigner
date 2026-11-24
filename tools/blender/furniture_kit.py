@@ -538,16 +538,16 @@ GOODS = ('#b8332b', '#e3b83a', '#3f7d4b', '#3b62a8', '#dd7a2c', '#6e4a94', '#ece
 GLASSY = ('clear_g', 'clear_a', 'clear', 'glass', 'gloss:#3a2416', 'gloss:#1f3a2a', 'gloss:#6e1f1f')
 
 
-def goods(b, kind, x0, x1, y, z, d, hmax, rng, label=True):
+def goods(b, kind, x0, x1, y, z, d, hmax, rng, label=True, n=8):
     """Fills a shelf span with products. kind: box, can, bottle, jar, liquor, tool, bag, mix. `y` = shelf front edge."""
     x = x0 + 0.01
     while x < x1 - 0.04:
         k = kind if kind != 'mix' else rng.choice(('box', 'can', 'bottle', 'jar', 'bag'))
         col = rng.choice(GOODS)
         if k == 'box':
-            w, h, n = rng.uniform(0.07, 0.16), hmax * rng.uniform(0.55, 0.95), rng.randint(1, 3)
+            w, h, cnt = rng.uniform(0.07, 0.16), hmax * rng.uniform(0.55, 0.95), rng.randint(1, 3)
             dd = min(d - 0.03, rng.uniform(0.05, 0.09) * 3)
-            for i in range(n):
+            for i in range(cnt):
                 if x + w > x1:
                     break
                 b.box(col, x + w / 2, y + 0.015 + dd / 2, z, w - 0.004, dd, h, skip='bk')
@@ -559,30 +559,30 @@ def goods(b, kind, x0, x1, y, z, d, hmax, rng, label=True):
             x += 0.012
         elif k in ('can', 'jar', 'tool'):
             r = rng.uniform(0.03, 0.045) if k != 'tool' else rng.uniform(0.045, 0.075)
-            h, n = min(hmax * 0.9, r * rng.uniform(2.2, 3.4) if k != 'tool' else r * 2.3), rng.randint(2, 4)
+            h, cnt = min(hmax * 0.9, r * rng.uniform(2.2, 3.4) if k != 'tool' else r * 2.3), rng.randint(2, 4)
             band = rng.choice(GOODS)
-            for i in range(n):
+            for i in range(cnt):
                 if x + 2 * r > x1:
                     break
                 for row in range(2 if d > 0.3 else 1):
                     if k == 'jar':
-                        b.cyl('clear_a' if rng.random() < 0.5 else 'clear_g', x + r, y + 0.02 + r + row * (2 * r + 0.01), z, r, h * 0.85, n=8, caps=(False, False))
-                        b.cyl(col, x + r, y + 0.02 + r + row * (2 * r + 0.01), z + h * 0.85, r * 0.9, h * 0.15, n=8, caps=(False, True))
+                        b.cyl('clear_a' if rng.random() < 0.5 else 'clear_g', x + r, y + 0.02 + r + row * (2 * r + 0.01), z, r, h * 0.85, n=n, caps=(False, False))
+                        b.cyl(col, x + r, y + 0.02 + r + row * (2 * r + 0.01), z + h * 0.85, r * 0.9, h * 0.15, n=n, caps=(False, True))
                     else:
-                        can(b, x + r, y + 0.02 + r + row * (2 * r + 0.01), z, r, h, col, band if row == 0 else None, lid='steel' if k == 'can' else col)
+                        can(b, x + r, y + 0.02 + r + row * (2 * r + 0.01), z, r, h, col, band if row == 0 else None, lid='steel' if k == 'can' else col, n=n)
                 x += 2 * r + 0.006
             x += 0.012
         elif k in ('bottle', 'liquor'):
             r = rng.uniform(0.03, 0.042)
-            h, n = hmax * rng.uniform(0.7, 0.96), rng.randint(2, 4)
+            h, cnt = hmax * rng.uniform(0.7, 0.96), rng.randint(2, 4)
             m = rng.choice(GLASSY) if k == 'liquor' else rng.choice(('clear_g', 'clear_a', 'clear', col))
             lab = rng.choice(GOODS)
             nk = rng.choice((0.28, 0.34, 0.45))
-            for i in range(n):
+            for i in range(cnt):
                 if x + 2 * r > x1:
                     break
                 for row in range(2 if d > 0.3 else 1):
-                    bottle(b, x + r, y + 0.02 + r + row * (2 * r + 0.012), z, h, r, m, cap=rng.choice(('black', 'red', 'brass', 'white')) if row == 0 else 'black', label=lab if row == 0 else None, neck=nk)
+                    bottle(b, x + r, y + 0.02 + r + row * (2 * r + 0.012), z, h, r, m, cap=rng.choice(('black', 'red', 'brass', 'white')) if row == 0 else 'black', n=n, label=lab if row == 0 else None, neck=nk)
                 x += 2 * r + 0.008
             x += 0.014
         else:  # bag
