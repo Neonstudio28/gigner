@@ -52,8 +52,12 @@ def colour(key, color, label=None):
     """Flat-colour material auto-named from its key and colour: colour('paint', '#7a4a2b')."""
     if label:
         return mat(f'{key}__{label}', color)
-    c = srgb(color)
-    return mat(f'{key}_{int(c[0] * 255):02x}{int(c[1] * 255):02x}{int(c[2] * 255):02x}'.replace('_', '__c'), color)
+    c = color
+    if isinstance(c, str):
+        c = int(c.lstrip('#'), 16)
+    if not isinstance(c, int):
+        c = int(c[0] * 255 + 0.5) << 16 | int(c[1] * 255 + 0.5) << 8 | int(c[2] * 255 + 0.5)
+    return mat(f'{key}__c{c:06x}', color)
 
 
 def to_object(name, bm, materials, angle=35.0, parent=None):
