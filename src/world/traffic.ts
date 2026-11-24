@@ -104,6 +104,13 @@ export class Traffic {
     });
   }
 
+  /** Where every car is, which way it points and how fast it goes (for the townsfolk). */
+  movers(): { x: number; z: number; fx: number; fz: number; v: number; hl: number }[] {
+    return this.cars.map((c) => ({ x: c.x, z: c.z, fx: Math.cos(c.h), fz: -Math.sin(c.h), v: c.v, hl: c.len / 2 }));
+  }
+  /** People out on the carriageway: cars brake for them as they do for the player. */
+  walkers: { x: number; z: number }[] = [];
+
   private tmp = { x: 0, z: 0, y: 0, h: 0, speed: 0 };
 
   update(dt: number, camera?: THREE.Vector3, player?: { x: number; z: number } | null) {
@@ -124,6 +131,12 @@ export class Traffic {
           const ahead = dx * Math.cos(c.h) - dz * Math.sin(c.h);
           const side = Math.abs(dx * Math.sin(c.h) + dz * Math.cos(c.h));
           if (ahead > 0 && ahead < gap && side < 2.4) gap = ahead - 3.5;
+        }
+        for (const w of this.walkers) {
+          const dx = w.x - c.x;
+          const dz = w.z - c.z;
+          const ahead = dx * Math.cos(c.h) - dz * Math.sin(c.h);
+          if (ahead > 0 && ahead < gap && Math.abs(dx * Math.sin(c.h) + dz * Math.cos(c.h)) < 2.2) gap = ahead - 3.5;
         }
         if (gap < 45) target = Math.min(target, Math.max(0, (gap - 7) * 0.8));
         c.v += clamp(target - c.v, -9 * dt, 3.2 * dt);

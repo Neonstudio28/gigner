@@ -30,6 +30,25 @@ export function rooms(): Zone[] {
 
 export function clearZones() {
   ZONES.length = 0;
+  DOORS.length = 0;
+}
+
+/** An open doorway in an outside wall: its sill, and the unit vector pointing out of the building. */
+export interface Doorway {
+  x: number;
+  y: number;
+  z: number;
+  nx: number;
+  nz: number;
+  w: number;
+}
+const DOORS: Doorway[] = [];
+export const doorways = () => DOORS;
+/** Records a doorway at local (x, y, z) whose outside is local +Z (the townsfolk use these to go in and out). */
+export function addDoorway(k: Kit, x: number, y: number, z: number, w: number) {
+  const p = k.toWorld(x, y, z);
+  const q = k.toWorld(x, y, z + 1);
+  DOORS.push({ x: p.x, y: p.y, z: p.z, nx: q.x - p.x, nz: q.z - p.z, w });
 }
 
 /** A walkable floor (local rectangle centred on x, z); `yBack`/`yFront` differ to make a ramp out of a stair. */

@@ -3,8 +3,15 @@ import { Placer } from './placer';
 import { heightAt, isWater, LAKE } from '../terrain';
 import { put } from '../b2/hull';
 import { zoneAt } from '../buildings/interiors';
-import { person, randomPerson, cast, deputy, crowd, type PersonOpts, type Pose } from '../people';
+import { addPost, newRing, type Post, type PostPose } from '../../npc/posts';
 
+type Pose = PostPose;
+/** Who starts at a spot: a model (or 'any' townsperson), what they are doing and what they hold. */
+interface Who {
+  model: string;
+  pose?: Pose;
+  carry?: string;
+}
 const PI = Math.PI;
 
 /** True where a person cannot stand: water, the wet edge of the beach, or something solid. */
@@ -20,32 +27,43 @@ function ground(pl: Placer, x: number, z: number) {
   return Math.max(heightAt(x, z), r > -1e8 ? r : -1e9, zoneAt(x, z)?.floor ?? -1e9);
 }
 
-function stand(pl: Placer, x: number, z: number, ry: number, o: PersonOpts) {
+function stand(pl: Placer, x: number, z: number, ry: number, o: Who, tag = 'street', extra: Partial<Post> = {}) {
   if (taken(pl, x, z, 0.3)) return false;
-  person(pl.k, x, z, ry, o, ground(pl, x, z));
+  addPost({ kind: 'stand', x, z, y: ground(pl, x, z), ry, tag, ...o, ...extra });
   return true;
 }
 
 /** A few people talking in a ring. */
-function group(pl: Placer, rng: Rng, x: number, z: number, n: number, mk: (r: Rng) => PersonOpts = randomPerson) {
+function group(pl: Placer, rng: Rng, x: number, z: number, n: number, tag = 'street') {
   if (taken(pl, x, z, 0.7)) return;
-  pl.k.at(x, z, 0, () => crowd(pl.k, rng, 0, 0, n, 0.55 + n * 0.14, mk), ground(pl, x, z));
+  const ring = newRing();
+  const R = 0.55 + n * 0.14;
+  const a0 = rng.range(0, 6.28);
+  for (let i = 0; i < n; i++) {
+    const a = a0 + (i / n) * 6.28 + rng.range(-0.2, 0.2);
+    stand(pl, x + Math.sin(a) * R, z + Math.cos(a) * R, a + PI, { model: 'any', pose: rng.pick(['talk', 'stand', 'hips', 'cross', 'talk'] as const) }, tag, { ring });
+  }
 }
 
 /** A bench with one or two people sitting on it. */
-function bench(pl: Placer, rng: Rng, x: number, z: number, ry: number) {
+function bench(pl: Placer, rng: Rng, x: number, z: number, ry: number, tag = 'street') {
   if (taken(pl, x, z, 0.8)) return;
-  pl.k.at(x, z, ry, () => {
-    put(pl.k, 'bench_wood', 0, 0, 0, 0, { solid: 0.9 });
-    const n = rng.pick([1, 2, 2]);
-    for (let i = 0; i < n; i++) person(pl.k, n === 1 ? rng.range(-0.4, 0.4) : -0.42 + i * 0.84, 0.12, rng.range(-0.15, 0.15), { ...randomPerson(rng, 'sit'), seat: 0.46 });
-  }, ground(pl, x, z));
+  const y = ground(pl, x, z);
+  pl.k.at(x, z, ry, () => put(pl.k, 'bench_wood', 0, 0, 0, 0, { solid: 0.9 }), y);
+  const n = rng.pick([1, 2, 2]);
+  const ring = n > 1 ? newRing() : undefined;
+  for (let i = 0; i < 2; i++) {
+    const lx = -0.42 + i * 0.84;
+    const [sx, sz] = Placer.world(x, z, ry, lx, 0.12);
+    const [ax, az] = Placer.world(x, z, ry, lx, 0.85);
+    addPost({ kind: 'seat', x: sx, z: sz, y, ry, tag, ax, az, ring, ...(i < n ? { model: 'any', pose: 'sit' as const } : {}) });
+  }
 }
 
 /** People standing about a building's front door (local frame of its site). */
-function door(pl: Placer, rng: Rng, id: string, list: [number, number, number, (r: Rng) => PersonOpts][]) {
-  for (const s of pl.sites) {
-    if (s.def.id !== id) continue;
+function door(pl: Placer, rng: Rng, id: string, list: [number, number, number, (r: Rng) => Who][]) {
+  pl.sites.forEach((s, site) => {
+    if (s.def.id !== id) return;
     const at = (lx: number, lz: number) => Placer.world(s.x, s.z, s.ry, lx, s.def.d / 2 + lz);
     // a flight of steps is a ramp to the walker but not to the eye: the whole group moves out to the flat below it
     const onSteps = (lx: number, lz: number) => {
@@ -58,13 +76,14 @@ function door(pl: Placer, rng: Rng, id: string, list: [number, number, number, (
     if (out) out += 0.5;
     for (const [lx, lz, ry, mk] of list) {
       const [x, z] = at(lx, lz + out);
-      stand(pl, x, z, s.ry + ry, mk(rng));
+      stand(pl, x, z, s.ry + ry, mk(rng), id, { site });
     }
-  }
+  });
 }
 
-const as = (model: string, pose: Pose = 'stand', carry?: string) => (r: Rng): PersonOpts => ({ ...cast(r, model, pose), carry });
-const any = (pose?: Pose) => (r: Rng) => randomPerson(r, pose);
+const as = (model: string, pose: Pose = 'stand', carry?: string) => (): Who => ({ model, pose, carry });
+const any = (pose?: Pose) => (): Who => ({ model: 'any', pose });
+const deputy = (r: Rng): Who => ({ model: r.chance(0.7) ? 'sheriff_deputy_m' : 'sheriff_deputy_f', pose: r.pick(['hips', 'cross', 'talk'] as const) });
 
 /** The town's standing population: chatting groups, bench sitters, people at their work and on the beach. */
 export function townsfolk(pl: Placer) {
@@ -85,7 +104,7 @@ export function townsfolk(pl: Placer) {
         else if (pick < 0.7 && busy) {
           const b = pl.net.frontage(r, s, side, r.full - 0.55);
           bench(pl, rng, b.x, b.z, b.ry);
-        } else stand(pl, f.x, f.z, rng.range(0, 6.28), randomPerson(rng, rng.pick(['stand', 'stride', 'stride', 'carry', 'hips'] as const)));
+        } else stand(pl, f.x, f.z, rng.range(0, 6.28), { model: 'any', pose: rng.pick(['stand', 'stride', 'stride', 'carry', 'hips'] as const) });
       }
     }
   }
@@ -114,13 +133,13 @@ export function townsfolk(pl: Placer) {
   };
   for (let x = -70; x <= 100; x += rng.range(12, 22)) {
     const z = shore(x) - rng.range(3, 9);
-    if (rng.chance(0.55)) group(pl, rng, x, z, rng.pick([2, 3, 3, 4]));
-    else stand(pl, x, z, rng.range(-0.6, 0.6), randomPerson(rng, rng.pick(['hips', 'point', 'wave', 'stand'] as const)));
+    if (rng.chance(0.55)) group(pl, rng, x, z, rng.pick([2, 3, 3, 4]), 'beach');
+    else stand(pl, x, z, rng.range(-0.6, 0.6), { model: 'any', pose: rng.pick(['hips', 'point', 'wave', 'stand'] as const) }, 'beach');
   }
-  for (const [kx, kz, m] of [[-82, 293, 'kid_m'], [-88, 294, 'kid_f'], [-80, 299, 'kid_f'], [-90, 300, 'kid_m'], [-76, 291, 'casual_f_2']] as const) stand(pl, kx, kz, rng.range(0, 6.28), cast(rng, m, rng.pick(['wave', 'stride', 'stand', 'hips'] as const)));
+  for (const [kx, kz, m] of [[-82, 293, 'kid_m'], [-88, 294, 'kid_f'], [-80, 299, 'kid_f'], [-90, 300, 'kid_m'], [-76, 291, 'casual_f_2']] as const) stand(pl, kx, kz, rng.range(0, 6.28), { model: m, pose: rng.pick(['wave', 'stride', 'stand', 'hips'] as const) }, 'play');
   const pz = shore(14) - 5;
   const deck = LAKE.level + 0.9;
-  for (const [lz, ry, mk] of [[40, 0.2, as('old_man', 'carry')], [36, PI / 2, as('kid_m', 'point')], [22, -PI / 2, as('tourist', 'hips')], [10, PI, any('stride')]] as const) person(pl.k, 14 + rng.range(-0.5, 0.5), pz + lz, ry, mk(rng), deck);
+  for (const [lz, ry, mk] of [[40, 0.2, as('old_man', 'carry')], [36, PI / 2, as('kid_m', 'point')], [22, -PI / 2, as('tourist', 'hips')], [10, PI, any('stride')]] as const) addPost({ kind: 'stand', x: 14 + rng.range(-0.5, 0.5), z: pz + lz, y: deck, ry, tag: 'pier', ...mk() });
   // the green: benches round the town hall block
-  for (const [bx, bz, ry] of [[-24, 58, PI / 2], [24, 58, -PI / 2], [-12, 22, 0], [12, 22, 0], [-24, 36, PI / 2], [24, 36, -PI / 2]] as const) bench(pl, rng, bx, bz, ry);
+  for (const [bx, bz, ry] of [[-24, 58, PI / 2], [24, 58, -PI / 2], [-12, 22, 0], [12, 22, 0], [-24, 36, PI / 2], [24, 36, -PI / 2]] as const) bench(pl, rng, bx, bz, ry, 'green');
 }

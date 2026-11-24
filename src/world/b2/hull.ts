@@ -1,6 +1,6 @@
 import type { Kit, Col } from '../core/kit';
 import { hasAsset } from '../assets';
-import { addZone } from '../buildings/interiors';
+import { addZone, addDoorway } from '../buildings/interiors';
 import { win, door, WHITE, DARK, type WinO, type DoorO } from './kit2';
 
 /** Interior finish of a room: painted upper wall over panelled wainscot, floor and ceiling. */
@@ -129,7 +129,10 @@ function wallSide(k: Kit, len: number, o: HullO, ops: Op[], flip: number, lo = 0
       k.box(p.x, p.y - 0.08, 0.0, p.w + 0.1, 0.1, 0.22, fr);
       const m = Math.max(1, Math.round(p.w / 1.2));
       if (p.y > 0.3) for (let i = 0; i < m; i++) k.box(p.x - p.w / 2 + ((i + 0.5) * p.w) / m, 0.08, 0.02, p.w / m - 0.16, p.y - 0.24, 0.04, p.color ?? fr);
-    } else if (p.kind === 'door') door(k, p.x, 0, p.w, p.h, p.color ?? 0x6a4a32, { frame: fr, ...p.door, open: true });
+    } else if (p.kind === 'door') {
+      door(k, p.x, 0, p.w, p.h, p.color ?? 0x6a4a32, { frame: fr, ...p.door, open: true });
+      addDoorway(k, p.x, 0, 0, p.w);
+    }
     else if (p.kind === 'garage') {
       // roller door wound up into its drum
       k.cylX(p.x, p.h - 0.2, -0.2, 0.2, p.w, 10, 0xb9bcc0, 'metal');

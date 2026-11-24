@@ -7,11 +7,15 @@ import { SignBook } from './signs';
 import { createTerrain, groundHeight, heightAt as groundHeightPre, MAP_RADIUS, setDevelopment, waterAt, type WaterHit } from './terrain';
 import { createVegetation, type Vegetation, type TreeIndex } from './vegetation';
 import { Traffic } from './traffic';
-import { Pedestrians } from './pedestrians';
+import { Townsfolk } from '../npc/town';
+import { npcLib } from '../npc/lib';
 import { roadEnds } from './plan/edges';
-import { clearZones, zoneAt, rooms, type Zone } from './buildings/interiors';
+import { clearZones, zoneAt, rooms, doorways, type Zone, type Doorway } from './buildings/interiors';
 import { loadFonts } from './fonts';
 import { loadAssets, atlases } from './assets';
+import { loadNpcLib } from '../npc/lib';
+import { clearPosts, posts, type Post } from '../npc/posts';
+import { Nav } from '../npc/nav';
 import { SHOTS, type Shot } from './shots';
 import type { Ctx } from './buildings/common';
 import { buildNetwork } from './plan/roads';
@@ -88,13 +92,19 @@ export interface TownWorld {
   shots: Shot[];
   spawn: THREE.Vector3;
   traffic: Traffic;
-  pedestrians: Pedestrians;
+  /** Sidewalk graph and walkability for the townsfolk. */
+  nav: Nav | null;
+  doors: Doorway[];
+  posts: Post[];
+  /** Every building placed: catalog id, centre, facing and footprint. */
+  sites: { id: string; name: string; x: number; z: number; ry: number; w: number; d: number }[];
+  pedestrians: Townsfolk;
   materials: MaterialLib;
   signs: SignBook;
   vegetation: Vegetation;
   /** Street lamps, lit canopies and neon signs (for the coloured glow in the fog). */
   lamps: Lamp[];
-  update: (dt: number, elapsed: number, camera: THREE.Vector3, player?: { x: number; z: number } | null) => void;
+  update: (dt: number, elapsed: number, camera: THREE.Vector3, player?: { x: number; y?: number; z: number } | null, env?: { hour?: number; rain?: number; night?: number; flash?: number; driving?: boolean }) => void;
   dispose: () => void;
 }
 
@@ -115,7 +125,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   const materials = new MaterialLib(createLayers(await loadPhotoSet(import.meta.env.BASE_URL)));
   const signs = new SignBook((i, tex) => materials.addSignPage(i, tex));
   await progress(0.07, 'Unpacking the model kit');
-  await loadAssets(import.meta.env.BASE_URL, ASSET_FAMILIES);
+  await Promise.all([loadAssets(import.meta.env.BASE_URL, ASSET_FAMILIES), loadNpcLib(import.meta.env.BASE_URL)]);
   for (const [family, tex] of atlases()) materials.addAtlas(family, tex);
 
   const root = new THREE.Group();
@@ -168,6 +178,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   };
 
   clearZones();
+  clearPosts();
   await progress(0.08, 'Grading the valley and laying out roads');
   registerTownPads();
   const net = buildNetwork();
@@ -207,7 +218,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   const traffic = new Traffic(materials, signs, net);
   traffic.enabled = opts.traffic ?? true;
   root.add(terrain, statics, dynamic, vegetation.group, traffic.group);
-  let pedestrians: Pedestrians | null = null;
+  let pedestrians: Townsfolk | null = null;
 
   // the drawn ground mesh (not the analytic terrain), so cars ride exactly on what is on screen
   const groundAt = (x: number, z: number, nearY?: number) => {
@@ -220,9 +231,16 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
     return ok.length ? Math.max(...ok) : Math.min(...c);
   };
 
+  const solidAt = (x: number, z: number, y?: number) => solids.blocked(x, z, 0, y) || (trees as TreeIndex).hit(x, z) || Math.hypot(x, z) > MAP_RADIUS;
+  let nav: Nav | null = null;
   try {
-    pedestrians = new Pedestrians(materials, net, groundAt, opts.pedestrians ?? 70);
-    root.add(pedestrians.group);
+    nav = new Nav({ groundAt, floorAt: zoneAt, solidAt, waterAt, roadAt: (x, z, y) => net.roadAt(x, z, y) }, net);
+    console.info('[npc] sidewalk graph', JSON.stringify(nav.stats));
+    if (npcLib() && opts.pedestrians !== 0) {
+      pedestrians = new Townsfolk({ nav, sites: pl.sites.map((s) => ({ id: s.def.id, name: s.def.name, x: s.x, z: s.z, ry: s.ry, w: s.def.w, d: s.def.d })), doors: doorways(), rooms: rooms(), posts: posts(), movers: () => traffic.movers() });
+      console.info('[npc] townsfolk', JSON.stringify(pedestrians.info()));
+    }
+    if (pedestrians) root.add(pedestrians.group);
   } catch (err) {
     console.error('[pedestrians] failed', err);
   }
@@ -231,9 +249,11 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
     root,
     heightAt: groundHeight,
     groundAt,
-    solidAt: (x, z, y) => {
-      return solids.blocked(x, z, 0, y) || (trees as TreeIndex).hit(x, z) || Math.hypot(x, z) > MAP_RADIUS;
-    },
+    solidAt,
+    nav,
+    doors: doorways(),
+    posts: posts(),
+    sites: pl.sites.map((s) => ({ id: s.def.id, name: s.def.name, x: s.x, z: s.z, ry: s.ry, w: s.def.w, d: s.def.d })),
     waterAt,
     floorAt: zoneAt,
     rooms: rooms(),
@@ -257,11 +277,14 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
     signs,
     vegetation,
     lamps: [...lightCells.values()],
-    update(dt, elapsed, camera, player) {
+    update(dt, elapsed, camera, player, env) {
       windUniform.value = elapsed;
       for (const a of pl.animated) a.update(dt, elapsed);
       traffic.update(dt, camera, player);
-      pedestrians?.update(dt, camera, player);
+      if (pedestrians) {
+        pedestrians.update(dt, camera, player, env);
+        traffic.walkers = pedestrians.walkers;
+      }
       vegetation.update(camera);
     },
     dispose() {

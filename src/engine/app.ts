@@ -310,7 +310,13 @@ export async function startApp(container: HTMLElement) {
     drive.audio.setRain(foot.active && foot.indoors ? raining * 0.35 : raining);
     drive.headlight.intensity = drive.active ? 320 * THREE.MathUtils.smoothstep(fog.lampsOn, 0.3, 0.7) : 0;
     const player = drive.active ? drive.pos : foot.active ? foot.pos : null;
-    world.update(dt, elapsed, camera.position, player);
+    world.update(dt, elapsed, camera.position, player, {
+      hour: weather.enabled ? weather.hour : preset.name === 'Night' ? 22.5 : NaN,
+      rain: raining,
+      night: weather.enabled ? weather.night : preset.name === 'Night' ? 1 : 0,
+      flash: weather.enabled ? weather.flash : 0,
+      driving: drive.active,
+    });
     mist.update(elapsed);
     fog.tick(dt);
     ui?.update(dt);
