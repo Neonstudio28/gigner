@@ -259,8 +259,8 @@ def manhole_cover():
     iron, iron2 = MT('#5b5f62'), MT('#494c4f')
     a.lathe(iron2, [(0, 0), (0.42, 0), (0.42, 0.012), (0.4, 0.02), (0.345, 0.02), (0.345, 0.008), (0, 0.008)], 16)
     a.lathe(iron, [(0, 0.008), (0.338, 0.008), (0.338, 0.022), (0.32, 0.026), (0, 0.026)], 16)
-    a.lathe(iron2, [(0.2, 0.026), (0.2, 0.031), (0.23, 0.031), (0.23, 0.026)], 16, caps=False)
-    a.lathe(iron2, [(0.07, 0.026), (0.07, 0.031), (0.1, 0.031), (0.1, 0.026)], 16, caps=False)
+    a.lathe(iron2, [(0.23, 0.026), (0.23, 0.031), (0.2, 0.031), (0.2, 0.026)], 16, caps=False)
+    a.lathe(iron2, [(0.1, 0.026), (0.1, 0.031), (0.07, 0.031), (0.07, 0.026)], 16, caps=False)
     for i in range(12):
         ang = math.tau * i / 12
         c, s = math.cos(ang), math.sin(ang)
@@ -321,8 +321,8 @@ def guard_rail_segment():
     verts = [(x, y - 0.1, zc + z) for x in (-L / 2, L / 2) for y, z in wsec]
     k = len(wsec)
     faces = [[i, i + 1, k + i + 1, k + i] for i in range(k - 1)]
-    a.mesh(st, verts, faces, closed=False)
-    a.mesh(dk, [(x, y + 0.004, z) for x, y, z in verts], [f[::-1] for f in faces], closed=False)
+    a.mesh(st, verts, [f[::-1] for f in faces], closed=False)
+    a.mesh(dk, [(x, y + 0.004, z) for x, y, z in verts], faces, closed=False)
     for x in (-1.905, 0, 1.905):
         a.box(wood, 0.15, 0.2, 0.74, (x, 0.07, 0.37), 0.012, 'xyB')
         a.box(wood, 0.15, 0.075, 0.34, (x, -0.0675, zc), 0.006, 'z')

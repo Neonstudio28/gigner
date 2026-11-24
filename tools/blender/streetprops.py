@@ -12,7 +12,7 @@ import lib
 import streetprops_kit as K
 import streetprops_atlas
 
-MODULES = ['streetprops_waste', 'streetprops_furniture', 'streetprops_furniture2', 'streetprops_road', 'streetprops_utility', 'streetprops_yard',
+MODULES = ['streetprops_waste', 'streetprops_furniture', 'streetprops_furniture2', 'streetprops_road', 'streetprops_utility', 'streetprops_yard', 'streetprops_yard2',
            'streetprops_gas']
 
 
@@ -49,6 +49,9 @@ def shoot(objs, tag, fast=False):
     for o in objs:
         o.scale = (zoom,) * 3
     bpy.context.view_layer.update()
+    for o in objs:                                   # wall-mounted assets hang below their origin: lift them onto the floor
+        o.location.z = max(0.0, -lib.bounds(o)[0][2])
+    bpy.context.view_layer.update()
     # lib frames on max(cols * cell_w, rows * cell_d * 1.5): keep the row count dominant so nothing is cut off at the sides
     size = [lib.bounds(o) for o in objs]
     gap = 0.3 * big * zoom
@@ -61,6 +64,7 @@ def shoot(objs, tag, fast=False):
                 samples=8 if fast else 24)
     for o in objs:
         o.scale = (1, 1, 1)
+        o.location.z = 0.0
     bpy.context.view_layer.update()
 
 
