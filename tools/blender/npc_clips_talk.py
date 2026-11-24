@@ -1,0 +1,48 @@
+"""Social clips (talking, greeting) and everything done sitting down."""
+from npc_clips import P, mir, over, clip, REL, SIT
+
+
+def make(rig):
+    g1 = P(aR=(28, 0, 6), fR=(88, 20, 0), hd=(0, 6, 0))
+    g2 = P(aR=(36, 0, 12), fR=(70, -12, 0), aL=(20, 0, -8), fL=(74, 12, 0), hd=(3, -5, 0), sp=-2)
+    clip(rig, 'talk_a', 5.0, [(0, {}), (0.6, g1), (1.2, over(g1, fR=(72, 8, 0), hR=(0, 0, -22))), (2.0, g2), (2.7, over(g2, fL=(58, 22, 0), hd=(-5, 4, 0))),
+                              (3.5, g1), (4.3, P(hd=(-6, 0, 0)))])
+    c1 = P(aL=(30, 0, -6), fL=(96, -14, 0), hd=(-3, -8, 0), sp=-4)
+    c2 = P(aL=(34, 0, -6), fL=(58, -14, 0), hd=(-7, -4, 0), sp=-5)
+    clip(rig, 'talk_b', 5.6, [(0, {}), (0.5, c1), (0.9, c2), (1.3, c1), (1.7, c2), (2.6, P(aL=(12, 0, -18), fL=(70, 42, 0), aR=(12, 0, 18), fR=(70, -42, 0), hd=(4, 0, 6))),
+                              (3.6, P(hd=(0, 14, 0))), (4.6, over(c1, hd=(-8, 0, 0)))])
+    chin = P(aL=(32, 0, -4), fL=(98, -76, 0), aR=(36, 0, 4), fR=(140, 28, 0), hd=(-4, 0, 0))
+    clip(rig, 'listen', 5.0, [(0, chin), (1.0, over(chin, hd=(-12, 0, 0))), (1.4, chin), (1.8, over(chin, hd=(-12, 0, 0))), (2.2, chin), (3.6, over(chin, hd=(-2, 0, 8)))], base=chin)
+    la = P(sp=7, hd=13, aL=(8, 0, -12), aR=(20, 0, 8), fR=(96, 50, 0), at=(0, 0, 0.012))
+    lb = P(sp=2, hd=4, aL=(6, 0, -10), aR=(20, 0, 8), fR=(100, 50, 0), ch=-3)
+    clip(rig, 'laugh', 1.2, [(0, la), (0.3, lb), (0.6, la), (0.9, lb)], base=la)
+    sh = P(aL=(10, 0, -18), fL=(74, 44, 0), aR=(10, 0, 18), fR=(74, -44, 0), hd=(2, 0, 8), ch=3)
+    clip(rig, 'shrug', 2.0, [(0, {}), (0.5, sh), (1.2, sh), (2.0, {})], loop=False)
+    w1 = P(aR=(10, 0, 140), fR=(0, 0, -36), hd=(3, 0, -4))
+    w2 = P(aR=(10, 0, 146), fR=(0, 0, 24), hd=(3, 0, -4))
+    clip(rig, 'wave', 2.4, [(0, {}), (0.4, w1), (0.72, w2), (1.04, w1), (1.36, w2), (1.68, w1), (2.4, {})], loop=False)
+    pt = P(aR=(84, 0, 4), fR=6, hd=(0, -6, 0), ch=(0, 8, 0))
+    clip(rig, 'point', 2.6, [(0, {}), (0.5, pt), (1.0, over(pt, aR=(80, 0, 4), fR=14)), (1.4, pt), (2.0, pt), (2.6, {})], loop=False)
+    nod = P(hd=-13)
+    clip(rig, 'nod', 1.4, [(0, {}), (0.3, nod), (0.6, {}), (0.9, nod), (1.4, {})], loop=False)
+    u1 = P(aL=(165, 0, -24), aR=(165, 0, 24), fL=20, fR=20, hd=10, at=(0, 0, 0.05))
+    u2 = P(aL=(140, 0, -34), aR=(140, 0, 34), fL=70, fR=70, hd=4, at=(0, 0, -0.03), tL=12, tR=12, sL=-24, sR=-24, ftL=12, ftR=12)
+    clip(rig, 'cheer', 1.0, [(0, u1), (0.5, u2)], base=u1)
+    k1 = P(aL=(30, 0, -6), fL=(84, -40, 0), aR=(30, 0, 6), fR=(84, 40, 0))
+    k2 = P(aL=(30, 0, -4), fL=(84, -64, 0), aR=(30, 0, 4), fR=(84, 64, 0))
+    clip(rig, 'clap', 0.5, [(0, k1), (0.25, k2)], base=k1)
+    # ---- seated (a 0.45 m seat; the engine offsets for other heights) ----------------------------------------
+    rest = over(SIT, aL=(26, 0, -6), fL=(52, -10, 0), aR=(26, 0, 6), fR=(52, 10, 0), sp=3)
+    clip(rig, 'sit', 6.0, [(0, rest), (2.0, over(rest, ch=1.5, hd=(0, 18, 0))), (4.0, over(rest, hd=(-4, -16, 0)))], base=rest, seat=0.45)
+    sg = over(rest, aR=(38, 0, 8), fR=(92, 18, 0), hd=(0, 10, 0), sp=-3)
+    clip(rig, 'sit_talk', 5.0, [(0, rest), (0.7, sg), (1.4, over(sg, fR=(70, -6, 0))), (2.2, sg), (3.2, over(rest, hd=(-8, 6, 0))), (4.2, over(rest, sp=6, hd=10))], base=rest, seat=0.45)
+    cup = over(rest, aR=(40, 0, 6), fR=(70, 10, 0))
+    sip = over(rest, aR=(58, 0, 8), fR=(126, 14, 0), hd=9)
+    clip(rig, 'sit_drink', 6.0, [(0, cup), (1.0, sip), (2.0, sip), (3.0, cup), (4.6, over(cup, hd=(0, -20, 0)))], base=cup, seat=0.45, prop='hand.R')
+    rd = over(SIT, aL=(44, 0, -4), fL=(66, -12, 0), aR=(44, 0, 4), fR=(66, 12, 0), hd=-16, sp=2)
+    clip(rig, 'sit_read', 7.0, [(0, rd), (2.5, over(rd, hd=(-16, 9, 0))), (5.0, over(rd, hd=(-18, -9, 0))), (6.0, over(rd, fR=(80, 30, 0)))], base=rd, seat=0.45, prop='both')
+    fork = over(rest, aR=(46, 0, 8), fR=(64, 14, 0), sp=-8, hd=-10)
+    bite = over(rest, aR=(56, 0, 8), fR=(128, 16, 0), sp=-10, hd=-4)
+    clip(rig, 'sit_eat', 4.0, [(0, fork), (0.9, bite), (1.5, bite), (2.3, fork), (3.2, over(fork, fR=(58, -6, 0)))], base=fork, seat=0.45)
+    pray = over(SIT, aL=(40, 0, -4), fL=(92, -44, 0), aR=(40, 0, 4), fR=(92, 44, 0), hd=-24, sp=-8)
+    clip(rig, 'sit_pray', 6.0, [(0, pray), (3.0, over(pray, ch=1.5, hd=-27))], base=pray, seat=0.45)

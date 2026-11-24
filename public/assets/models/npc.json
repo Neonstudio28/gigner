@@ -1,0 +1,793 @@
+{
+ "characters": {
+  "sheriff_deputy_m": {
+   "palette": {
+    "pants": "#1f2024",
+    "shoes": "#2a2420",
+    "shirt": "#f1efe9",
+    "skin": "#e0ac86",
+    "hair": "#d9b35c"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 2068
+  },
+  "sheriff_deputy_f": {
+   "palette": {
+    "pants": "#4a3f33",
+    "shoes": "#2a2420",
+    "shirt": "#c9b78f",
+    "skin": "#e0ac86",
+    "hair": "#3a2a1e",
+    "hat": "#6b5536"
+   },
+   "sex": "f",
+   "scale": 1.0,
+   "tris": 2092
+  },
+  "agent_m": {
+   "palette": {
+    "pants": "#22242a",
+    "shoes": "#2a2420",
+    "jacket": "#22242a",
+    "skin": "#e0ac86",
+    "shirt": "#f1efe9",
+    "hair": "#2a211b"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1796
+  },
+  "agent_f": {
+   "palette": {
+    "pants": "#2a2c33",
+    "shoes": "#2a2420",
+    "jacket": "#2a2c33",
+    "skin": "#e0ac86",
+    "shirt": "#f1efe9",
+    "hair": "#b08a4a"
+   },
+   "sex": "f",
+   "scale": 1.0,
+   "tris": 1792
+  },
+  "businessman": {
+   "palette": {
+    "pants": "#5a5f6b",
+    "shoes": "#2a2420",
+    "jacket": "#5a5f6b",
+    "skin": "#e0ac86",
+    "shirt": "#dfe6ee",
+    "hair": "#8a8782"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1752
+  },
+  "businesswoman": {
+   "palette": {
+    "skin": "#e0ac86",
+    "shoes": "#2a2420",
+    "dress": "#3f5f86",
+    "jacket": "#3f5f86",
+    "shirt": "#f1efe9",
+    "hair": "#b5562a"
+   },
+   "sex": "f",
+   "scale": 1.0,
+   "tris": 1896
+  },
+  "casual_m_1": {
+   "palette": {
+    "pants": "#3b4a66",
+    "shoes": "#3a5a8c",
+    "shirt": "#3f6fa8",
+    "skin": "#e0ac86",
+    "hair": "#5a3d26"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1476
+  },
+  "casual_m_2": {
+   "palette": {
+    "pants": "#2a3348",
+    "shoes": "#2a2420",
+    "shirt": "#8fb0cf",
+    "skin": "#e0ac86",
+    "hair": "#6b4a2e"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1428
+  },
+  "casual_m_3": {
+   "palette": {
+    "pants": "#4a5a6b",
+    "shoes": "#e9e6df",
+    "shirt": "#7a3b33",
+    "skin": "#a8744f",
+    "hair": "#2a211b"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1564
+  },
+  "casual_f_1": {
+   "palette": {
+    "pants": "#3b4a66",
+    "shoes": "#e9e6df",
+    "shirt": "#b9506a",
+    "skin": "#e0ac86",
+    "hair": "#7a3b1d"
+   },
+   "sex": "f",
+   "scale": 1.0,
+   "tris": 1756
+  },
+  "casual_f_2": {
+   "palette": {
+    "skin": "#c68e63",
+    "shoes": "#2a2420",
+    "dress": "#c8a13a",
+    "hair": "#2a211b"
+   },
+   "sex": "f",
+   "scale": 1.0,
+   "tris": 1648
+  },
+  "casual_f_3": {
+   "palette": {
+    "pants": "#2a3348",
+    "shoes": "#2a2420",
+    "jacket": "#4f6b4a",
+    "skin": "#e0ac86",
+    "hair": "#d9b35c"
+   },
+   "sex": "f",
+   "scale": 1.0,
+   "tris": 1692
+  },
+  "teen_m": {
+   "palette": {
+    "pants": "#6b6f78",
+    "skin": "#e0ac86",
+    "shoes": "#b33a3a",
+    "shirt": "#3d6b4f",
+    "hair": "#b5562a",
+    "hat": "#b33a3a"
+   },
+   "sex": "m",
+   "scale": 0.93,
+   "tris": 1852
+  },
+  "teen_f": {
+   "palette": {
+    "pants": "#3b4a66",
+    "skin": "#e0ac86",
+    "shoes": "#e9e6df",
+    "shirt": "#e8dcc0",
+    "hair": "#d9b35c"
+   },
+   "sex": "f",
+   "scale": 0.91,
+   "tris": 1900
+  },
+  "kid_m": {
+   "palette": {
+    "pants": "#3b4a66",
+    "skin": "#e0ac86",
+    "shoes": "#b33a3a",
+    "shirt": "#c8a13a",
+    "hair": "#5a3d26"
+   },
+   "sex": "m",
+   "scale": 0.68,
+   "tris": 1564
+  },
+  "kid_f": {
+   "palette": {
+    "skin": "#e0ac86",
+    "shoes": "#e9e6df",
+    "dress": "#b9506a",
+    "hair": "#7a3b1d"
+   },
+   "sex": "f",
+   "scale": 0.66,
+   "tris": 1628
+  },
+  "old_man": {
+   "palette": {
+    "pants": "#4a4640",
+    "shoes": "#2a2420",
+    "jacket": "#7a6a52",
+    "skin": "#e0ac86",
+    "hair": "#c8c6c0",
+    "hat": "#5a5046"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1568
+  },
+  "old_woman": {
+   "palette": {
+    "skin": "#e0ac86",
+    "shoes": "#2a2420",
+    "dress": "#5a5560",
+    "jacket": "#8a6f8f",
+    "hair": "#d8d6d0"
+   },
+   "sex": "f",
+   "scale": 1.0,
+   "tris": 1744
+  },
+  "farmer": {
+   "palette": {
+    "pants": "#3f5f86",
+    "shoes": "#2a2420",
+    "shirt": "#c9a94a",
+    "skin": "#e0ac86",
+    "hair": "#5a3d26",
+    "hat": "#b33a3a"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1856
+  },
+  "lumberjack": {
+   "palette": {
+    "pants": "#3b4a66",
+    "shoes": "#6b4a2e",
+    "shirt": "#a83a32",
+    "skin": "#e0ac86",
+    "hair": "#4a3020",
+    "hat": "#2a2c33"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 2052
+  },
+  "trucker": {
+   "palette": {
+    "pants": "#3b4a66",
+    "shoes": "#2a2420",
+    "jacket": "#b5642a",
+    "skin": "#e0ac86",
+    "shirt": "#8a8f96",
+    "hair": "#6b4a2e",
+    "hat": "#2a3a5c"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1956
+  },
+  "biker": {
+   "palette": {
+    "pants": "#1f2024",
+    "shoes": "#2a2420",
+    "jacket": "#1c1a19",
+    "skin": "#e0ac86",
+    "hair": "#3a2a1e",
+    "hat": "#b33a3a"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1600
+  },
+  "worker": {
+   "palette": {
+    "pants": "#4a4640",
+    "shoes": "#8a6a3a",
+    "shirt": "#6b7f96",
+    "skin": "#a8744f",
+    "hair": "#2a211b",
+    "hat": "#e8b21c"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1984
+  },
+  "mechanic": {
+   "palette": {
+    "pants": "#3a4f6b",
+    "shoes": "#2a2420",
+    "shirt": "#3a4f6b",
+    "skin": "#e0ac86",
+    "hair": "#2a211b",
+    "hat": "#1f2024"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1692
+  },
+  "cook": {
+   "palette": {
+    "pants": "#4a4a50",
+    "shoes": "#2a2420",
+    "shirt": "#f1efe9",
+    "skin": "#e0ac86",
+    "hair": "#2a211b"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1724
+  },
+  "waitress": {
+   "palette": {
+    "skin": "#e0ac86",
+    "shoes": "#e9e6df",
+    "dress": "#d98fa0",
+    "hair": "#b5562a"
+   },
+   "sex": "f",
+   "scale": 1.0,
+   "tris": 1688
+  },
+  "priest": {
+   "palette": {
+    "pants": "#1c1a19",
+    "shoes": "#2a2420",
+    "shirt": "#1c1a19",
+    "skin": "#e0ac86",
+    "hair": "#8a8782"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1368
+  },
+  "tourist": {
+   "palette": {
+    "pants": "#c9b78f",
+    "skin": "#e0ac86",
+    "shoes": "#e9e6df",
+    "shirt": "#d9843a",
+    "hair": "#8a5a2a",
+    "hat": "#f1efe9"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1964
+  },
+  "jogger": {
+   "palette": {
+    "pants": "#1f2024",
+    "skin": "#8a5a3c",
+    "shoes": "#e8b21c",
+    "shirt": "#c0392b",
+    "hair": "#2a211b",
+    "hat": "#f1efe9"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1516
+  },
+  "shopkeeper": {
+   "palette": {
+    "pants": "#6b5a46",
+    "shoes": "#2a2420",
+    "shirt": "#dfe6ee",
+    "skin": "#e0ac86",
+    "hair": "#6b4a2e"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1744
+  },
+  "fisherman": {
+   "palette": {
+    "pants": "#3d4a3a",
+    "shoes": "#2f3a2e",
+    "jacket": "#c9a21c",
+    "skin": "#e0ac86",
+    "hair": "#c8c6c0",
+    "hat": "#3a4f6b"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1648
+  },
+  "mailman": {
+   "palette": {
+    "pants": "#3a4f6b",
+    "skin": "#8a5a3c",
+    "shoes": "#1f2024",
+    "shirt": "#8fb0cf",
+    "hair": "#2a211b",
+    "hat": "#3a4f6b"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1724
+  },
+  "rancher": {
+   "palette": {
+    "pants": "#3b4a66",
+    "shoes": "#6b4a2e",
+    "shirt": "#5a7a8f",
+    "skin": "#e0ac86",
+    "hair": "#8a8782",
+    "hat": "#b89a6a"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1868
+  },
+  "nurse": {
+   "palette": {
+    "pants": "#8fc7c2",
+    "shoes": "#e9e6df",
+    "shirt": "#8fc7c2",
+    "skin": "#a8744f",
+    "hair": "#2a211b"
+   },
+   "sex": "f",
+   "scale": 1.0,
+   "tris": 1700
+  },
+  "firefighter": {
+   "palette": {
+    "pants": "#c9a94a",
+    "shoes": "#1f2024",
+    "jacket": "#c9a94a",
+    "skin": "#e0ac86",
+    "hair": "#5a3d26"
+   },
+   "sex": "m",
+   "scale": 1.0,
+   "tris": 1624
+  },
+  "teacher_f": {
+   "palette": {
+    "skin": "#e0ac86",
+    "shoes": "#2a2420",
+    "dress": "#4a4640",
+    "jacket": "#a8744f",
+    "hair": "#3a2a1e"
+   },
+   "sex": "f",
+   "scale": 1.0,
+   "tris": 1732
+  }
+ },
+ "props": {
+  "briefcase": {
+   "bone": "hand.R"
+  },
+  "shopping_bag": {
+   "bone": "hand.R"
+  },
+  "coffee_cup": {
+   "bone": "hand.R"
+  },
+  "phone": {
+   "bone": "hand.L"
+  },
+  "phone_r": {
+   "bone": "hand.R"
+  },
+  "cigarette": {
+   "bone": "hand.R"
+  },
+  "broom": {
+   "bone": "hand.R"
+  },
+  "rake": {
+   "bone": "hand.R"
+  },
+  "hammer": {
+   "bone": "hand.R"
+  },
+  "fishing_rod": {
+   "bone": "hand.R"
+  },
+  "tray": {
+   "bone": "hand.L"
+  },
+  "umbrella": {
+   "bone": "hand.R"
+  },
+  "box": {
+   "bone": "chest"
+  },
+  "newspaper": {
+   "bone": "chest"
+  },
+  "clipboard": {
+   "bone": "chest"
+  }
+ },
+ "clips": {
+  "walk": {
+   "dur": 1.0,
+   "loop": true,
+   "speed": 1.38
+  },
+  "stroll": {
+   "dur": 1.25,
+   "loop": true,
+   "speed": 0.85
+  },
+  "walk_old": {
+   "dur": 1.3,
+   "loop": true,
+   "speed": 0.68
+  },
+  "walk_carry": {
+   "dur": 1.05,
+   "loop": true,
+   "speed": 1.22,
+   "prop": "both"
+  },
+  "walk_bag": {
+   "dur": 1.0,
+   "loop": true,
+   "speed": 1.3,
+   "prop": "hand.R"
+  },
+  "walk_phone": {
+   "dur": 1.05,
+   "loop": true,
+   "speed": 1.15,
+   "prop": "hand.L"
+  },
+  "walk_umbrella": {
+   "dur": 1.0,
+   "loop": true,
+   "speed": 1.3,
+   "prop": "hand.R"
+  },
+  "jog": {
+   "dur": 0.74,
+   "loop": true,
+   "speed": 2.6
+  },
+  "run": {
+   "dur": 0.6,
+   "loop": true,
+   "speed": 4.2
+  },
+  "sidestep": {
+   "dur": 0.8,
+   "loop": false
+  },
+  "idle": {
+   "dur": 4.0,
+   "loop": true
+  },
+  "idle_shift": {
+   "dur": 7.0,
+   "loop": true
+  },
+  "look_around": {
+   "dur": 6.0,
+   "loop": true
+  },
+  "hips": {
+   "dur": 5.0,
+   "loop": true
+  },
+  "cross": {
+   "dur": 5.0,
+   "loop": true
+  },
+  "lean": {
+   "dur": 5.0,
+   "loop": true,
+   "wall": true
+  },
+  "watch": {
+   "dur": 3.0,
+   "loop": false
+  },
+  "stretch": {
+   "dur": 4.0,
+   "loop": false
+  },
+  "phone": {
+   "dur": 6.0,
+   "loop": true,
+   "prop": "hand.L"
+  },
+  "text": {
+   "dur": 5.0,
+   "loop": true,
+   "prop": "hand.R"
+  },
+  "smoke": {
+   "dur": 7.0,
+   "loop": true,
+   "prop": "hand.R"
+  },
+  "drink_stand": {
+   "dur": 6.0,
+   "loop": true,
+   "prop": "hand.R"
+  },
+  "scratch_head": {
+   "dur": 3.0,
+   "loop": false
+  },
+  "wait": {
+   "dur": 6.0,
+   "loop": true
+  },
+  "talk_a": {
+   "dur": 5.0,
+   "loop": true
+  },
+  "talk_b": {
+   "dur": 5.6,
+   "loop": true
+  },
+  "listen": {
+   "dur": 5.0,
+   "loop": true
+  },
+  "laugh": {
+   "dur": 1.2,
+   "loop": true
+  },
+  "shrug": {
+   "dur": 2.0,
+   "loop": false
+  },
+  "wave": {
+   "dur": 2.4,
+   "loop": false
+  },
+  "point": {
+   "dur": 2.6,
+   "loop": false
+  },
+  "nod": {
+   "dur": 1.4,
+   "loop": false
+  },
+  "cheer": {
+   "dur": 1.0,
+   "loop": true
+  },
+  "clap": {
+   "dur": 0.5,
+   "loop": true
+  },
+  "sit": {
+   "dur": 6.0,
+   "loop": true,
+   "seat": 0.45
+  },
+  "sit_talk": {
+   "dur": 5.0,
+   "loop": true,
+   "seat": 0.45
+  },
+  "sit_drink": {
+   "dur": 6.0,
+   "loop": true,
+   "seat": 0.45,
+   "prop": "hand.R"
+  },
+  "sit_read": {
+   "dur": 7.0,
+   "loop": true,
+   "seat": 0.45,
+   "prop": "both"
+  },
+  "sit_eat": {
+   "dur": 4.0,
+   "loop": true,
+   "seat": 0.45
+  },
+  "sit_pray": {
+   "dur": 6.0,
+   "loop": true,
+   "seat": 0.45
+  },
+  "sweep": {
+   "dur": 1.8,
+   "loop": true,
+   "prop": "both"
+  },
+  "rake": {
+   "dur": 2.0,
+   "loop": true,
+   "prop": "both"
+  },
+  "hammer": {
+   "dur": 0.9,
+   "loop": true,
+   "prop": "hand.R"
+  },
+  "write": {
+   "dur": 5.0,
+   "loop": true,
+   "prop": "both"
+  },
+  "carry_box": {
+   "dur": 4.0,
+   "loop": true,
+   "prop": "both"
+  },
+  "pickup": {
+   "dur": 2.6,
+   "loop": false,
+   "prop": "both"
+  },
+  "putdown": {
+   "dur": 2.6,
+   "loop": false,
+   "prop": "both"
+  },
+  "garden": {
+   "dur": 2.4,
+   "loop": true
+  },
+  "fish": {
+   "dur": 8.0,
+   "loop": true,
+   "prop": "hand.R"
+  },
+  "wipe": {
+   "dur": 1.6,
+   "loop": true,
+   "prop": "hand.R"
+  },
+  "serve": {
+   "dur": 5.0,
+   "loop": true,
+   "prop": "hand.L"
+  },
+  "counter": {
+   "dur": 5.0,
+   "loop": true
+  },
+  "flinch": {
+   "dur": 1.3,
+   "loop": false
+  },
+  "cower": {
+   "dur": 1.6,
+   "loop": true
+  },
+  "look_sky": {
+   "dur": 3.0,
+   "loop": false
+  },
+  "huddle": {
+   "dur": 3.0,
+   "loop": true
+  }
+ },
+ "bones": [
+  "root",
+  "hips",
+  "spine",
+  "chest",
+  "neck",
+  "head",
+  "upper_arm.L",
+  "forearm.L",
+  "hand.L",
+  "thigh.L",
+  "shin.L",
+  "foot.L",
+  "upper_arm.R",
+  "forearm.R",
+  "hand.R",
+  "thigh.R",
+  "shin.R",
+  "foot.R"
+ ],
+ "fps": 24,
+ "slots": {
+  "fixed": 0,
+  "skin": 1,
+  "hair": 2,
+  "shirt": 3,
+  "pants": 4,
+  "jacket": 5,
+  "dress": 6,
+  "hat": 7,
+  "shoes": 8
+ }
+}
