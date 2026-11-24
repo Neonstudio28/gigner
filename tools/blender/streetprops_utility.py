@@ -94,8 +94,8 @@ def _head(a, at, rz=0.0, ped=False, col='#d9a81e'):
             pts = [(0.125 * math.cos(rad(t)), 0.125 * math.sin(rad(t))) for t in range(-20, 201, 44)]
             vv = [(x, -0.1, z + zz) for x, zz in pts] + [(x * 0.96, -0.3, z + zz * 0.96 - 0.01) for x, zz in pts]
             k = len(pts)
-            a.mesh(ye, vv, [[j, k + j, k + j + 1, j + 1] for j in range(k - 1)], closed=False)
-            a.mesh(bk, [(x, y, zz - 0.004) for x, y, zz in vv], [[j + 1, k + j + 1, k + j, j] for j in range(k - 1)], closed=False)
+            a.mesh(ye, vv, [[j + 1, k + j + 1, k + j, j] for j in range(k - 1)], closed=False)
+            a.mesh(bk, [(x * 0.97, y, z + (zz - z) * 0.97) for x, y, zz in vv], [[j, k + j, k + j + 1, j + 1] for j in range(k - 1)], closed=False)
 
 
 @asset('utility')
@@ -320,7 +320,7 @@ def wall_lights():
     gy = P('#6d757a')
     b.box(gy, 0.3, 0.06, 0.2, (0, -0.03, 0), 0.012)
     b.prism(gy, [(0.0, 0.11), (-0.22, 0.11), (-0.22, 0.04), (-0.06, -0.1), (0.0, -0.1)], -0.16, 0.16, 'yz', 0.012)
-    with b.at((0, -0.14, -0.03), (-48.8, 0, 0)):
+    with b.at((0, -0.14, -0.03), (48.8, 0, 0)):
         b.rim(P('#4f565a'), 0.3, 0.2, (0, -0.006, 0), 0.02, 0.012)
         b.plate(LT('lamp', '#fff1c4'), 0.27, 0.17, (0, -0.002, 0), t=0.006)
         for x in (-0.07, 0.0, 0.07):
