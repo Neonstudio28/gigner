@@ -7,7 +7,8 @@ import { heightAt, isWater, LAKE } from '../terrain';
 import { put } from '../b2/hull';
 import { HOUSES } from '../b2/houses';
 import { DISTRICT } from '../b2/district';
-import { railFence, securityFence, cow } from '../props';
+import * as THREE from 'three';
+import { railFence, securityFence, cow, wire as cable } from '../props';
 import { vehicle, VEHICLE_LENGTH } from '../vehicles';
 import { asset } from '../assets';
 import { addZone } from '../buildings/interiors';
@@ -86,11 +87,67 @@ function fence(pl: Placer, f: Frame, pts: [number, number][], col: Col = 0x7a624
 }
 
 /** A working farm: house by the road, barn and sheds round a gravel yard, silo, stock paddock and a corn field behind. */
-function farm(pl: Placer, r: Road, x: number, z: number, seed: number, o: { corn?: boolean; cows?: number; silo?: boolean } = {}) {
+/** The stock yard east of the farmhouse: a barn or shed for the animals, a railed paddock, feed, water and the herd. */
+function livestock(pl: Placer, f: Frame, rng: Rng, kind: 'pigs' | 'horses' | 'sheep' | 'goats') {
+  const shed = { pigs: 'hog_barn', horses: 'stable_barn', sheep: 'loafing_shed', goats: 'loafing_shed' }[kind];
+  const herd = { pigs: ['pig', 'pig', 'pig_spotted'], horses: ['horse_bay', 'horse_grey', 'horse_chestnut'], sheep: ['sheep', 'sheep_white', 'sheep_white'], goats: ['goat', 'goat_brown'] }[kind];
+  const n = { pigs: 9, horses: 5, sheep: 12, goats: 8 }[kind];
+  at(pl, f, shed, 62, -21, 0);
+  fence(pl, f, [[44, -13], [44, 14], [82, 14], [82, -13], [70, -13]]);
+  at(pl, f, 'feed_trough', 50, -9, 0);
+  at(pl, f, 'feed_trough', 58, -9, 0);
+  at(pl, f, kind === 'pigs' ? 'feed_bin' : 'farm_water_tank', 79, -18, 0);
+  if (kind !== 'pigs') at(pl, f, 'hay_bale_round', 76, 10, rng.range(0, 3));
+  else for (let i = 0; i < 3; i++) {
+    const [wx, wz] = Placer.world(f.x, f.z, f.ry, 50 + i * 9, 4 + rng.range(-2, 2));
+    pl.k.at(wx, wz, f.ry + rng.range(0, 3), () => pl.k.box(0, -0.02, 0, rng.range(4, 7), 0.06, rng.range(3, 5), 0x5e4a36, 'gravel', { cast: false }), heightAt(wx, wz));
+  }
+  for (let i = 0; i < n; i++) at(pl, f, rng.pick(herd), rng.range(47, 79), rng.range(-6, 11), rng.range(0, 6), 0.3);
+  tree(pl, f, 'oak_large', 78, 4, 0.85);
+}
+
+/**
+ * High-tension line on lattice pylons striding across the farmland north of the river: one pylon every ~140 m
+ * along the route, nudged off roads and buildings, three phase conductors sagging between the cross-arms.
+ */
+export function pylons(pl: Placer) {
+  const route: [number, number][] = [[-1500, -250], [-1000, -300], [-560, -470], [-120, -500], [260, -470], [700, -400], [1100, -420], [1600, -360]];
+  const info = asset('hv_pylon')?.info as { hang?: number[][] } | undefined;
+  const hang = info?.hang ?? [];
+  const k = pl.k;
+  const towers: THREE.Vector3[][] = [];
+  for (let i = 0; i < route.length - 1; i++) {
+    const [ax, az] = route[i];
+    const [bx, bz] = route[i + 1];
+    const L = Math.hypot(bx - ax, bz - az);
+    const ry = Math.atan2(bx - ax, bz - az);
+    const n = Math.max(1, Math.round(L / 140));
+    for (let j = i ? 1 : 0; j <= n; j++) {
+      let t = j / n;
+      let x = ax + (bx - ax) * t;
+      let z = az + (bz - az) * t;
+      for (let tries = 0; tries < 8 && (isWater(x, z) || pl.onStreet(x, z, 9) || pl.c.occ.blocked(x, z, 8)); tries++) {
+        t += (tries % 2 ? -1 : 1) * (tries + 1) * (14 / L);
+        x = ax + (bx - ax) * t;
+        z = az + (bz - az) * t;
+      }
+      if (isWater(x, z) || pl.onStreet(x, z, 6)) continue;
+      const y = heightAt(x, z);
+      k.at(x, z, ry, () => put(k, 'hv_pylon', 0, 0, 0, 0, { solid: true }), y);
+      pl.c.occ.add(x, z, 15, 9, ry, 1, true);
+      const c = Math.cos(ry);
+      const sn = Math.sin(ry);
+      towers.push(hang.map(([hx, hy]) => new THREE.Vector3(x + hx * c, y + hy, z - hx * sn)));
+    }
+  }
+  for (let i = 0; i < towers.length - 1; i++) for (let j = 0; j < towers[i].length; j++) cable(k, towers[i][j], towers[i + 1][j], 0.022, 0.035);
+}
+
+function farm(pl: Placer, r: Road, x: number, z: number, seed: number, o: { corn?: boolean; cows?: number; silo?: boolean; stock?: 'pigs' | 'horses' | 'sheep' | 'goats' } = {}) {
   const rng = new Rng(seed);
   const f = beside(pl, r, x, z, r.full + 16);
   const k = pl.k;
-  clearing(pl, f, -86, 84, (o.corn ?? true) ? -112 : -50, 18);
+  clearing(pl, f, -86, 112, (o.corn ?? true) ? -132 : -50, 18);
   build(pl, f, rng.pick(HOUSES), 0, 0, 0, seed);
   build(pl, f, D('barn'), -30, -26, 0, seed + 1);
   build(pl, f, D('machineShed'), -38, -1, PI / 2, seed + 2);
@@ -129,11 +186,12 @@ function farm(pl: Placer, r: Road, x: number, z: number, seed: number, o: { corn
     tree(pl, f, 'oak_large', -66, -22, 0.9);
   }
   if (o.corn ?? true) {
-    const [cx, cz] = Placer.world(f.x, f.z, f.ry, 28, -78);
-    pl.cornFields.push({ x: cx, z: cz, w: 96, d: 56, ry: f.ry });
+    const [cx, cz] = Placer.world(f.x, f.z, f.ry, 40, -88);
+    pl.cornFields.push({ x: cx, z: cz, w: 130, d: 70, ry: f.ry });
     at(pl, f, 'scarecrow', 6, -62, 0, false);
     fence(pl, f, [[-22, -48], [78, -48]]);
   }
+  if (o.stock) livestock(pl, f, rng, o.stock);
   // shelter belt and yard trees
   for (let i = 0; i < 6; i++) tree(pl, f, 'poplar_tall', 30, -30 + i * 7, rng.range(0.8, 1));
   for (const [tx, tz, kind] of [[-9, 9, 'maple_large'], [10, 8, 'oak_medium'], [-4, -14, 'apple_tree'], [3, -18, 'apple_tree'], [22, 2, 'birch_cluster']] as const) tree(pl, f, kind, tx, tz, rng.range(0.85, 1.05));
@@ -145,15 +203,15 @@ function farm(pl: Placer, r: Road, x: number, z: number, seed: number, o: { corn
 export function farms(pl: Placer) {
   const R = (n: string) => pl.net.byName(n);
   farm(pl, R('Orchard Rd'), 200, -400, 301);
-  farm(pl, R('Orchard Rd'), 440, -280, 302, { cows: 0 });
+  farm(pl, R('Orchard Rd'), 440, -280, 302, { cows: 0, stock: 'pigs' });
   farm(pl, R('Hansen Rd'), -220, -500, 303);
-  farm(pl, R('Hansen Rd'), -470, -360, 304, { corn: false, cows: 9 });
+  farm(pl, R('Hansen Rd'), -470, -360, 304, { corn: false, cows: 9, stock: 'horses' });
   farm(pl, R('County Rd 5'), -60, -560, 305);
-  farm(pl, R('Miller Dairy Rd'), -1500, 110, 306, { cows: 10, corn: false });
+  farm(pl, R('Miller Dairy Rd'), -1500, 110, 306, { cows: 10, corn: false, stock: 'sheep' });
   farm(pl, R('Ridgeview Ln'), -1150, -110, 307);
-  farm(pl, R('Eastside Rd'), 1210, -240, 308);
-  farm(pl, R('Homestead Rd'), 1340, 170, 309, { cows: 5 });
-  farm(pl, R('Cougar Creek Rd'), -1010, 200, 310, { silo: false });
+  farm(pl, R('Eastside Rd'), 1210, -240, 308, { stock: 'pigs' });
+  farm(pl, R('Homestead Rd'), 1340, 170, 309, { cows: 5, stock: 'horses' });
+  farm(pl, R('Cougar Creek Rd'), -1010, 200, 310, { silo: false, stock: 'goats' });
 }
 
 /** Gravel pad over a rectangle of a lot frame (skips anything built). */

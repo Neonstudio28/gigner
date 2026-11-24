@@ -15,7 +15,7 @@ import { put } from '../b2/hull';
 import { yards } from './dress2';
 import { townsfolk } from './folk';
 import { DISTRICT } from '../b2/district';
-import { farms, lumberYard, freight, lakefront } from './districts2';
+import { farms, lumberYard, freight, lakefront, pylons } from './districts2';
 import { core } from './core';
 import { meadowbrook } from './meadow';
 import { strip, homes, riverPark, ridge, flats, trailerCourt, industry } from './quarters';
@@ -39,6 +39,7 @@ export function town(pl: Placer) {
   strip(pl);
   lakefront(pl);
   farms(pl);
+  pylons(pl);
   lumberYard(pl);
   freight(pl);
   industry(pl);
@@ -47,6 +48,7 @@ export function town(pl: Placer) {
   ridge(pl);
   flats(pl);
   trailerCourt(pl);
+  trailerCourt(pl, 'Sunset Loop', 'Sunset Acres', [1655, 60], 6161, [[1, 10, -10], [-1, 14, -14]]);
   meadowbrook(pl);
   yards(pl);
   streets(pl);

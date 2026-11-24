@@ -316,9 +316,9 @@ export function flats(pl: Placer) {
 }
 
 /** Whispering Pines: single-wides set at an angle round a gravel loop off Fairground Rd, a shared green with mailboxes and bins in the middle. */
-export function trailerCourt(pl: Placer) {
-  const rng = new Rng(2727);
-  const loop = pl.net.byName('Pine Loop');
+export function trailerCourt(pl: Placer, road = 'Pine Loop', label = 'Whispering Pines', mark: [number, number] = [-512, -84], seed = 2727, rows?: [1 | -1, number, number][]) {
+  const rng = new Rng(seed);
+  const loop = pl.net.byName(road);
   const first = pl.sites.length;
   const lean = 0.32;
   const row = (side: 1 | -1, s0: number, s1: number, step: number) => {
@@ -329,10 +329,8 @@ export function trailerCourt(pl: Placer) {
       pl.put(def, f.x, f.z, f.ry + PI / 2 - lean, (rng.next() * 1e6) | 0, { maxSlope: 6 });
     }
   };
-  row(N, 10, loop.length - 6, 12.5);
-  row(S, 16, 78, 12.5);
-  row(S, loop.length - 74, loop.length - 14, 12.5);
-  pl.landmarks.push({ name: 'Whispering Pines', x: -512, z: -84, kind: 'district' });
+  for (const [sd, a, b] of rows ?? [[N, 10, loop.length - 6], [S, 16, 78], [S, loop.length - 74, loop.length - 14]]) row(sd, a < 0 ? loop.length + a : a, b < 0 ? loop.length + b : b, 12.5);
+  pl.landmarks.push({ name: label, x: mark[0], z: mark[1], kind: 'district' });
   const YARD = ['patio_chair', 'patio_chair', 'bbq_grill', 'kiddie_pool', 'satellite_dish_yard', 'tyre', 'bicycle', 'bmx_bike', 'garden_gnome', 'wheelie_bin', 'trash_can_metal', 'lawn_mower', 'gas_can', 'crate_wood_a', 'doghouse', 'planter_round'];
   for (const s of pl.sites.slice(first)) {
     const W = local(s);

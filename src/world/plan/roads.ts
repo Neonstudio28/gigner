@@ -142,6 +142,8 @@ export const ROADS: RoadDef[] = [
   { name: 'Freight Rd', kind: 'rural', pts: [[520, 90], [620, 90], [720, 92], [800, 100]], culdesac: true },
   { name: 'Depot Rd', kind: 'rural', pts: [[520, 0], [520, -60], [524, -110]], culdesac: true },
   { name: 'Eastside Rd', kind: 'gravel', pts: [[1150, 20], [1152, -100], [1150, -220], [1140, -330]], culdesac: true },
+  // Sunset Acres: a mobile-home park out on the highway past the last farm, ten minutes from town
+  { name: 'Sunset Loop', label: 'Sunset Acres', kind: 'gravel', pts: [[1600, -6], [1596, 50], [1612, 96], [1652, 120], [1700, 108], [1720, 60], [1704, 10], [1690, -17]] },
   { name: 'Homestead Rd', kind: 'gravel', pts: [[1400, 10], [1402, 110], [1400, 230]], culdesac: true },
 ];
 
