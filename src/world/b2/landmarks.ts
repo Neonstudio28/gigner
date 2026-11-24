@@ -10,7 +10,7 @@ import { item } from './furnish';
 import { asset } from '../assets';
 
 type Kit = Ctx['kit'];
-interface BlockO {
+export interface BlockO {
   w: number;
   d: number;
   h?: number;
@@ -33,7 +33,7 @@ interface BlockO {
 }
 
 /** One walk-in volume with its roof; returns the height of the wall top. Call inside `k.at`. */
-function block(c: Ctx, o: BlockO): number {
+export function block(c: Ctx, o: BlockO): number {
   const { kit: k, rng } = c;
   const y0 = o.y0 ?? 0.18;
   const h = o.h ?? 3.4;
@@ -53,13 +53,13 @@ function block(c: Ctx, o: BlockO): number {
   return H;
 }
 
-const glassDoor = (x: number, color: Col, w = 1.1): Op => ({ x, w, h: 2.3, kind: 'door', color, door: { glass: true, transom: 0.45, frame: color } });
-const shopWin = (x: number, w: number, color: Col, h = 2.2): Op => ({ x, w, y: 0.6, h, kind: 'shop', color });
-const sash = (x: number, w = 1.1, h = 1.5, y = 0.95, frame: Col = WHITE): Op => ({ x, w, h, y, kind: 'win', win: { frame, my: 1, sill: frame } });
-const backDoor = (x: number): Op => ({ x, w: 0.95, h: 2.1, kind: 'door', color: 0x6b6f73, door: { frame: 0x8a8580 } });
+export const glassDoor = (x: number, color: Col, w = 1.1): Op => ({ x, w, h: 2.3, kind: 'door', color, door: { glass: true, transom: 0.45, frame: color } });
+export const shopWin = (x: number, w: number, color: Col, h = 2.2): Op => ({ x, w, y: 0.6, h, kind: 'shop', color });
+export const sash = (x: number, w = 1.1, h = 1.5, y = 0.95, frame: Col = WHITE): Op => ({ x, w, h, y, kind: 'win', win: { frame, my: 1, sill: frame } });
+export const backDoor = (x: number): Op => ({ x, w: 0.95, h: 2.1, kind: 'door', color: 0x6b6f73, door: { frame: 0x8a8580 } });
 
 /** Stands a sign model and letters its flat faces (manifest `faces`: x, depth, height, w, h, turn in degrees). "A|B" is two lines. */
-function faceSign(c: Ctx, key: string, name: string, x: number, z: number, ry: number, bg: string, ink: string, texts: string[], y = 0) {
+export function faceSign(c: Ctx, key: string, name: string, x: number, z: number, ry: number, bg: string, ink: string, texts: string[], y = 0) {
   const { kit: k } = c;
   if (!put(k, name, x, y, z, ry, { solid: 0.4 })) return;
   const faces = (asset(name)!.info.faces as number[][] | undefined) ?? [];
@@ -83,7 +83,7 @@ function faceSign(c: Ctx, key: string, name: string, x: number, z: number, ry: n
 }
 
 /** Lot paving with oil stains and a kerb-height apron edge. */
-function lot(k: Kit, w: number, d: number, color: Col = 0x6f6f72, mat = 'asphalt', cz = 0) {
+export function lot(k: Kit, w: number, d: number, color: Col = 0x6f6f72, mat = 'asphalt', cz = 0) {
   k.box(0, 0, cz, w, 0.05, d, color, mat, { cast: false });
 }
 
@@ -98,10 +98,10 @@ function pump(k: Kit, x: number, z: number, body: Col) {
   }
 }
 
-const L_STORE: Look = { wall: 0xe6dcc3, wains: 0x8a6a48, floor: 0xffffff, floorMat: 'checker', lights: 'troffer' };
-const L_CAFE: Look = { wall: 0xf3d9c8, wains: 0xd9869a, floor: 0xffffff, floorMat: 'checker', lights: 'pendant', step: 3.2 };
-const L_OFFICE: Look = { wall: 0xd7dccb, wains: 0x7a6248, floor: 0x8f8a80, floorMat: 'carpet', lights: 'troffer' };
-const L_WOOD: Look = { wall: 0xece4d2, wains: 0x7a5a3c, floor: 0xb98e62, floorMat: 'woodFloor', ceil: 0xe9e2d2, ceilMat: 'beadboard', lights: 'pendant', step: 4 };
+export const L_STORE: Look = { wall: 0xe6dcc3, wains: 0x8a6a48, floor: 0xffffff, floorMat: 'checker', lights: 'troffer' };
+export const L_CAFE: Look = { wall: 0xf3d9c8, wains: 0xd9869a, floor: 0xffffff, floorMat: 'checker', lights: 'pendant', step: 3.2 };
+export const L_OFFICE: Look = { wall: 0xd7dccb, wains: 0x7a6248, floor: 0x8f8a80, floorMat: 'carpet', lights: 'troffer' };
+export const L_WOOD: Look = { wall: 0xece4d2, wains: 0x7a5a3c, floor: 0xb98e62, floorMat: 'woodFloor', ceil: 0xe9e2d2, ceilMat: 'beadboard', lights: 'pendant', step: 4 };
 
 /** Filling station: mart at the back of the lot, pumps under the canopy, price pylon on the corner. */
 function gas(c: Ctx, x: number, z: number, ry: number) {
