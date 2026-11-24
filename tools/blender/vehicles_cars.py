@@ -30,7 +30,7 @@ def build_car(name, S):
     pf, pr = S.get('pinch', (0.08, 0.08))
     wid = S.get('wid') or [(xf, w - pf), (xf - 0.1, w - pf * 0.25), (xf - 0.5, w), (xr + 0.5, w), (xr + 0.1, w - pr * 0.25), (xr, w - pr)]
     kw = dict(S.get('loft', {}))
-    L = v.loft(top, bot, wid, xs=[v.fa, v.ra, *S.get('xs', [])], **kw)
+    L = v.loft(top, bot, wid, xs=[x for x in (v.fa, v.ra, *S.get('xs', [])) if xr < x < xf], **kw)
     v.wb = w - L.lean - L.cham * 1.1
     ar = S.get('arch', r + 0.075)
     sq = S.get('sq', 2.6)

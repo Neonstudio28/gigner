@@ -144,5 +144,15 @@ def wheel_tractor():
     return k.obj('wheel_tractor')
 
 
+def wheel_loader():
+    """Wide earth-mover wheel for the log loader (extra to the requested set)."""
+    k = Kit()
+    tyre(k, hw=0.15, rim=0.17, floor=0.05, lip='yellow', barrel='yellow', blocks=16, lugtread=True)
+    k.lathe((0, 0.05, 0), (0, 1, 0), [(0, 0.15), (0.015, 0.14, 'yellow'), (0.04, 0.09, 'yellow'), (0.04, 0, 'yellow')], 'yellow', 12)
+    hub(k, 0.09, 0.06, 10, 0.07, cap='dsteel', nut='steel', face='dsteel', depth=0.0)
+    return k.obj('wheel_loader')
+
+
 def build():
-    return [lib.finish(compact(f())) for f in (wheel_steel, wheel_alloy5, wheel_wire, wheel_rally, wheel_truck, wheel_truck_dual, wheel_tractor)]
+    return [lib.finish(compact(f())) for f in (wheel_steel, wheel_alloy5, wheel_wire, wheel_rally, wheel_truck, wheel_truck_dual, wheel_tractor,
+                                               wheel_loader)]
