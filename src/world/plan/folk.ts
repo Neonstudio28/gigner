@@ -2,6 +2,7 @@ import { Rng } from '../core/rng';
 import { Placer } from './placer';
 import { heightAt, isWater, LAKE } from '../terrain';
 import { put } from '../b2/hull';
+import { zoneAt } from '../buildings/interiors';
 import { person, randomPerson, cast, deputy, crowd, type PersonOpts, type Pose } from '../people';
 
 const PI = Math.PI;
@@ -15,7 +16,8 @@ function taken(pl: Placer, x: number, z: number, pad: number) {
 /** Standing ground at a point: the sidewalk or road surface where there is one, the terrain otherwise. */
 function ground(pl: Placer, x: number, z: number) {
   const r = pl.net.surfaceY(x, z);
-  return Math.max(heightAt(x, z), r > -1e8 ? r : -1e9);
+  // porches, steps and decks count as ground, so nobody stands buried in a stair
+  return Math.max(heightAt(x, z), r > -1e8 ? r : -1e9, zoneAt(x, z)?.floor ?? -1e9);
 }
 
 function stand(pl: Placer, x: number, z: number, ry: number, o: PersonOpts) {

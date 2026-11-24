@@ -1,7 +1,7 @@
 import type { Col } from '../core/kit';
 import type { Ctx } from '../buildings/common';
 import type { BuildingDef } from '../buildings/catalog';
-import { room } from '../buildings/interiors';
+import { room, addZone } from '../buildings/interiors';
 import { Rng } from '../core/rng';
 import { face, WHITE } from './kit2';
 import { hull, partition, put, type Look, type Op } from './hull';
@@ -109,6 +109,8 @@ export function house(c: Ctx, x: number, z: number, ry: number, seed: number, o:
     else {
       k.box(doorX, 0, d / 2 + 0.7, 1.8, y0, 1.4, 0x9a968e, 'concrete');
       for (let i = 0; i < 3; i++) k.box(doorX, 0, d / 2 + 1.4 + 0.15 + i * 0.3, 1.8, y0 - ((i + 1) * y0) / 4, 0.3, 0x9a968e, 'concrete');
+      addZone(k, doorX, d / 2 + 0.7, 1.8, 1.4, y0);
+      addZone(k, doorX, d / 2 + 1.85, 1.8, 0.9, y0, 0);
       k.box(doorX, y0 + 2.4, d / 2 + 0.6, 2.2, 0.1, 1.3, roofC, 'shingle', { rx: 0.2 });
     }
     // back stoop, services, gutters

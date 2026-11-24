@@ -81,7 +81,8 @@ function lining(k: Kit, xc: number, yb: number, w: number, hh: number, zi: numbe
   if (skirt && yb === 0) k.box(xc, y0, zi - 0.025, w, 0.13, 0.05, wh ? L.wains! : tr, 'paint', { cast: false });
 }
 
-function wallSide(k: Kit, len: number, o: HullO, ops: Op[], flip: number) {
+/** `lo`/`hi`: how far each end of this wall runs into the adjoining wall's thickness (its lining stops short there). */
+function wallSide(k: Kit, len: number, o: HullO, ops: Op[], flip: number, lo = 0, hi = 0) {
   const t = o.t ?? 0.3;
   const y0 = o.y0 ?? 0.2;
   const { h, look: L } = o;
@@ -90,7 +91,9 @@ function wallSide(k: Kit, len: number, o: HullO, ops: Op[], flip: number) {
   const seg = (xc: number, yb: number, w: number, hh: number, solid: boolean) => {
     if (w < 0.02 || hh < 0.02) return;
     k.box(xc, y0 + yb, 0, w, hh, t, o.wall, o.wallMat ?? 'siding');
-    warm(k, () => lining(k, xc, yb, w, hh, -t / 2, y0, L, true));
+    const l0 = Math.max(xc - w / 2, -len / 2 + lo);
+    const l1 = Math.min(xc + w / 2, len / 2 - hi);
+    if (l1 - l0 > 0.02) warm(k, () => lining(k, (l0 + l1) / 2, yb, l1 - l0, hh, -t / 2, y0, L, true));
     if (solid) k.solid(xc, 0, w, t);
   };
   const list = ops.map((p) => ({ ...p, x: p.x * flip, y: p.y ?? 0, kind: p.kind ?? (p.y ? 'win' : 'door') })).sort((a, b) => a.x - b.x);
@@ -147,8 +150,10 @@ export function hull(k: Kit, o: HullO): { a: number; b: number; y0: number } {
   const y0 = o.y0 ?? 0.2;
   const { w, d, h, look: L } = o;
   const skip = o.skip ?? '';
-  if (!skip.includes('f')) k.at(0, d / 2 - t / 2, 0, () => wallSide(k, w, o, o.f ?? [], 1));
-  if (!skip.includes('b')) k.at(0, -d / 2 + t / 2, Math.PI, () => wallSide(k, w, o, o.b ?? [], -1));
+  const tl = skip.includes('l') ? 0 : t;
+  const trr = skip.includes('r') ? 0 : t;
+  if (!skip.includes('f')) k.at(0, d / 2 - t / 2, 0, () => wallSide(k, w, o, o.f ?? [], 1, tl, trr));
+  if (!skip.includes('b')) k.at(0, -d / 2 + t / 2, Math.PI, () => wallSide(k, w, o, o.b ?? [], -1, trr, tl));
   if (!skip.includes('r')) k.at(w / 2 - t / 2, 0, Math.PI / 2, () => wallSide(k, d - 2 * t, o, o.r ?? [], -1));
   if (!skip.includes('l')) k.at(-w / 2 + t / 2, 0, -Math.PI / 2, () => wallSide(k, d - 2 * t, o, o.l ?? [], 1));
   const a = w / 2 - t;

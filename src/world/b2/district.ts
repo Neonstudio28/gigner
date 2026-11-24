@@ -1,7 +1,7 @@
 import type { Col } from '../core/kit';
 import type { Ctx } from '../buildings/common';
 import type { BuildingDef } from '../buildings/catalog';
-import { room, furnishCourt, furnishOffice, furnishCafe, furnishStore } from '../buildings/interiors';
+import { room, addZone, furnishCourt, furnishOffice, furnishCafe, furnishStore } from '../buildings/interiors';
 import { face, cornice, signBoard, WHITE, STONE, DARK, F_OS } from './kit2';
 import { hull, upper, spread, put, partition, warm, type Look, type Op } from './hull';
 import { parapetRoof, roofGear, gable, services, steps, post } from './parts';
@@ -212,7 +212,8 @@ function warehouse(c: Ctx, x: number, z: number, ry: number) {
       k.box(-4, 0, 1.2, 20, 1.2, 2.4, 0x9a968e, 'concrete');
       k.solid(-4, 1.2, 20, 2.4, 0, 1.2);
       for (const dx of [-10, -4, 2]) for (const e of [-1, 1]) k.box(dx + e * 1.2, 0.7, 2.45, 0.3, 0.4, 0.1, 0x1b1b1b, 'rubber');
-      k.at(11.5, 2.3, 0, () => steps(k, 0, 0, 1.6, 1.2, { color: 0x9a968e, rail: 0xd9b323 }));
+      addZone(k, 11.5, 1.15, 2.2, 2.4, 1.2);
+      steps(k, 11.5, 2.3 + 7 * 0.3, 1.6, 1.2, { color: 0x9a968e, rail: 0xd9b323 });
       k.box(11.5, 0, 1.15, 2.2, 1.2, 2.3, 0x9a968e, 'concrete');
       k.box(-4, 5.3, 1.4, 20.4, 0.14, 2.8, 0x6f7880, 'corrugated');
       for (const dx of [-13.5, -7, -1, 5.5]) k.beam({ x: dx, y: 6.4, z: 0.05 }, { x: dx, y: 5.4, z: 2.6 }, 0.05, 0.05, 0x5f666b, 'metal');
@@ -452,7 +453,8 @@ function lakeCafe(c: Ctx, x: number, z: number, ry: number) {
       rail(hw, 0.2, hw, dd);
       rail(-hw, dd, -1.2, dd);
       rail(1.2, dd, hw, dd);
-      k.at(0, dd, 0, () => steps(k, 0, 0, 2.4, 0.7, { color: 0xa98a62, mat: 'planks' }));
+      addZone(k, 0, dd / 2, len + 3, dd + 0.1, 0.7);
+      steps(k, 0, dd + 4 * 0.3, 2.4, 0.7, { color: 0xa98a62, mat: 'planks' });
       for (const [px, pz, col] of [[-5.6, 3.6, 0xc8443a], [-2.2, 4.1, 0xe9d9a0], [2.4, 3.8, 0x4f8f8a], [5.8, 3.4, 0xc8443a]] as const) patioSet(k, px, 0.7, pz, col);
       for (const e of [-1, 1]) k.box(e * hw, 0.7, dd, 0.1, 3.2, 0.1, 0x6a5038);
       for (const e of [-1, 1]) {
@@ -557,11 +559,11 @@ function courthouse(c: Ctx, x: number, z: number, ry: number) {
     const pd = 3.6;
     const ch = h + 3.0;
     k.box(0, 0, D / 2 + pd / 2, bw + 1.6, y0, pd, 0xcfc8b8, 'concrete');
-    k.at(0, D / 2 + pd + 0.01, 0, () => {
-      k.push(0, 0, 0, PI);
-      steps(k, 0, 0, bw + 1.6, y0, { color: 0xcfc8b8, run: 0.36, rail: DARK });
-      k.pop();
-    });
+    addZone(k, 0, D / 2 + pd / 2, bw + 1.6, pd + 0.1, y0);
+    const sz = D / 2 + pd + Math.round(y0 / 0.17) * 0.36;
+    steps(k, 0, sz, bw + 1.6, y0, { color: 0xcfc8b8, run: 0.36, rail: DARK });
+    // paved walk from the foot of the steps out to the sidewalk
+    k.box(0, 0, (sz + 25.5) / 2, 4, 0.07, 25.5 - sz, 0xb9b4a8, 'concrete', { cast: false });
     for (const cx of spread(4, bw)) column(k, cx, y0, D / 2 + pd - 0.65, ch, 0.42);
     k.box(0, y0 + ch, D / 2 + pd / 2 - 0.1, bw + 1.2, 0.95, pd + 0.2, WHITE);
     k.box(0, y0 + ch + 0.95, D / 2 + pd / 2 - 0.05, bw + 1.7, 0.16, pd + 0.6, WHITE);
@@ -596,7 +598,8 @@ function courthouse(c: Ctx, x: number, z: number, ry: number) {
     face(k, 'b', W, D, (len) => {
       services(k, len / 2 - 1.5, H - 1);
       k.box(-9, 0, 0.7, 1.6, y0, 1.4, 0xcfc8b8, 'concrete');
-      k.at(-9, 1.4, 0, () => steps(k, 0, 0, 1.6, y0, { color: 0xcfc8b8, rail: DARK }));
+      addZone(k, -9, 0.7, 1.6, 1.5, y0);
+      steps(k, -9, 1.4 + Math.round(y0 / 0.17) * 0.3, 1.6, y0, { color: 0xcfc8b8, rail: DARK });
     });
   });
 }

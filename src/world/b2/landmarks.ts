@@ -2,7 +2,7 @@ import type { Col } from '../core/kit';
 import type { Ctx } from '../buildings/common';
 import type { BuildingDef } from '../buildings/catalog';
 import { Rng } from '../core/rng';
-import { room, furnishStore, furnishDiner, furnishCafe, furnishSheriff, furnishOffice } from '../buildings/interiors';
+import { room, addZone, furnishStore, furnishDiner, furnishCafe, furnishSheriff, furnishOffice } from '../buildings/interiors';
 import { face, cornice, awning, signBoard, WHITE, STONE, DARK, F_OS } from './kit2';
 import { hull, spread, put, partition, type Look, type Op } from './hull';
 import { parapetRoof, roofGear, gable, services, post } from './parts';
@@ -268,6 +268,9 @@ function churchB(c: Ctx, x: number, z: number, ry: number) {
       if (!put(k, 'church_spire', 0, H + 6.4, 0, 0, { solid: false, s: 0.85 })) k.roof(0, H + 6.4, 0, 3.4, [[-1.7, 0], [0, 7], [1.7, 0]], 0x4a4f57, 'shingle', {});
       k.box(0, 0, 2.5, 4.4, 0.6, 1.8, 0x9a968e, 'concrete');
       for (let i = 0; i < 3; i++) k.box(0, 0, 3.6 + i * 0.36, 4.4, 0.45 - i * 0.15, 0.4, 0x9a968e, 'concrete');
+      addZone(k, 0, 0.9, 3.2, 5.0, 0.6);
+      addZone(k, 0, 3.94, 4.4, 1.08, 0.6, 0);
+      k.box(0, 0, 4.48 + 2.4, 2.6, 0.07, 4.8, 0xb9b4a8, 'concrete', { cast: false });
       k.solid(-1.9, 0, 0.6, 3.2);
       k.solid(1.9, 0, 0.6, 3.2);
     });

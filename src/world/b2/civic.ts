@@ -1,7 +1,7 @@
 import type { Kit, Col } from '../core/kit';
 import type { Ctx } from '../buildings/common';
 import type { BuildingDef } from '../buildings/catalog';
-import { room, furnishCourt, furnishSheriff, furnishOffice } from '../buildings/interiors';
+import { room, addZone, furnishCourt, furnishSheriff, furnishOffice } from '../buildings/interiors';
 import { face, cornice, signBoard, WHITE, STONE, DARK, F_OS } from './kit2';
 import { hull, upper, spread, put, partition, warm, type Look, type Op } from './hull';
 import { parapetRoof, roofGear, services, gutter, gable, steps } from './parts';
@@ -63,8 +63,11 @@ function townHall(c: Ctx, x: number, z: number, ry: number) {
     partition(k, -a, 3.2, a, 3.2, y0, h, CIVIC, [{ at: a - 5.5, w: 1.8 }, { at: a + 8, w: 1.1, leaf: 0x5a3f2a }]);
     partition(k, 4, -bb, 4, 3.2, y0, h, CIVIC, [{ at: 3.5, w: 1.1, leaf: 0x5a3f2a }]);
     room(k, y0, () => {
-      k.at(-5.5, -4.4, 0, () => furnishCourt(k, 8.6, bb - 2.6));
-      k.at(9, -4.4, 0, () => furnishOffice(k, rng, 4.6, bb - 2.6, -3));
+      // both back rooms run from the lobby partition (z = 3.2) to the back wall
+      const rz = (3.2 - bb) / 2;
+      const rb = (3.2 + bb) / 2 - 0.2;
+      k.at(-4.8, rz, 0, () => furnishCourt(k, 8.6, rb));
+      k.at(9, rz, 0, () => furnishOffice(k, rng, 4.6, rb, -3));
       if (!put(k, 'reception_counter', 6, 0, 5.6, Math.PI, { solid: 1.2 })) {
         k.box(6, 0, 5.6, 3.2, 1.05, 0.7, 0x6f5238);
         k.box(6, 1.05, 5.6, 3.4, 0.06, 0.85, 0x2f5d4b, 'gloss');
@@ -99,11 +102,11 @@ function townHall(c: Ctx, x: number, z: number, ry: number) {
     const pd = 4.2;
     const ch = h + 3.2;
     k.box(0, 0, D / 2 + pd / 2, pw + 1, y0, pd, 0xcfc8b8, 'concrete');
-    k.at(0, D / 2 + pd + 0.01, 0, () => {
-      k.push(0, 0, 0, Math.PI);
-      steps(k, 0, 0, pw + 1, y0, { color: 0xcfc8b8, run: 0.36, rail: DARK });
-      k.pop();
-    });
+    addZone(k, 0, D / 2 + pd / 2, pw + 1, pd + 0.1, y0);
+    const sz = D / 2 + pd + Math.round(y0 / 0.17) * 0.36;
+    steps(k, 0, sz, pw + 1, y0, { color: 0xcfc8b8, run: 0.36, rail: DARK });
+    // paved walk from the foot of the steps out to the sidewalk
+    k.box(0, 0, (sz + 27) / 2, 4, 0.07, 27 - sz, 0xb9b4a8, 'concrete', { cast: false });
     for (const cx of spread(6, pw + 2.2)) column(k, cx, y0, D / 2 + pd - 0.7, ch, 0.44);
     k.box(0, y0 + ch, D / 2 + pd / 2 - 0.1, pw + 0.6, 1.0, pd + 0.2, WHITE);
     k.box(0, y0 + ch + 1.0, D / 2 + pd / 2 - 0.05, pw + 1.1, 0.16, pd + 0.6, WHITE);
@@ -127,6 +130,8 @@ function townHall(c: Ctx, x: number, z: number, ry: number) {
       services(k, -len / 2 + 1.5, H - 1);
       gutter(k, -len / 2 + 0.4, len / 2 - 0.4, H - 0.2, 0.02, 0x8a8d90);
       k.box(-9, 0, 0.7, 1.6, y0, 1.4, 0xcfc8b8, 'concrete');
+      addZone(k, -9, 0.7, 1.6, 1.5, y0);
+      steps(k, -9, 1.4 + Math.round(y0 / 0.17) * 0.3, 1.6, y0, { color: 0xcfc8b8, rail: DARK });
     });
     void gable;
     void furnishSheriff

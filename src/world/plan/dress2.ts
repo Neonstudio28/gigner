@@ -179,11 +179,20 @@ export function alleys(pl: Placer) {
         if (rng.chance(0.06)) k.at(x, zm + rng.pick([-1, 1]) * 2.6, rng.range(0, 6), () => put(k, rng.pick(['trash_can_metal', 'wheelie_bin', 'trash_bag_b', 'cardboard_box_flat', 'tyre', 'trash_can_metal_tipped']), 0, 0, 0, 0, { solid: false }), heightAt(x, zm));
       }
       if (laid < 8) continue;
+      // the line stops at anything built across the alley instead of running through it
+      let last = 0;
       for (let x = x0 + 14; x <= x0 + GRID.step - 14; x += 31) {
         if (!clear(pl, x, zm + 2.9, 0.4)) continue;
+        let open = true;
+        if (poles.length) for (let xx = last + 3; xx < x && open; xx += 3) open = clear(pl, xx, zm + 2.9, 0.4);
+        if (!open) {
+          connectPoles(k, poles);
+          poles.length = 0;
+        }
         let att: THREE.Vector3[] = [];
         k.at(x, zm + 2.9, PI / 2, () => (att = utilityPole(k, 0, 0, 0, { h: 9, transformer: rng.chance(0.35) })), heightAt(x, zm + 2.9));
         poles.push(att);
+        last = x;
       }
       connectPoles(k, poles);
     }
