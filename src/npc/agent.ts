@@ -111,6 +111,12 @@ export class Agent {
   /** Places that could not be reached, with the hour to try again. */
   avoid = new Map<number, number>();
   fails = 0;
+  /** Seconds until the rain drives it off (set when the rain starts). */
+  wet = 0;
+  /** Standing somewhere the sidewalks do not reach. */
+  lost = false;
+  /** Why routes failed (for the probe scripts). */
+  static log: string[] = [];
   lod = 2;
   private headYaw = 0;
   lookAt: { x: number; z: number } | null = null;
@@ -203,6 +209,24 @@ export class Agent {
     this.pending = b;
     if (go === 'walk') {
       const far = this.goal === 'jog' ? 240 : this.goal === 'patrol' || this.goal === 'rounds' || this.goal === 'sights' ? 150 : 80;
+      if (this.lost && !this.inside) {
+        // cut off from the sidewalks (a farm out of town, the far bank): potter about within sight
+        const g = ctx.nav.grid;
+        const from = this.place3();
+        for (let i = 0; i < 6; i++) {
+          const a = ctx.rand() * 6.283;
+          const r = 3 + ctx.rand() * 11;
+          const x = this.x + Math.sin(a) * r;
+          const z = this.z + Math.cos(a) * r;
+          const c = g.probe(x, z, this.y);
+          if (Number.isNaN(c.f) || c.road || Math.abs(c.f - this.y) > 0.5 || !g.straight(from, { x, y: c.f, z })) continue;
+          this.release();
+          this.dest = { p: { x, y: c.f, z }, place: null, indoor: false, spot: null };
+          this.state = 'route';
+          return;
+        }
+        return this.start(b, ctx);
+      }
       const n = ctx.nav.wander(this.x, this.z, far, ctx.rand);
       if (!n || this.inside !== false && !this.place?.out) return this.start(b, ctx);
       this.release();
@@ -361,7 +385,8 @@ export class Agent {
       if (p && !p.driving) see(p.x, p.z, p.y, 0, 0, 0);
     } else this.ghost -= dt;
     this.v += (sp - this.v) * Math.min(1, dt * 6);
-    const step = this.v * dt;
+    // out of sight the walk is fast-forwarded, so the town keeps to the clock
+    const step = this.v * dt * (this.lod === 2 ? 3 : 1);
     if (d <= (crowded && this.li < legs.length - 1 ? 0.7 : Math.max(step, 0.12))) {
       if (!crowded) {
         this.x = tgt.x;
@@ -444,7 +469,7 @@ export class Agent {
     body.hold(held || null);
     const m = body.meta(clip);
     const r = b.t ?? [5, 9];
-    this.t = m && !m.loop ? m.dur : r[0] + ctx.rand() * (r[1] - r[0]);
+    this.t = m && !m.loop ? m.dur : (r[0] + ctx.rand() * (r[1] - r[0])) * (this.goal === 'post' ? 1 : 1.8);
     if (m?.loop) body.offset(ctx.rand() * m.dur);
     this.state = 'beat';
     this.v = 0;
@@ -461,6 +486,8 @@ export class Agent {
     this.dest = null;
     this.pending = null;
     this.fails++;
+    if (!this.inside && !ctx.nav.reachable(this.place3())) this.lost = true;
+    if (Agent.log.length < 400) Agent.log.push(`${this.goal}|${d?.place?.name ?? '-'}|${d?.indoor ? 'in' : 'out'}|${this.inside ? 'from ' + this.place?.name : 'outside'}|${this.x.toFixed(0)},${this.z.toFixed(0)}>${d?.p.x.toFixed(0)},${d?.p.z.toFixed(0)}`);
     this.idle(1 + ctx.rand() * 2);
   }
 
@@ -499,7 +526,7 @@ export class Agent {
         break;
       case 'think':
         if ((this.t -= dt) <= 0) ctx.think(this);
-        else this.body.play(IDLE_PROP[this.held(ctx)] ?? 'idle', 0.4);
+        else this.body.play(this.seated ? 'sit' : (IDLE_PROP[this.held(ctx)] ?? 'idle'), 0.4);
         break;
       case 'route': {
         const r = this.plan(ctx);
@@ -530,7 +557,9 @@ export class Agent {
   /** Puts the body where the agent is and advances its animation. */
   pose(dt: number) {
     const g = this.body.group;
-    g.position.set(this.x, this.y, this.z);
+    // seated, the hips go back onto the seat
+    const back = this.seated ? 0.27 : 0;
+    g.position.set(this.x - Math.sin(this.h) * back, this.y, this.z - Math.cos(this.h) * back);
     g.rotation.y = this.h;
     this.body.update(dt);
     let want = 0;

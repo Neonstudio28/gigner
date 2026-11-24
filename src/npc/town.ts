@@ -167,6 +167,7 @@ export class Townsfolk {
         placed.add(a);
         if (post.carry) a.carry = post.carry;
         this.seatAt(a, p, s, POSE[s.seat ? 'sit' : (post.pose ?? 'stand')] ?? POSE.stand);
+        a.lost = !this.nav.reachable({ x: s.ax ?? s.x, y: s.y, z: s.az ?? s.z });
         if (s.ring !== undefined) {
           const l = rings.get(s.ring);
           if (l) l.push(a);
@@ -272,9 +273,16 @@ export class Townsfolk {
     const go = (goal: string, act: Act | undefined, place: Place | null) => {
       if (!act) return a.idle(2);
       const wet = env.rain > 0.3 && !a.traits.umbrella && !a.inside;
-      a.hurry = wet || (goal === 'home' && env.night > 0.8 && rng.chance(0.3));
+      a.hurry = wet || ((goal === 'home' || goal === 'sleep') && env.night > 0.8 && rng.chance(0.5));
       a.begin(goal, act, place, this.ctx);
     };
+    if (a.lost && !a.inside) {
+      // nowhere to go from here: work or idle on the spot, with short walks round about
+      const job = JOBS[a.role.jobs.length ? rng.pick(a.role.jobs) : ''];
+      const beats = (job ?? LEISURE.stroll).beats.map((x) => ({ ...x, go: x.go ? ('walk' as const) : undefined, sit: false }));
+      beats.push({ c: ['look_around', 'idle_shift', 'stretch', 'hips'], t: [5, 16], go: 'walk', sit: false });
+      return a.begin(job ? rng.pick(a.role.jobs) : 'stroll', { say: job?.say ?? 'pottering about', beats, rounds: [1, 2] }, null, this.ctx);
+    }
     const home = usable(a.home) ? a.home : null;
     if (b === 'sleep') return home ? go('sleep', LEISURE.sleep, home) : go('stroll', LEISURE.stroll, null);
     if (b === 'home') {
@@ -313,7 +321,7 @@ export class Townsfolk {
     const add = (goal: string, place: Place | null, w: number, needsPlace = true) => {
       if (w <= 0 || (needsPlace && !place)) return;
       let s = w * (0.7 + rng.next() * 0.6);
-      if (place) s /= 1 + Math.hypot(place.x - a.x, place.z - a.z) / 300;
+      if (place) s /= 1 + Math.hypot(place.x - a.x, place.z - a.z) / (goal === 'home' ? 220 : 110);
       if (OUTDOOR.test(goal)) s *= (env.rain > 0.3 ? (t.umbrella ? 0.4 : 0.04) : 1) * (env.night > 0.6 ? 0.3 : 1);
       opts.push([goal, place, s]);
     };
@@ -335,7 +343,7 @@ export class Townsfolk {
     }
     add('bar', this.pick(a, 'bar'), grown && hr > 16.5 ? 0.25 + n.social * 0.5 + (/^(biker|trucker|logger|hand)$/.test(id) ? 0.6 : 0) : 0);
     add('church', this.pick(a, 'church'), id === 'elder' ? 0.3 : 0.04);
-    add('home', home, 0.15 + (1 - n.energy) * 0.8 + env.night * 1.5 + (env.rain > 0.3 ? 0.5 : 0) + (a.carry === 'shopping_bag' ? 1.2 : 0));
+    add('home', home, 0.05 + (1 - n.energy) * 0.6 + env.night * 1.8 + (env.rain > 0.3 ? 0.5 : 0) + (a.carry === 'shopping_bag' ? 0.5 : 0));
     if (env.rain > 0.3 && !a.inside && !t.umbrella) add('shelter', this.pick(a, /^(diner|donut|grocery|church|townhall|hardware|pharmacy|bakery|gas|motel)$/), 2.2);
     opts.sort((p, q) => q[2] - p[2]);
     const best = opts[0];
@@ -345,6 +353,8 @@ export class Townsfolk {
     else if (goal === 'shop') n.errand = 0;
     else if (goal === 'bench' || goal === 'home') n.energy = Math.min(1, n.energy + 0.4);
     if (OUTDOOR.test(goal) || goal === 'bar') n.fun *= 0.45;
+    // the shopping does not go everywhere: it is dropped off on the way to anything but home
+    if (goal !== 'home' && a.carry === 'shopping_bag') a.carry = '';
     go(goal, LEISURE[goal], place);
   }
 
@@ -399,7 +409,7 @@ export class Townsfolk {
 
   /** People who pass each other may stop to talk, or join friends already talking. */
   private mingle(a: Agent) {
-    if (a.cool > 0 || a.inside || a.hurry || a.crossing || a.state !== 'walk' || this.env.rain > 0.3) return;
+    if (a.cool > 0 || a.inside || a.hurry || a.crossing || !(a.state === 'walk' || a.approachable) || this.env.rain > 0.3) return;
     const rng = this.rng;
     for (const o of this.around(a.x, a.z, 2)) {
       if (o === a || o.inside || o.cool > 0 || Math.abs(o.y - a.y) > 0.6) continue;
@@ -522,7 +532,7 @@ export class Townsfolk {
       const g = a.body.group;
       g.visible = lod < 2;
       const n = a.needs;
-      n.hunger = Math.min(1, n.hunger + hours / 5);
+      n.hunger = Math.min(1, n.hunger + hours / 7);
       n.energy = Math.max(0, n.energy - hours / 16);
       n.social = Math.min(1, n.social + hours / 4);
       n.fun = Math.min(1, n.fun + hours / 5);
@@ -541,10 +551,15 @@ export class Townsfolk {
       if (a.crossing) onRoad.push(a);
       if (lod === 0) this.wary(a);
       if (a.inside) continue;
-      if (rainStart && !a.seated) {
-        if (rng.chance(0.6)) a.react('look_sky', 1.5 + rng.next() * 1.5);
-        if (!a.traits.umbrella && OUTDOOR.test(a.goal) && a.state !== 'talk') a.idle(2 + rng.next() * 3);
+      if (rainStart) {
+        if (!a.seated && rng.chance(0.6)) a.react('look_sky', 1.5 + rng.next() * 1.5);
+        // nobody without an umbrella stays out in it
+        if ((!a.traits.umbrella || a.seated) && a.state !== 'walk' && a.state !== 'route') {
+          if (a.state === 'talk') a.leaveTalk();
+          a.wet = 2 + rng.next() * 5;
+        }
       }
+      if (a.wet > 0 && (a.wet -= dt) <= 0 && a.state !== 'walk' && a.state !== 'route' && e.rain > 0.3) a.idle(0.1);
       if (thunder && rng.chance(0.3)) a.react('flinch', 1.1);
       if (social && lod === 0) {
         this.mingle(a);

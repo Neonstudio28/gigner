@@ -35,3 +35,9 @@ body.no-ui #hud, body.no-ui #hud-stats, body.no-ui .lil-gui { display: none !imp
 #drive-hud .bigmap.show { display: block; }
 body.driving #hud, body.driving #hud-shot { display: none; }
 body.no-ui #drive-hud .drive-keys { display: none; }
+
+#drive-hud .person { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); padding: 8px 16px; border-radius: 6px; background: rgba(12, 16, 20, 0.62); color: #fff; text-align: center; opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap; }
+#drive-hud .person.on { opacity: 1; }
+#drive-hud .person b { display: block; font-size: 16px; letter-spacing: 1px; }
+#drive-hud .person span { display: block; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #ffd24a; }
+#drive-hud .person i { display: block; font-size: 12px; font-style: normal; opacity: 0.85; margin-top: 2px; }

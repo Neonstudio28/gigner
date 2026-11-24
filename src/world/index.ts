@@ -98,7 +98,7 @@ export interface TownWorld {
   posts: Post[];
   /** Every building placed: catalog id, centre, facing and footprint. */
   sites: { id: string; name: string; x: number; z: number; ry: number; w: number; d: number }[];
-  pedestrians: Townsfolk;
+  pedestrians: Townsfolk | null;
   materials: MaterialLib;
   signs: SignBook;
   vegetation: Vegetation;
@@ -271,7 +271,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
     spawn: new THREE.Vector3(-60, 1.7, 2.5),
     traffic,
     get pedestrians() {
-      return pedestrians!;
+      return pedestrians;
     },
     materials,
     signs,

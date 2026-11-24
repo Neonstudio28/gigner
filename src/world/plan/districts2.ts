@@ -261,9 +261,10 @@ export function lakefront(pl: Placer) {
   };
   // pier
   const px = 14;
-  const z0 = shore(px) - 5;
+  // the first sections stand on the sand, so the deck can be walked onto from the beach
+  const z0 = shore(px) - 13;
   const deck = LAKE.level + 0.9;
-  const n = 11;
+  const n = 13;
   k.at(px, z0, 0, () => {
     for (let i = 0; i < n; i++) put(k, 'pier_section', 0, LAKE.level, 2 + i * 4, 0, { solid: false });
     put(k, 'pier_end_ladder', 1.1, deck, n * 4 - 0.6, PI / 2, { solid: false });

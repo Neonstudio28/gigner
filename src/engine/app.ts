@@ -288,11 +288,13 @@ export async function startApp(container: HTMLElement) {
       drive.update(dt);
       drive.focus(focus);
       hud.update(drive.pos.x, drive.pos.z, drive.heading, drive.speed, drive.onRoad, drive.gear, weather.enabled ? weather.label : '');
+      hud.setPerson(null);
       sky.updateShadows(focus, 70);
     } else if (foot.active) {
       foot.update(dt);
       foot.focus(focus);
       hud.update(foot.pos.x, foot.pos.z, foot.heading - Math.PI / 2, foot.pace, true, 0, weather.enabled ? weather.label : '', true);
+      hud.setPerson(world.pedestrians?.nearest(foot.pos.x + Math.sin(foot.heading) * 0.9, foot.pos.z + Math.cos(foot.heading) * 0.9, 2.2, foot.pos.y) ?? null);
       sky.updateShadows(focus, 45);
     } else {
       director.update(dt);

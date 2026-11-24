@@ -139,7 +139,7 @@ export function townsfolk(pl: Placer) {
   for (const [kx, kz, m] of [[-82, 293, 'kid_m'], [-88, 294, 'kid_f'], [-80, 299, 'kid_f'], [-90, 300, 'kid_m'], [-76, 291, 'casual_f_2']] as const) stand(pl, kx, kz, rng.range(0, 6.28), { model: m, pose: rng.pick(['wave', 'stride', 'stand', 'hips'] as const) }, 'play');
   const pz = shore(14) - 5;
   const deck = LAKE.level + 0.9;
-  for (const [lz, ry, mk] of [[40, 0.2, as('old_man', 'carry')], [36, PI / 2, as('kid_m', 'point')], [22, -PI / 2, as('tourist', 'hips')], [10, PI, any('stride')]] as const) addPost({ kind: 'stand', x: 14 + rng.range(-0.5, 0.5), z: pz + lz, y: deck, ry, tag: 'pier', ...mk() });
+  for (const [lz, ry, mk] of [[44, 0.2, as('old_man', 'carry')], [40, PI / 2, as('kid_m', 'point')], [26, -PI / 2, as('tourist', 'hips')], [14, PI, any('stride')]] as const) addPost({ kind: 'stand', x: 14 + rng.range(-0.5, 0.5), z: pz + lz, y: deck, ry, tag: 'pier', ...mk() });
   // the green: benches round the town hall block
   for (const [bx, bz, ry] of [[-24, 58, PI / 2], [24, 58, -PI / 2], [-12, 22, 0], [12, 22, 0], [-24, 36, PI / 2], [24, 36, -PI / 2]] as const) bench(pl, rng, bx, bz, ry, 'green');
 }

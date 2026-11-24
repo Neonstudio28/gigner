@@ -42,6 +42,8 @@ export class DriveHUD {
   private gear: HTMLElement;
   private loc: HTMLElement;
   private surface: HTMLElement;
+  private person: HTMLElement;
+  private personText = '';
   private mini: HTMLCanvasElement;
   private big: HTMLCanvasElement;
   private raster: HTMLCanvasElement;
@@ -55,6 +57,7 @@ export class DriveHUD {
       <canvas class="minimap" width="440" height="440"></canvas>
       <div class="speedo"><span class="spd">0</span><span class="unit">MPH</span><span class="gear">D</span></div>
       <div class="loc"></div><div class="surface"></div>
+      <div class="person"></div>
       <div class="drive-keys"></div>
       <canvas class="bigmap" width="${BIG_W}" height="${BIG_H}"></canvas>`;
     document.body.appendChild(this.el);
@@ -63,9 +66,19 @@ export class DriveHUD {
     this.gear = this.el.querySelector('.gear')!;
     this.loc = this.el.querySelector('.loc')!;
     this.surface = this.el.querySelector('.surface')!;
+    this.person = this.el.querySelector('.person')!;
     this.mini = this.el.querySelector('.minimap')!;
     this.big = this.el.querySelector('.bigmap')!;
     this.raster = this.buildRaster();
+  }
+
+  /** Who the player is standing next to: name, what they do and what they are doing now (null hides it). */
+  setPerson(p: { name: string; title: string; say: string } | null) {
+    const t = p ? `<b>${p.name}</b><span>${p.title}</span><i>${p.say}</i>` : '';
+    if (t === this.personText) return;
+    this.personText = t;
+    this.person.innerHTML = t;
+    this.person.classList.toggle('on', !!p);
   }
 
   private buildRaster(): HTMLCanvasElement {

@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import type { TownWorld } from '../world';
 import { Figure } from '../world/walker';
+import { NpcBody } from '../npc/body';
+import { npcLib } from '../npc/lib';
 
 const WALK = 2.1;
 const RUN = 5.6;
@@ -24,7 +26,9 @@ export class FootMode {
   /** Extra obstacles (the parked car), tested in world space. */
   blocker: ((x: number, z: number) => boolean) | null = null;
 
-  private fig: Figure;
+  private fig: Figure | null = null;
+  private body: NpcBody | null = null;
+  private root: THREE.Group;
   private keys = new Set<string>();
   private yaw = 0;
   private pitch = 0.2;
@@ -44,10 +48,17 @@ export class FootMode {
     private camera: THREE.PerspectiveCamera,
     dom: HTMLElement,
   ) {
-    this.fig = new Figure(world.materials, { skin: 0xe0b08a, shirt: 0xa5352f, pants: 0x34425a, hair: 0x3a2a1c, hat: 'cap', model: 'casual_m_3', tint: { jacket: 0x7a3b33, pants: 0x34425a } });
-    this.fig.group.name = 'player';
-    this.fig.group.visible = false;
-    scene.add(this.fig.group);
+    // the player wears the same Blender rig as the townsfolk (the jointed block figure only if the library is missing)
+    if (npcLib()) {
+      this.body = new NpcBody('casual_m_3', { jacket: 0x7a3b33, shirt: 0xa5352f, pants: 0x34425a, hair: 0x3a2a1c });
+      this.root = this.body.group;
+    } else {
+      this.fig = new Figure(world.materials, { skin: 0xe0b08a, shirt: 0xa5352f, pants: 0x34425a, hair: 0x3a2a1c, hat: 'cap', model: 'casual_m_3', tint: { jacket: 0x7a3b33, pants: 0x34425a } });
+      this.root = this.fig.group;
+    }
+    this.root.name = 'player';
+    this.root.visible = false;
+    scene.add(this.root);
     window.addEventListener('keydown', (e) => {
       if (!this.active) return;
       this.keys.add(e.code);
@@ -90,13 +101,13 @@ export class FootMode {
     this.grounded = true;
     this.active = true;
     this.snap = true;
-    this.fig.group.visible = true;
+    this.root.visible = true;
     this.place(0);
   }
 
   exit() {
     this.active = false;
-    this.fig.group.visible = false;
+    this.root.visible = false;
     this.keys.clear();
   }
 
@@ -120,16 +131,26 @@ export class FootMode {
       const dz = z - o.z;
       if (Math.abs(dx * o.c - dz * o.s) < o.hl + RADIUS && Math.abs(dx * o.s + dz * o.c) < 1.05 + RADIUS) return true;
     }
+    // people are in the way too, but never so that you cannot step back from one
+    const here = this.world.pedestrians?.around(x, z, RADIUS + 0.27);
+    if (here) for (const p of here) if (Math.abs(p.y - this.pos.y) < 1.2 && Math.hypot(p.x - x, p.z - z) < Math.hypot(p.x - this.pos.x, p.z - this.pos.z)) return true;
     // a wall of ground taller than a step
     return this.grounded && this.floor(x, z, this.pos.y + STEP) - this.pos.y > STEP;
   }
 
   private place(dt: number) {
-    const g = this.fig.group;
+    const g = this.root;
     g.position.copy(this.pos);
     if (this.swimming) g.position.y += Math.sin(this.time * 2.4) * 0.04;
     g.rotation.y = this.heading;
-    this.fig.animate(dt, Math.min(Math.abs(this.speed), this.pace) * Math.sign(this.speed));
+    const v = Math.min(Math.abs(this.speed), this.pace);
+    if (this.fig) return this.fig.animate(dt, v * Math.sign(this.speed));
+    const b = this.body!;
+    const clip = this.swimming ? 'walk' : v < 0.25 ? 'idle' : v > 3.4 ? 'run' : 'walk';
+    b.play(clip, clip === 'idle' ? 0.25 : 0.15);
+    const m = b.meta(clip);
+    b.rate = this.swimming ? 0.6 : m?.speed ? THREE.MathUtils.clamp(v / m.speed, 0.5, 1.6) : 1;
+    b.update(dt);
   }
 
   update(dt: number) {
@@ -230,7 +251,7 @@ export class FootMode {
     cam.position.copy(this.camPos);
     // look where the player looks, not at the player: with its back to a wall the camera becomes first-person
     const near = this.camPos.distanceTo(head);
-    this.fig.group.visible = near > 0.9;
+    this.root.visible = near > 0.9;
     cam.lookAt(head.x + Math.sin(this.yaw) * 12, head.y - Math.sin(this.pitch) * 12 + 1.2, head.z + Math.cos(this.yaw) * 12);
     cam.fov += (58 - cam.fov) * Math.min(1, dt * 4);
     cam.updateProjectionMatrix();
