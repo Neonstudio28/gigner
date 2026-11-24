@@ -8,7 +8,7 @@ import { CIVIC_B2 } from '../b2/civic';
 import { LANDMARKS } from '../b2/landmarks';
 import { DISTRICT } from '../b2/district';
 import { ALLEY, BANK_LOT, MAIN, AVE_S, face } from './roads';
-import { alleyEdge, wear, pave, paveTrap, path, prop, scatter, trashCorner, poleLine, backLot, carPark, treeEdge, fence, weedLine, inFrame, W, fbuild, fcar, fentrance, ftree, freserve, OLD_ASPHALT, CONCRETE, RUBBISH, type BackKind, type Bounds } from './blocks';
+import { alleyEdge, wear, pave, paveTrap, path, prop, scatter, trashCorner, poleLine, backLot, carPark, treeEdge, fence, BEATERS, hedge, parked, stalls, weedLine, inFrame, W, fbuild, fcar, fentrance, ftree, freserve, OLD_ASPHALT, CONCRETE, RUBBISH, type BackKind, type Bounds } from './blocks';
 
 const PI = Math.PI;
 export const N = 1 as const; // frontage side of an eastbound street: 1 = north, -1 = south
@@ -314,6 +314,51 @@ function courthouseSquare(pl: Placer) {
   fence(pl, 'tall', [[yx0, zs - sh.w / 2 - 1], [yx0, zs + sh.w / 2 + 13], [xb - 6.5, zs + sh.w / 2 + 13]]);
   for (let i = 0; i < 3; i++) fcar(pl, 'police', yx0 + 3.2, zs - 6 + i * 4.2, 0, 0xf1ede2, { model: i === 1 ? 'police_suv' : 'police_sedan' });
   fentrance(pl, xb, zs + sh.w / 2 + 9, 1, 0, 6);
+  // the yard is worked: marked bays against the station wall, impounded wrecks along the back fence, cones and barriers stacked
+  stalls(pl, rng, sx - sh.d / 2 - 0.6, zs - sh.w / 2 + 1, -PI / 2, 4, { fill: 0, stops: true });
+  for (const i of [0, 2]) fcar(pl, 'police', sx - sh.d / 2 - 3.3, zs - sh.w / 2 + 1 + (i + 0.5) * 2.75, PI, 0xf1ede2, { model: i ? 'police_sedan' : 'police_suv' });
+  const zy = zs + sh.w / 2 + 13;
+  stalls(pl, rng, yx0 + 7, zy - 0.5, PI, 0, {});
+  for (let i = 0; i < 3; i++) if (i !== 1 || rng.chance(0.5)) parked(pl, rng, yx0 + 8.5 + i * 3.1, zy - 3.4, PI / 2 + rng.range(-0.08, 0.08), BEATERS);
+  for (let i = 0; i < 4; i++) prop(pl, 'jersey_barrier', sx - sh.d / 2 + 3 + i * 2.1, zy - 0.9, 0, 0.6);
+  for (let i = 0; i < 5; i++) prop(pl, 'traffic_cone', sx + 3 + rng.range(-1.2, 1.2), zy - 2.2 + rng.range(-0.8, 0.8), rng.range(0, 6), false);
+  prop(pl, 'barricade_lights', sx + 6, zy - 1.2, 0.2, 0.5);
+  prop(pl, 'barricade_a', sx + 7.6, zy - 1.4, -0.15, 0.5);
+  prop(pl, 'traffic_barrel', sx + 1, zy - 1.1, 0, 0.4);
+  prop(pl, 'traffic_barrel', sx + 1.9, zy - 1.3, 1, 0.4);
+  prop(pl, 'fuel_tank_stand', yx0 + 2.4, zy - 3, PI / 2, 1.2);
+  prop(pl, 'oil_rack', yx0 + 1.2, zy - 6.5, PI / 2, 0.6);
+  prop(pl, 'tyre_stack', yx0 + 1.3, zy - 8.2, 0, 0.5);
+  prop(pl, 'utility_pole_light', yx0 + 0.9, zs + sh.w / 2 + 4, PI / 2, 0.3);
+  prop(pl, 'dumpster_green', sx - sh.d / 2 + 2.2, zs + sh.w / 2 + 2, 0, true);
+  prop(pl, 'electric_box', sx - sh.d / 2 + 4.6, zs + sh.w / 2 + 1.1, 0, 0.5);
+  wear(pl, rng, yx0 + 1, zs - sh.w / 2, sx - sh.d / 2 - 1, zy - 1, 40);
+  // memorial lawn between the courthouse and the sheriff: a walk in from the corner, the war memorial, benches under the trees
+  const lx0 = cx + court.w / 2 + 3;
+  const lx1 = xb - 2;
+  const lz1 = zs - sh.w / 2 - 3;
+  const mx = (lx0 + lx1) / 2 + 2;
+  const mz = z0 + 13 + (lz1 - z0 - 13) * 0.45;
+  if (lx1 - lx0 > 14) {
+    pave(pl, mx - 3.4, mz - 3.4, mx + 3.4, mz + 3.4, CONCRETE, 'concrete');
+    prop(pl, 'war_memorial', mx, mz, PI, 1.4);
+    path(pl, mx, z0 - 0.2, mx, mz - 3.2, 2.2);
+    path(pl, lx0 - 3.2, mz, mx - 3.2, mz, 2.2);
+    path(pl, mx + 3.2, mz, xb + 0.2, mz, 2.2);
+    for (const sd of [-1, 1]) {
+      prop(pl, 'bench_wood', mx + sd * 4.6, mz - 2.2, -sd * PI / 2, 0.6);
+      prop(pl, 'planter_round', mx + sd * 2.6, mz - 4.4, 0, 0.4);
+      ftree(pl, 'flower_bed', mx + sd * 2.4, mz + 4.6, 1, 0);
+      ftree(pl, 'flower_bed', mx + sd * 4.2, mz + 4.6, 1, 0);
+      ftree(pl, rng.pick(['maple_large', 'oak_medium']), mx + sd * 8.5, mz - 6.5, 0.9, rng.range(0, 6));
+      ftree(pl, rng.pick(['maple_medium', 'birch_cluster']), mx + sd * 9.5, mz + 3.5, 1, rng.range(0, 6));
+    }
+    prop(pl, 'street_lamp_old', mx - 1.9, mz - 8, 0, 0.3);
+    prop(pl, 'trash_can_street', mx + 1.9, mz - 6.2, 0, 0.4);
+    prop(pl, 'picnic_table', mx - 7.5, mz + 3.2, 0.3, 0.9);
+    prop(pl, 'flagpole_tall', mx, mz + 6, 0, 0.3);
+    hedge(pl, lx0, lz1, lx1, lz1);
+  }
   pave(pl, sx - sh.d / 2, zs + sh.w / 2 + 0.4, xb, zs + sh.w / 2 + 13, 0x7c8087);
   // public parking behind the courthouse off Division St
   const zl = fz + court.d / 2 + 3;

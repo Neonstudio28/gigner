@@ -200,8 +200,8 @@ function dressStreet(pl: Placer, rng: Rng, r: Road) {
     const f = net.frontage(r, s, side, lat);
     if (f.p.elevated || !clear(f.x, f.z, f.y)) continue;
     k.at(f.x, f.z, f.ry + (t >= 0.5 && t < 0.8 ? rng.range(0, 3) : rng.range(-0.04, 0.04)), () => {
-      if (t < 0.25) k.box(0, 0.05, 0, hw * 2 - 0.5, 0.012, rng.range(0.5, 0.9), rng.pick<Col>([0x55585d, 0x606368]), 'asphalt', { cast: false });
-      else if (t < 0.5) k.box(0, 0.05, 0, rng.range(1.2, 2.6), 0.012, rng.range(1, 3.4), rng.pick<Col>([0x5a5d62, 0x64676c, 0x50535a, 0x7c7f85]), 'asphalt', { cast: false });
+      if (t < 0.25) k.box(0, 0.05, 0, rng.range(0.5, 0.9), 0.012, hw * 2 - 0.5, rng.pick<Col>([0x6c6f75, 0x7b7e84]), 'asphalt', { cast: false });
+      else if (t < 0.5) k.box(0, 0.05, 0, rng.range(1.2, 2.6), 0.012, rng.range(1, 3.4), rng.pick<Col>([0x6a6d73, 0x74777d, 0x64676d, 0x85888e]), 'asphalt', { cast: false });
       else if (t < 0.8) k.box(0, 0.052, 0, rng.range(2.5, 6.5), 0.012, 0.07, 0x2e3033, 'paint', { cast: false });
       else k.box(0, 0.052, 0, rng.range(0.5, 1.2), 0.012, rng.range(0.5, 1.4), rng.pick<Col>([0x3e4044, 0x46484c]), 'paint', { cast: false });
     }, f.y);
