@@ -82,9 +82,9 @@ def workbench(b):
     b.box('panel', 0, D / 2 - 0.1, H + 0.73, 1.2, 0.08, 0.012, skip='t')
 
 
-@asset('car_lift_2post', G, lift_range=[0.12, 1.8], width=3.3)
+@asset('car_lift_2post', G, lift_range=[0.0, 1.7], width=3.3)
 def car_lift_2post(b):
-    """Two-post lift: posts 3.3 m apart across X, the car drives through along Y. `.arms` child slides on Z by `lift_range`."""
+    """Two-post lift: posts 3.3 m apart across X, the car drives through along Y. `.arms` child (modelled lowered) slides up on Z by an offset within `lift_range`."""
     for sx in (-1, 1):
         x = sx * 1.65
         b.box('steel_d', x, 0, 0, 0.5, 0.6, 0.025, bev=0.006)
@@ -100,6 +100,7 @@ def car_lift_2post(b):
     b.box('green', 1.85, -0.152, 1.08, 0.03, 0.006, 0.03)
     b.tube('black', [(1.85, 0.03, 1.0), (1.85, 0.12, 0.6), (1.7, 0.16, 0.1)], 0.012, n=4)
     p = b.part('arms', pivot=(0, 0, 0))
+    k0 = p.mark()
     for sx in (-1, 1):
         x = sx * 1.65
         p.box('enamel_y', x - sx * 0.2, 0, -0.02, 0.2, 0.36, 0.3, bev=0.012)
@@ -109,6 +110,7 @@ def car_lift_2post(b):
             p.box('steel', -sx * 1.05, 0, 0.01, 0.5, 0.065, 0.055)
             p.cyl('rubber', -sx * 1.25, 0, 0.065, 0.07, 0.03, n=8)
             p.rot(k, 'z', sx * sy * -32); p.move(k, x - sx * 0.26, sy * 0.12, 0.0)
+    p.move(k0, 0, 0, 0.1)
     return {}
 
 
@@ -242,10 +244,10 @@ def motel_bed(b):
     b.box('wood_dd', 0, 0.02, 0, W - 0.1, L - 0.14, 0.14, skip='tb')
     b.soft('white', 0, 0, 0.14, W, L, 0.2, r=0.04)                                         # box spring
     b.soft('white', 0, 0, 0.34, W, L, 0.18, r=0.05)
-    b.soft('paint__fabric:#c8643a', 0, -0.12, 0.36, W + 0.04, L - 0.22, 0.19, r=0.05)       # bedspread
+    b.soft('paint__bedspread:#c8643a', 0, -0.12, 0.36, W + 0.04, L - 0.22, 0.19, r=0.05)       # bedspread
     for i in range(4):
-        b.box('paint__fabric2:#e3b83a', -0.56 + i * 0.37, -0.12, 0.552, 0.05, L - 0.3, 0.004, skip='b')
-    b.box('paint__fabric2:#e3b83a', 0, -L / 2 + 0.3, 0.553, W - 0.1, 0.05, 0.004, skip='b')
+        b.box('paint__bedspread2:#e3b83a', -0.56 + i * 0.37, -0.12, 0.552, 0.05, L - 0.3, 0.004, skip='b')
+    b.box('paint__bedspread2:#e3b83a', 0, -L / 2 + 0.3, 0.553, W - 0.1, 0.05, 0.004, skip='b')
     for sx in (-1, 1):
         b.soft('white', sx * 0.36, L / 2 - 0.22, 0.5, 0.62, 0.36, 0.12, r=0.045, rx=6)
     b.soft('teal', 0, L / 2 - 0.44, 0.56, 0.4, 0.2, 0.1, r=0.04, rx=-10)
@@ -288,7 +290,7 @@ def motel_desk(b):
     b.box('white', 0.75, -0.08, H, 0.12, 0.18, 0.004, rz=10, skip='b')
     b.box('red_d', -0.28, -0.05, H, 0.16, 0.22, 0.03, bev=0.005, rz=-12)                    # Bible
     k = b.mark()
-    chair_frame(b, 'wood_d', w=0.44, d=0.44, sh=0.45, bh=0.9, seat='paint__fabric:#c8643a')
+    chair_frame(b, 'wood_d', w=0.44, d=0.44, sh=0.45, bh=0.9, seat='paint__bedspread:#c8643a')
     b.rot(k, 'z', 180); b.move(k, 0.44, -0.3, 0)
     return {'seat': [[0.44, -0.3, 0.5]], 'seat_facing': [0, 1, 0]}
 
@@ -297,7 +299,7 @@ def motel_desk(b):
 def luggage_rack(b):
     for sy in (-1, 1):
         for sx in (-1, 1):
-            b.rod('wood', (sx * 0.3, sy * 0.2, 0), (-sx * 0.3, sy * 0.2, 0.5), 0.016, n=5)
+            b.rod('wood', (sx * 0.3, sy * 0.2, 0.02), (-sx * 0.3, sy * 0.2, 0.5), 0.016, n=5)
         b.cyl('brass', 0, sy * 0.2 - 0.02, 0.25, 0.014, 0.04, n=6, axis='y')
     for sx in (-1, 1):
         b.rod('wood', (sx * 0.3, -0.2, 0.5), (sx * 0.3, 0.2, 0.5), 0.018, n=5)

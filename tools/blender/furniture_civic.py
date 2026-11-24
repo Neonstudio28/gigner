@@ -27,7 +27,7 @@ def pew(b):
     for sx in (-1, 0, 1):
         _pew_end(b, sx * (W / 2 - 0.025))
     b.box('wood', 0, -0.06, 0.4, W - 0.08, 0.42, 0.04, bev=0.01, edges='x')
-    b.soft('paint__fabric:#8c1f2b', 0, -0.07, 0.44, W - 0.12, 0.38, 0.045, r=0.018)
+    b.soft('paint__velvet:#8c1f2b', 0, -0.07, 0.44, W - 0.12, 0.38, 0.045, r=0.018)
     b.box('wood', 0, 0.16, 0.42, W - 0.08, 0.035, 0.5, rx=-10, bev=0.008, edges='x')
     b.box('wood', 0, 0.245, 0.9, W - 0.08, 0.06, 0.045, bev=0.012)
     b.box('wood_d', 0, 0.22, 0.05, W - 0.08, 0.03, 0.34)
@@ -276,8 +276,8 @@ def jury_box_bench(b):
         for i in range(6):
             x = -1.2 + i * 0.48
             b.box('wood_d', x, y + 0.02, z0, 0.4, 0.4, 0.36, bev=0.008, edges='z')
-            b.box('paint__fabric:#3f6b52', x, y, z0 + 0.36, 0.42, 0.44, 0.09, bev=0.03, edges='T', skip='b')
-            b.box('paint__fabric:#3f6b52', x, y + 0.23, z0 + 0.42, 0.42, 0.09, 0.5, bev=0.03, rx=-8)
+            b.box('paint__juryseat:#3f6b52', x, y, z0 + 0.36, 0.42, 0.44, 0.09, bev=0.03, edges='T', skip='b')
+            b.box('paint__juryseat:#3f6b52', x, y + 0.23, z0 + 0.42, 0.42, 0.09, 0.5, bev=0.03, rx=-8)
             b.box('wood', x - 0.24, y + 0.02, z0 + 0.36, 0.05, 0.4, 0.22, bev=0.01)
             seats.append([round(x, 2), round(y, 2), round(z0 + 0.48, 2)])
         b.box('wood', -1.2 + 5 * 0.48 + 0.24, y + 0.02, z0 + 0.36, 0.05, 0.4, 0.22, bev=0.01)

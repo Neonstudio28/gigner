@@ -10,7 +10,7 @@ CH, CD = 0.86, 0.6   # carcass height, depth; worktop adds 0.04
 
 def _base(b, x, w, rows, top=True, y=0.0):
     b.box('char', x, y + 0.04, 0, w, CD - 0.1, 0.1, skip='tb')
-    b.box(CAB, x, y + 0.01, 0.1, w, CD - 0.02, CH - 0.1)
+    b.box(CAB, x, y + 0.01, 0.1, w, CD - 0.02, CH - 0.1, skip='' if top else 't')
     fronts(b, DOOR, x, y - CD / 2 + 0.02, 0.11, w - 0.008, CH - 0.115, rows, hm='steel', hz=0.82)
     if top:
         _top(b, x, w, y)

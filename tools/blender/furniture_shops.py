@@ -6,14 +6,17 @@ G = 'shops'
 
 
 def _bt(b, x, y, z, h, r, m, cap='black', label=None, n=5):
-    """Cheap few-sided bottle for dense displays."""
-    b.lathe(m, x, y, z, [(r, 0), (r, h * 0.58), (r * 0.36, h * 0.78), (r * 0.36, h * 0.94)], n=n, caps=(False, False))
-    b.cyl(cap, x, y, z + h * 0.93, r * 0.42, h * 0.07, n=n, caps=(False, True))
-    if label:
+    """Cheap few-sided bottle for dense displays (n = 4 gives a square bottle with a front-only label)."""
+    ph = 45 if n == 4 else 0
+    b.lathe(m, x, y, z, [(r, 0), (r, h * 0.58), (r * 0.36, h * 0.78), (r * 0.36, h * 0.94)], n=n, caps=(False, False), phase=ph)
+    b.cyl(cap, x, y, z + h * 0.93, r * 0.42, h * 0.07, n=n, caps=(False, True), phase=ph)
+    if label and n == 4:
+        b.box(label, x, y - r * 0.7071 - 0.002, z + h * 0.16, r * 1.3, 0.004, h * 0.28, skip='k')
+    elif label:
         b.lathe(label, x, y, z + h * 0.16, [(r + 0.002, 0), (r + 0.002, h * 0.28)], n=n, caps=(False, False))
 
 
-def _bottles(b, x0, x1, y, z, hmax, rng, gap=0.018):
+def _bottles(b, x0, x1, y, z, hmax, rng, gap=0.018, n=5):
     """One row of assorted spirits and wine bottles along a shelf whose front edge is `y`."""
     x = x0
     while x < x1 - 0.05:
@@ -22,7 +25,7 @@ def _bottles(b, x0, x1, y, z, hmax, rng, gap=0.018):
         for i in range(rng.randint(2, 3)):
             if x + 2 * r > x1:
                 break
-            _bt(b, x + r, y + 0.03 + r, z, h, r, m, cap, lab)
+            _bt(b, x + r, y + 0.03 + r, z, h, r, m, cap, lab, n=n)
             x += 2 * r + gap
         x += 0.02
 
@@ -53,8 +56,9 @@ def _gondola(b, kinds, seed, W=1.2, H=1.5, D=0.42, accent='red', peg=False):
                 b.box('white', -0.42 + j * 0.28 + rng.uniform(-0.03, 0.03), -dd - 0.02, z - 0.026, 0.06, 0.003, 0.024, skip='k')
             if kind == 'peg':
                 _peg_tools(b, -W / 2 + 0.08, W / 2 - 0.08, -0.016, z + 0.02, step - 0.08, rng)
+                goods(b, 'box', -W / 2 + 0.04, W / 2 - 0.04, -dd - 0.012, z, 0.13, 0.12, rng, n=6)     # small boxed parts along the shelf front
             elif kind == 'liquor':
-                _bottles(b, -W / 2 + 0.05, W / 2 - 0.04, -dd - 0.012, z, step - 0.07, rng)
+                _bottles(b, -W / 2 + 0.05, W / 2 - 0.04, -dd - 0.012, z, step - 0.07, rng, gap=0.024)
             else:
                 goods(b, kind, -W / 2 + 0.04, W / 2 - 0.04, -dd - 0.012, z, min(dd, 0.3), step - 0.07, rng, n=6)
         if side:
@@ -807,14 +811,14 @@ def atm_indoor(b):
 def barber_chair(b):
     b.lathe('chrome', 0, 0, 0, [(0.3, 0), (0.3, 0.025), (0.2, 0.06), (0.09, 0.09), (0.07, 0.2), (0.1, 0.22), (0.1, 0.3), (0.05, 0.32), (0.05, 0.42)], n=14)
     b.box('enamel', 0, 0.02, 0.42, 0.5, 0.5, 0.06, bev=0.015)
-    b.soft('paint__fabric:#8c1f2b', 0, 0, 0.48, 0.52, 0.5, 0.12, r=0.04)
-    b.soft('paint__fabric:#8c1f2b', 0, 0.27, 0.56, 0.5, 0.11, 0.56, r=0.04, rx=-12)
+    b.soft('paint__velvet:#8c1f2b', 0, 0, 0.48, 0.52, 0.5, 0.12, r=0.04)
+    b.soft('paint__velvet:#8c1f2b', 0, 0.27, 0.56, 0.5, 0.11, 0.56, r=0.04, rx=-12)
     b.box('enamel', 0, 0.335, 0.58, 0.44, 0.03, 0.5, bev=0.01, rx=-12)
     b.box('chrome', 0, 0.36, 1.08, 0.04, 0.02, 0.2, rx=-12)
-    b.soft('paint__fabric:#8c1f2b', 0, 0.37, 1.2, 0.26, 0.09, 0.14, r=0.035, rx=-12)
+    b.soft('paint__velvet:#8c1f2b', 0, 0.37, 1.2, 0.26, 0.09, 0.14, r=0.035, rx=-12)
     for sx in (-1, 1):
         b.box('enamel', sx * 0.29, 0.02, 0.44, 0.05, 0.46, 0.26, bev=0.015)
-        b.soft('paint__fabric:#8c1f2b', sx * 0.29, 0.0, 0.7, 0.08, 0.36, 0.05, r=0.02)
+        b.soft('paint__velvet:#8c1f2b', sx * 0.29, 0.0, 0.7, 0.08, 0.36, 0.05, r=0.02)
         b.box('chrome', sx * 0.29, -0.2, 0.5, 0.055, 0.03, 0.2, bev=0.008)
         b.tube('chrome', [(sx * 0.2, -0.22, 0.44), (sx * 0.2, -0.4, 0.3), (sx * 0.2, -0.46, 0.16)], 0.014, n=5)
     b.box('chrome', 0, -0.48, 0.13, 0.46, 0.16, 0.025, bev=0.008, rx=25)
@@ -988,7 +992,7 @@ def dartboard(b):
         b.box('#2a332f', sx * 0.155, -0.022, 0.07, 0.24, 0.004, 0.5, skip='k')
         for i in range(5):
             b.box('white', sx * 0.155 + (i % 2) * 0.03 - 0.03, -0.025, 0.46 - i * 0.07, 0.1, 0.002, 0.01, skip='k')
-        b.rot(k, 'z', -sx * 150, pivot=(0, 0, 0)); b.move(k, sx * 0.31, -0.05, z - 0.02)
+        b.rot(k, 'z', -sx * 25, pivot=(0, 0, 0)); b.move(k, sx * 0.31, -0.05, z - 0.02)
     b.cyl('black', 0, -0.04, z + 0.31, 0.23, 0.03, n=16, axis='y', rz=180)
     disc_decal(b, 'dart', 0, -0.0715, z + 0.31, 0.225, n=16)
     b.tube('steel', [(0.2 * math.cos(i * math.tau / 12), -0.074, z + 0.31 + 0.2 * math.sin(i * math.tau / 12)) for i in range(12)], 0.003, n=3, closed=True)
@@ -1037,16 +1041,16 @@ def bar_counter(b):
     return {'seat_line': [[-1.2, -0.75, 0], [1.2, -0.75, 0]]}
 
 
-@asset('back_bar', G, surface=0.95, length=3.0)
+@asset('back_bar', G, surface=0.95, length=1.5)
 def back_bar(b):
-    """Stands against a wall: back at y = +0.25."""
-    W, D, H = 3.0, 0.5, 0.95
+    """1.5 m module (two cover a 3 m bar). Stands against a wall: back at y = +0.25."""
+    W, D, H = 1.5, 0.5, 0.95
     rng = R(30)
     carcass(b, 'wood_d', 0, 0, 0, W, D, H - 0.04, toe=0.1, toe_m='wood_dd', top=('wood', 0.02, 0.04))
-    fronts(b, 'wood', 0, -D / 2, 0.11, W - 0.02, H - 0.17, [(1, 'dddd'), (2.6, 'lrlrlr')], hm='brass')
+    fronts(b, 'wood', 0, -D / 2, 0.11, W - 0.02, H - 0.17, [(1, 'dd'), (2.6, 'lrlr')], hm='brass')
     yb = D / 2 - 0.02
     b.box('wood_d', 0, yb, H, W, 0.04, 1.35, bev=0.006)
-    b.box('mirror', 0, yb - 0.024, H + 0.12, W - 0.5, 0.006, 1.05, skip='k')
+    b.box('mirror', 0, yb - 0.024, H + 0.12, W - 0.36, 0.006, 1.05, skip='k')
     for sx in (-1, 1):
         b.box('wood', sx * (W / 2 - 0.08), yb - 0.06, H, 0.14, 0.14, 1.35, bev=0.012, edges='z')
         b.box('wood_d', sx * (W / 2 - 0.08), yb - 0.134, H + 0.1, 0.08, 0.008, 1.1, bev=0.006, edges='F', skip='k')
@@ -1056,17 +1060,17 @@ def back_bar(b):
         z = H + i * 0.36
         dd = 0.34 - i * 0.07
         if i:
-            b.box('clear', 0, yb - 0.02 - dd / 2, z - 0.012, W - 0.3, dd, 0.012)
-            for sx in (-1, 0, 1):
+            b.box('clear', 0, yb - 0.02 - dd / 2, z - 0.012, W - 0.28, dd, 0.012)
+            for sx in (-1, 1):
                 b.box('brass', sx * (W / 2 - 0.3), yb - 0.03 - dd / 2, z - 0.05, 0.02, dd - 0.02, 0.038)
-        _bottles(b, -W / 2 + 0.24, W / 2 - 0.24, yb - dd - 0.02, z, 0.31, rng, gap=0.07 + i * 0.015)
-    b.box('panel', 0, yb - 0.1, H + 1.34, W - 0.4, 0.06, 0.012, skip='t')
+        _bottles(b, -W / 2 + 0.2, W / 2 - 0.2, yb - dd - 0.02, z, 0.31, rng, gap=0.022 + i * 0.008)
+    b.box('panel', 0, yb - 0.1, H + 1.34, W - 0.3, 0.06, 0.012, skip='t')
     # counter: till, glasses rack, ice bucket
-    _register(b, -1.1, -0.02, H)
-    for i in range(8):
-        b.lathe('clear', 0.7 + (i % 4) * 0.09, -0.12 + (i // 4) * 0.09, H, [(0.03, 0), (0.036, 0.12)], n=6, caps=(True, False))
-    b.lathe('steel', 1.25, -0.05, H, [(0.08, 0), (0.1, 0.18), (0.11, 0.18)], n=10, caps=(True, False))
-    b.cyl('white', 1.25, -0.05, H + 0.16, 0.095, 0.01, n=10)
+    _register(b, -0.42, -0.04, H)
+    for i in range(6):
+        b.lathe('clear', 0.08 + (i % 3) * 0.09, -0.12 + (i // 3) * 0.09, H, [(0.03, 0), (0.036, 0.12)], n=6, caps=(True, False))
+    b.lathe('steel', 0.52, -0.05, H, [(0.08, 0), (0.1, 0.18), (0.11, 0.18)], n=10, caps=(True, False))
+    b.cyl('white', 0.52, -0.05, H + 0.16, 0.095, 0.01, n=10)
 
 
 @asset('beer_tap_set', G, mount='top')
