@@ -107,7 +107,7 @@ def reception_counter(b):
     for i in range(4):
         b.box('wood_d', (i - 1.5) * 0.58, -0.303, 0.2, 0.5, 0.008, 0.74, bev=0.006, edges='F', skip='k')
     b.box('wood_d', 0, -0.305, 0.1, W, 0.012, 0.06, skip='k')
-    b.box('paint__counter:#3f7d4b', 0, -0.14, 1.04, W + 0.06, 0.48, 0.06, bev=0.014)        # high transaction top
+    b.box('paint__desktop:#3f7d4b', 0, -0.14, 1.04, W + 0.06, 0.48, 0.06, bev=0.014)        # high transaction top
     b.box('wood', 0, 0.2, 0.1, W, 0.3, 0.62, skip='f')
     b.box('wood', 0, 0.16, 0.72, W, 0.42, 0.04, bev=0.008, edges='K')                      # staff worktop
     for i in range(4):
@@ -191,7 +191,7 @@ def flag_stand(b):
     b.lathe('brass', 0, 0, 0, [(0.17, 0), (0.17, 0.02), (0.1, 0.05), (0.04, 0.07), (0.03, 0.12), (0.018, 0.14), (0.016, 2.2)], n=10)
     b.lathe('gold', 0, 0, 2.2, [(0.016, 0), (0.035, 0.03), (0.02, 0.06), (0.04, 0.12), (0, 0.2)], n=8)
     # draped flag: overlapping cloth folds hanging from the pole
-    for i, (x1, drop, yy, m, rz) in enumerate(((0.5, 1.0, 0.0, 'red', -14), (0.44, 1.12, 0.012, 'white', -4), (0.36, 1.22, 0.0, 'red', 8), (0.26, 1.3, -0.012, 'white', 20))):
+    for i, (x1, drop, yy, m, rz) in enumerate(((0.5, 1.0, 0.0, 'red', -14), (0.44, 0.96, 0.012, 'white', -4), (0.36, 1.22, 0.0, 'red', 8), (0.26, 1.16, -0.012, 'white', 20))):
         b.prism(m, [(0.012, 2.16), (x1, 2.16 - x1 * 0.5), (x1 * 0.7, 2.16 - drop), (0.012, 2.16 - drop + 0.1)], yy - 0.006, yy + 0.006, plane='xz', rz=rz)
     b.prism('blue_d', [(0.012, 2.165), (0.3, 2.02), (0.27, 1.55), (0.012, 1.6)], -0.03, -0.018, plane='xz', rz=-22)
     b.tube('gold', [(0.02, 0, 2.1), (0.06, -0.03, 1.9), (0.04, -0.03, 1.55)], 0.006, n=4)
@@ -374,7 +374,7 @@ def jail_bars_panel(b):
     _bars(b, 1.5)
 
 
-@asset('jail_door', G, length=1.0, height=2.4, hinge=[-0.5, 0, 0])
+@asset('jail_door', G, length=1.0, height=2.4, hinge=[-0.45, 0, 0])
 def jail_door(b):
     """Fixed frame plus the barred leaf as a `.leaf` child hinged on the -X jamb."""
     for sx in (-1, 1):
@@ -447,7 +447,7 @@ def hanging_sign_blank(b):
     return {}
 
 
-@asset('fluorescent_troffer', G, mount='ceiling', size=[0.6, 1.2])
+@asset('fluorescent_troffer', G, mount='ceiling', panel=[0.6, 1.2])
 def fluorescent_troffer(b):
     W, L = 0.6, 1.2
     b.box('offwhite', 0, 0, -0.06, W, L, 0.06, bev=0.008, edges='B', skip='t')

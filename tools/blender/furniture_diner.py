@@ -5,7 +5,7 @@ from furniture_kit import *
 G = 'diner'
 
 
-RED = 'paint__fabric:#b8332b'
+RED = 'paint__vinyl:#b8332b'
 
 
 def _napkins(b, x, y, z):
@@ -35,7 +35,7 @@ def _booth_bench(b, y, face, W=1.2):
     b.soft(RED, 0, -0.03, 0.3, W - 0.02, 0.5, 0.14, r=0.04)
     b.box('enamel', 0, 0.25, 0.3, W, 0.08, 0.86, bev=0.01)
     for i in range(3):
-        b.soft(RED if i != 1 else 'paint__fabric2:#ecebe6', (i - 1) * (W - 0.04) / 3, 0.17, 0.44, (W - 0.04) / 3 - 0.01, 0.1, 0.66, r=0.035)
+        b.soft(RED if i != 1 else 'paint__vinyl2:#ecebe6', (i - 1) * (W - 0.04) / 3, 0.17, 0.44, (W - 0.04) / 3 - 0.01, 0.1, 0.66, r=0.035)
     b.box('chrome', 0, 0.25, 1.16, W + 0.01, 0.09, 0.02, bev=0.006)
     if face > 0:
         b.rot(k, 'z', 180)
@@ -96,7 +96,7 @@ def diner_counter(b):
     for z, m in ((0.3, RED), (0.72, RED)):
         b.box(m, 0, -D / 2 + 0.117, z, W - 0.01, 0.006, 0.07, skip='k')
     b.box('chrome', 0, 0, H - 0.05, W + 0.04, D, 0.045, bev=0.014, edges='z')
-    b.box('paint__counter:#d9534a', 0, 0, H - 0.006, W + 0.02, D - 0.02, 0.008, bev=0.006, edges='z', skip='b')
+    b.box('paint__dinertop:#d9534a', 0, 0, H - 0.006, W + 0.02, D - 0.02, 0.008, bev=0.006, edges='z', skip='b')
     b.cyl('chrome', -W / 2 + 0.05, -D / 2 + 0.02, 0.22, 0.02, W - 0.1, n=8, axis='x')        # foot rail
     for i in range(4):
         x = -W / 2 + 0.2 + i * (W - 0.4) / 3
@@ -190,9 +190,9 @@ def kitchen_grill_line(b):
         b.box(('white', 'red', 'steel', 'yellow', 'white')[i], -0.9 + i * 0.3, D / 2 - 0.1, 1.52, 0.16, 0.12, 0.12, bev=0.008)
 
 
-@asset('pass_window_shelf', G, mount='wall', length=1.6, surface=1.1)
+@asset('pass_window_shelf', G, mount='wall', length=1.6, surface=1.1, in_opening=True)
 def pass_window_shelf(b):
-    """Kitchen pass: shelf at 1.1 m with a heat-lamp rail, order wheel and bell. Sits in a 1.6 m wall opening."""
+    """Kitchen pass: shelf at 1.1 m with a heat-lamp rail, order wheel and bell. Sits in a 1.6 m wall opening, centred on the wall plane (y from -0.2 to +0.2)."""
     W, z = 1.6, 1.1
     b.box('steel', 0, 0, z - 0.04, W, 0.4, 0.04, bev=0.008)
     for sx in (-1, 1):

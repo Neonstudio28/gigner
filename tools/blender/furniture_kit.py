@@ -630,9 +630,11 @@ def plant(b, kind, x, y, z, s=1.0, pm='white', rng=None):
     rng = rng or R(3)
     if kind == 'snake':
         pot(b, pm, x, y, z, 0.11 * s, 0.22 * s, square=True)
-        for i in range(7):
-            a = i * 360 / 7 + rng.uniform(-15, 15)
-            leaf(b, ('leaf', 'leaf_d', 'leaf_l')[i % 3], x + 0.03 * s * math.cos(math.radians(a)), y + 0.03 * s * math.sin(math.radians(a)), z + 0.2 * s, 0.06 * s, rng.uniform(0.3, 0.52) * s, rng.uniform(4, 16), a + 90)
+        for i in range(12):
+            a = i * 360 / 12 * 2.4 + rng.uniform(-15, 15)
+            rr = (0.02 + 0.045 * (i % 3) / 2) * s
+            leaf(b, ('leaf', 'leaf_d', 'leaf_l')[i % 3], x + rr * math.cos(math.radians(a)), y + rr * math.sin(math.radians(a)), z + 0.2 * s, 0.085 * s, rng.uniform(0.34, 0.6) * s,
+                 4 + 7 * (i % 3), a + 90)
     elif kind == 'palm':
         pot(b, pm, x, y, z, 0.16 * s, 0.3 * s)
         b.cyl('brown', x, y, z + 0.28 * s, 0.025 * s, 0.5 * s, n=6)

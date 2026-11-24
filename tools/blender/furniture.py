@@ -3,6 +3,7 @@ preview sheets. Development switches after `--`: --only a,b  --group living,shop
 import sys, os, math, importlib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy, lib
+from mathutils import Vector
 import furniture_kit as kit
 
 GROUPS = ('living', 'kitchen', 'bedbath', 'office', 'shops', 'diner', 'civic', 'garage')
@@ -22,6 +23,13 @@ def main():
     kit.reset()
     objs, extras, grp = kit.build_all(only, groups)
     if not partial:
+        bpy.context.view_layer.update()
+        for o in objs:      # lib.bounds() ignores the offset of child parts, so write the true bounds for those assets
+            if o.children_recursive:
+                pts = [m.matrix_world @ Vector(c) for m in [o, *o.children_recursive] for c in m.bound_box]
+                lo = [min(p[i] for p in pts) for i in range(3)]
+                hi = [max(p[i] for p in pts) for i in range(3)]
+                extras[o.name].update(min=[round(v, 3) for v in lo], size=[round(hi[i] - lo[i], 3) for i in range(3)])
         man = lib.export('furniture', objs, extras)
         size = os.path.getsize(os.path.join(lib.MODELS, 'furniture.glb'))
         print(f'[furniture] {len(man)} assets, {size / 1e6:.2f} MB, max tris {max(m["tris"] for m in man.values())}')
@@ -43,6 +51,9 @@ def main():
             o.hide_render = hide
             for c in o.children_recursive:
                 c.hide_render = hide
+        if len(chunk) == 1:   # a lone asset: widen the framing by its height so tall pieces are not cropped
+            lo, hi = lib.bounds(chunk[0])
+            k = {**k, 'cols': 1, 'gap': max(0.35, 1.5 * (hi[2] - lo[2]))}
         lib.preview('furniture', chunk, tag=tag, **{**kw, **k})
 
     if tag:
@@ -53,7 +64,8 @@ def main():
             mine.sort(key=lambda o: max(lib.bounds(o)[1][i] - lib.bounds(o)[0][i] for i in range(3)))
             per = 6
             for i in range(0, len(mine), per):
-                shot(mine[i:i + per], f'{g}_{i // per + 1:02d}', cols=3, gap=0.35)
+                chunk = mine[i:i + per]
+                shot(chunk, f'{g}_{i // per + 1:02d}', cols=min(3, len(chunk)), gap=0.35)
     for o in objs:
         o.hide_render = False
         for c in o.children_recursive:
