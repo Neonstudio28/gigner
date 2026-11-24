@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Kit, Col } from './core/kit';
 import type { SignBook } from './signs';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { asset, hasAsset } from './assets';
 
 export type VehicleType =
   | 'sedan'
@@ -25,6 +26,8 @@ export interface VehicleOpts {
   trailer?: boolean;
   stripes?: boolean;
   woody?: boolean;
+  /** A model of the vehicles family by name, instead of the one picked from the colour. */
+  model?: string;
 }
 
 const CHROME = 0xc9ccd0;
@@ -116,12 +119,16 @@ function poly(pts: Pt[]): THREE.Shape {
   return s;
 }
 
-type WheelSink = (x: number, z: number, r: number, width: number, side: number, dual: boolean) => void;
+type WheelSink = (x: number, z: number, r: number, width: number, side: number, dual: boolean, model?: string) => void;
 let wheelSink: WheelSink | null = null;
 
 /** Draws one wheel centred at the origin, axle along Z (used for the drivable car's separate wheels). */
-export function drawWheel(k: Kit, r: number, width: number, side: number, dual: boolean) {
+export function drawWheel(k: Kit, r: number, width: number, side: number, dual: boolean, model?: string) {
   wheelSink = null;
+  if (model && hasAsset(model)) {
+    k.asset(model, 0, 0, 0, side > 0 ? Math.PI : 0, { s: r / WHEEL_R, solid: false });
+    return;
+  }
   wheel(k, 0, 0, r, width, side, dual, 0);
 }
 
@@ -648,9 +655,50 @@ function tractor(k: Kit, color: Col) {
   k.box(2.1, 0.45, 0, 0.3, 0.5, 0.6, 0x5a5d60, 'metal');
 }
 
+const WHEEL_R = 0.335;
+/** Models of the Blender vehicles family that can stand in for each type; the paint colour picks one. */
+const FAMILY: Partial<Record<VehicleType, string[]>> = {
+  sedan: ['sedan_80s', 'sedan_luxury', 'hatch_compact', 'sedan_80s'],
+  wagon: ['wagon_woody'],
+  coupe: ['coupe_80s', 'muscle_70s', 'pony_80s', 'sports_70s', 'roadster'],
+  pickup: ['pickup_80s', 'pickup_50s', 'pickup_4x4', 'pickup_80s'],
+  van: ['van_cargo'],
+  suv: ['suv_boxy'],
+  sheriff: ['police_sedan'],
+  police: ['police_sedan'],
+  sheriffSuv: ['police_suv'],
+  tow: ['tow_truck'],
+  jeep: ['offroad_open'],
+  delivery: ['step_van'],
+};
+/** Types that keep the livery they were modelled with. */
+const LIVERY = new Set<VehicleType>(['sheriff', 'police', 'sheriffSuv', 'tow', 'delivery']);
+
+/** The family model used for a type and colour, if the family is loaded. */
+export function familyModel(type: VehicleType, color: Col, o: VehicleOpts = {}): string | undefined {
+  if (o.model && hasAsset(o.model)) return o.model;
+  const list = FAMILY[type]?.filter((n) => hasAsset(n));
+  if (!list?.length) return undefined;
+  const hex = new THREE.Color(color).getHex();
+  return list[((hex >> 16) + ((hex >> 8) & 255) * 3 + (hex & 255) * 7) % list.length];
+}
+
+function familyVehicle(k: Kit, name: string, type: VehicleType, color: Col): void {
+  const a = asset(name)!;
+  k.asset(name, 0, 0, 0, 0, { solid: false, tint: LIVERY.has(type) ? undefined : { body: color } });
+  for (const [x, y, , r, wn] of (a.info.wheels as [number, number, number, number, string][]) ?? []) {
+    const side = y > 0 ? -1 : 1;
+    const dual = wn === 'wheel_truck_dual';
+    if (wheelSink) wheelSink(x, -y, r, 0.23 * (r / WHEEL_R), side, dual, wn);
+    else k.asset(wn, x, r, -y, side > 0 ? Math.PI : 0, { s: r / WHEEL_R, solid: false });
+  }
+}
+
 /** Places a vehicle; local +X is the front. */
 export function vehicle(k: Kit, signs: SignBook, type: VehicleType, x: number, z: number, ry: number, color: Col, o: VehicleOpts = {}) {
   k.at(x, z, ry, () => {
+    const fam = familyModel(type, color, o);
+    if (fam) return familyVehicle(k, fam, type, color);
     switch (type) {
       case 'sedan':
         sedanLike(k, color, false, o.accent);
@@ -727,12 +775,13 @@ export interface WheelInfo {
   width: number;
   side: number;
   dual: boolean;
+  model?: string;
 }
 
 /** Builds a vehicle body without its wheels and reports where the wheels go (for the drivable car). */
 export function vehicleBody(k: Kit, signs: SignBook, type: VehicleType, color: Col, o: VehicleOpts = {}): WheelInfo[] {
   const out: WheelInfo[] = [];
-  wheelSink = (x, z, r, width, side, dual) => out.push({ x, z, r, width, side, dual });
+  wheelSink = (x, z, r, width, side, dual, model) => out.push({ x, z, r, width, side, dual, model });
   try {
     vehicle(k, signs, type, 0, 0, 0, color, o);
   } finally {

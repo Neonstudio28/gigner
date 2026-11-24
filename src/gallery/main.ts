@@ -21,6 +21,12 @@ const SETS: Record<string, () => Promise<BuildingDef[]>> = {
   civic: async () => (await import('../world/buildings/civic2')).CIVIC,
   town: async () => (await import('../world/buildings/town')).TOWN,
   b2: async () => (await import('../world/b2')).B2,
+  cars: async () => {
+    const { vehicle } = await import('../world/vehicles');
+    const names = ['sedan_80s', 'sedan_luxury', 'hatch_compact', 'wagon_woody', 'coupe_80s', 'muscle_70s', 'pony_80s', 'sports_70s', 'roadster', 'pickup_80s', 'pickup_50s', 'pickup_4x4', 'van_cargo', 'suv_boxy', 'police_sedan', 'police_suv', 'tow_truck', 'offroad_open', 'step_van'];
+    const cols = [0x3f6f9a, 0xb3261e, 0xe3b81f, 0x5d7a52, 0xe9e6dc, 0xe0701c, 0x2f6b3f, 0xc8b386, 0x4f8f8a];
+    return names.map((n, i) => ({ id: n, name: n, w: 3, d: 6, tags: [], build: (c, x, z) => vehicle(c.kit, c.signs, 'sedan', x, z, -Math.PI / 2 + 0.5, cols[i % cols.length], { model: n }) }));
+  },
 };
 
 async function main() {

@@ -216,7 +216,7 @@ export class DriveMode {
     const minX = Math.min(...xs);
     for (const info of infos) {
       const wb = new Batcher(1, false);
-      drawWheel(new Kit(wb, mats), info.r, info.width, info.side, info.dual);
+      drawWheel(new Kit(wb, mats), info.r, info.width, info.side, info.dual, info.model);
       const spin = new THREE.Group();
       wb.build((key) => mats.get(key), spin);
       spin.traverse((o) => ((o as THREE.Mesh).castShadow = true));
