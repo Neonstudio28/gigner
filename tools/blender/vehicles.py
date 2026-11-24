@@ -107,8 +107,8 @@ def main():
         return
     for w in wheel_list:
         w.location.z = wheels.R
-    if not GROUP:
-        shot(wheel_list, 'wheels', 158, 10, s, res, cols=7, gap=0.3)
+    if not GROUP or 'wheels' in GROUP:
+        shot(wheel_list, 'wheels', 160, 26, s, res, cols=4, gap=0.75)
     for w in wheel_list:
         w.location.z = 0
     for g, obs in groups.items():
