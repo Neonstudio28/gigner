@@ -24,7 +24,13 @@ The town is a compact grid, about 720 m by 360 m, between the river to the north
 
 **Interiors.** The landmarks, shops, houses and district buildings have furnished interiors behind real glass: wood floors, wainscot walls, tiled ceilings and furniture modelled for that kind of place (courtroom and clerk's office, diner booths and counter, bank counter and vault, jail cells, church pews, shop shelving, motel rooms, kitchens and living rooms, barn stalls and loft, warehouse racking).
 
-**People.** 29 townsfolk models (deputies, farmer, mechanic, lumberjack, waitress, cook, priest, kids, tourists and more) stand in groups, sit on benches, work at their buildings and walk the sidewalks, with varied clothing colours and carried items.
+**People.** About 430 townsfolk live in the town. They are 36 boxy characters modelled and rigged in Blender (deputies, farmer, mechanic, lumberjack, waitress, cook, priest, kids, tourists and more), on one skeleton with 56 authored animations and 15 hand props.
+
+- **Lives.** Each person has a name, a job and workplace or a role (local, kid, elder, tourist, jogger), a home, traits, friends and five needs (hunger, energy, company, fun, errands). A daily schedule and the needs are scored against each other to pick what to do next.
+- **Getting around.** They walk the sidewalks, wait at the kerb for traffic, cross at the corners, go in and out of buildings through the doors and take a seat or a spot at the counter inside. Cars slow for people on a crossing.
+- **Things they do.** Talk, listen, laugh and wave in groups; sit, eat, drink and read; phone, smoke, lean and stretch; sweep, rake, hammer, garden, fish, carry boxes, serve and work a counter or a desk.
+- **Reactions.** They step round each other and the player, look at and greet the player, flinch and get out of the way of a car, put up umbrellas or run for shelter when it rains, and go home at night.
+- **On foot.** Walk up to anyone to see their name, job and what they are doing.
 
 **Vehicles.** 30 vehicles from the 1970s and 80s: sedans, coupes, a muscle car, a woody wagon, pickups, an SUV, vans, police cars, a tow truck, semis with box, tanker and log trailers, a dump truck, a flatbed, a school bus, a farm tractor and a log loader.
 
@@ -94,7 +100,8 @@ URL options:
 | Family | Contents |
 |---|---|
 | `vehicles` | 30 vehicles and 8 wheels, with wheel positions, driver seat, hitch and paint colours in the manifest |
-| `people` | 29 jointed people and 6 carried props |
+| `npc` | 36 box-built characters on one 18-bone skeleton, 56 animation clips and 15 hand props (`tools/blender/npc*.py`) |
+| `people` | the earlier 29 jointed people, kept for the gallery only |
 | `structures` | 118 landmark pieces, rooftop and wall gear, doors, signs, farm, yard, pool and lake structures |
 | `streetprops` | 137 street, road, utility, waste, yard and gas-station props |
 | `furniture` | 174 pieces for homes, shops, the diner, civic buildings, offices and garages |
@@ -129,12 +136,17 @@ world.update(dt, elapsedSeconds, camera.position, playerPosition);
   - `town2.ts`: Main Street, the civic buildings and the house rows.
   - `districts2.ts`: farms, the lumber yard, the freight district and the lakefront.
   - `dress2.ts`: yards, fences, sheds, alleys and street clutter.
-  - `folk.ts`: the standing townsfolk.
+  - `folk.ts`: where people start out: chatting groups, benches, work spots, the beach and the pier.
   - `districts.ts`: named district outlines for the HUD and the map.
   - `placer.ts`: places buildings along road frontage with free-space and slope checks, foundations, driveways, mailboxes and parked cars.
 - **`src/world/b2/`:** the building catalogue. `hull.ts`, `parts.ts` and `kit2.ts` build walls with real openings, trim, roofs and doors; `furnish.ts` lays out rooms from the furniture family; `landmarks.ts`, `civic.ts`, `district.ts`, `shops.ts` and `houses.ts` define the buildings.
 - **`src/world/assets.ts`:** loads the model families and instances them through the shared batcher.
-- **`src/world/people.ts`, `walker.ts`, `pedestrians.ts`:** posed and walking people.
+- **`src/npc/`:** the townsfolk.
+  - `lib.ts`, `body.ts`: load `npc.glb` and build one skinned, tinted, animated body per person, with props on the hand bones.
+  - `grid.ts`, `nav.ts`: a walkability grid over the ground, floors and solids, and a sidewalk graph with crossings searched by A*.
+  - `places.ts`, `cast.ts`, `names.ts`, `acts.ts`: the buildings people use, the jobs and roles, and what each activity looks like.
+  - `agent.ts`: one person: needs, schedule, route, walking and avoidance, activities and reactions.
+  - `town.ts`: the population, conversations, shared context and level of detail by distance.
 - **`src/engine/atmosphere.ts`:** height fog, mist, presets. `post.ts` holds the N8AO → bloom → ACES → grade → vignette → grain stack. `sky.ts` drives the sun, fog and shadows; `physicalSky.ts` is the atmosphere and cloud renderer; `water.ts` the ripple simulation and water material.
 - **Performance:**
   - One shared material (texture array, per-vertex PBR) and a sign atlas keep static geometry to a few hundred draw calls.

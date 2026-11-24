@@ -217,6 +217,8 @@ function dinerB(c: Ctx, x: number, z: number, ry: number) {
       k.box(0, 0, 0.9, 3.2, 0.5, 1.8, 0x9a968e, 'concrete');
       k.box(0, 0, 2.1, 3.2, 0.25, 0.6, 0x9a968e, 'concrete');
       k.box(0, 3.4, 0.9, 3.6, 0.14, 1.9, red, 'gloss');
+      addZone(k, 0, 0.9, 3.2, 1.8, 0.5);
+      addZone(k, 0, 2.1, 3.2, 0.6, 0.5, 0);
       put(k, 'newspaper_box_c', 2.4, 0, 0.5, 0);
     });
     signBoard(c, 'diner.roof', 0, H + 1.0, d / 2 - 0.6, 9, 1.4, '#b5322c', [{ text: "DOTTIE'S DINER", font: F_OS, weight: '800', color: '#fff3d6', y: 0.5, size: 0.6, maxW: 0.9 }, { text: 'OPEN 24 HOURS · PIE', font: F_OS, weight: '600', color: '#fff3d6', y: 0.84, size: 0.2, maxW: 0.8 }], { frame: 0xc9ced2, lamps: 4, twoSided: true });

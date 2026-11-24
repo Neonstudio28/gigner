@@ -109,7 +109,7 @@ export interface TownWorld {
 }
 
 /** Blender-built model families (public/assets/models/<family>.glb). */
-const ASSET_FAMILIES = ['structures', 'streetprops', 'furniture', 'vegetation', 'vehicles', 'people'];
+const ASSET_FAMILIES = ['structures', 'streetprops', 'furniture', 'vegetation', 'vehicles'];
 
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
 

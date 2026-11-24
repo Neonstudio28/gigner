@@ -262,6 +262,7 @@ export class Agent {
       for (const p of pts) {
         const l = legs[legs.length - 1];
         if (!l || Math.hypot(l.x - p.x, l.z - p.z) > 0.05) legs.push({ x: p.x, y: p.y, z: p.z, cross: (p as RoutePt).cross });
+        else if ((p as RoutePt).cross !== undefined) l.cross = (p as RoutePt).cross;
       }
     };
     if (this.inside && d.indoor && d.place === this.place) {
@@ -405,9 +406,26 @@ export class Agent {
     if (steer) {
       const k = Math.sign(steer) * Math.min(0.9, this.v + 0.3) * dt;
       const g = ctx.nav.grid;
-      if (!Number.isNaN(g.cell(Math.round((nx + uz * k * 6) / 0.4), Math.round((nz - ux * k * 6) / 0.4), this.y).f)) {
+      const c = g.cell(Math.round((nx + uz * k * 6) / 0.4), Math.round((nz - ux * k * 6) / 0.4), this.y);
+      // sidestepping never takes it off the kerb
+      if (!Number.isNaN(c.f) && (!c.road || !!prev.cross)) {
         nx += uz * k;
         nz -= ux * k;
+      }
+    }
+    if (this.lod < 2 && !this.inside && this.ghost <= 0) {
+      // a lamp post or hydrant standing on the line: slide round it on the open side
+      const w = ctx.nav.grid.w;
+      const ax = this.x + ux * 0.5;
+      const az = this.z + uz * 0.5;
+      const hy = this.y + 0.9;
+      if (w.solidAt(ax, az, hy)) {
+        const open = (s: number) => !w.solidAt(ax + uz * s * 0.7, az - ux * s * 0.7, hy) && !w.solidAt(this.x + uz * s * 0.5, this.z - ux * s * 0.5, hy) && (!!prev.cross || !w.roadAt(ax + uz * s * 0.7, az - ux * s * 0.7, this.y));
+        const s = open(1) ? 1 : open(-1) ? -1 : 0;
+        if (s) {
+          nx = this.x + uz * s * Math.max(step, 0.6 * dt);
+          nz = this.z - ux * s * Math.max(step, 0.6 * dt);
+        }
       }
     }
     this.x = nx;

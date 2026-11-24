@@ -94,9 +94,23 @@ export function buildPlaces(nav: Nav, sites: Site[], doors: Doorway[], rooms: Zo
       const iy = g.floor(d.x - d.nx * 1.1, d.z - d.nz * 1.1, d.y);
       if (Number.isNaN(iy)) continue;
       const inn = { x: d.x - d.nx * 1.1, z: d.z - d.nz * 1.1, y: iy };
-      const far = { x: d.x + d.nx * 3, z: d.z + d.nz * 3, y: d.y - 0.5 };
-      far.y = nav.grid.w.groundAt(far.x, far.z, d.y + 0.5);
-      const way = g.plan(inn, far, 4, 1.6);
+      // out over the porch and down the steps to the first open ground
+      const far = { x: d.x + d.nx * 3, z: d.z + d.nz * 3, y: nav.grid.w.groundAt(d.x + d.nx * 3, d.z + d.nz * 3, d.y + 0.5) };
+      let run = 3;
+      for (let t = 0.3, y = iy; t <= 16; t += 0.3) {
+        const x = d.x + d.nx * t;
+        const z = d.z + d.nz * t;
+        y = g.floor(x, z, y);
+        if (Number.isNaN(y)) break;
+        if (t >= 3 && Math.abs(y - nav.grid.w.groundAt(x, z, y + 0.5)) < 0.08) {
+          far.x = x;
+          far.y = y;
+          far.z = z;
+          run = t;
+          break;
+        }
+      }
+      const way = g.plan(inn, far, 4 + run * 0.4, 1.6);
       if (!way) continue;
       const o = way[way.length - 1];
       if (!nav.reachable(o)) continue;
