@@ -142,6 +142,7 @@ class Asset:
         self.v, self.f, self.fm, self.fuv = [], [], [], []
         self.mats, self.stack = [], [Matrix.Identity(4)]
         self.children, self.extras, self.pivot, self.has_uv = [], {}, (0, 0, 0), False
+        self.ground = True                     # False for wall-mounted assets (origin on the wall, parts below z = 0)
 
     # ------------------------------------------------------------ plumbing
     @property
@@ -201,7 +202,9 @@ class Asset:
     def build(self, parent=None):
         me = bpy.data.meshes.new(self.name)
         px, py, pz = self.pivot if parent is not None else (0.0, 0.0, 0.0)
-        me.from_pydata([(x - px, y - py, z - pz) for x, y, z in self.v], [], self.f)
+        # feet cut flush with the floor: slanted leg ends may dip a few millimetres under z = 0
+        g = (lambda z: 0.0 if -0.03 < z < 0 else z) if self.ground else (lambda z: z)
+        me.from_pydata([(x - px, y - py, g(z) - pz) for x, y, z in self.v], [], self.f)
         for m in self.mats:
             me.materials.append(m)
         me.polygons.foreach_set('material_index', self.fm)
