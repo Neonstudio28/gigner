@@ -6,7 +6,7 @@ Pine Hollow is a small 1980s lake town in a Pacific Northwest valley, built in *
 
 ## The town
 
-The town sits between the river to the north and the lake to the south. Highway 10 comes in from both ends of the valley, slows into a commercial strip on the west side and becomes Main Street through four blocks of downtown. Around that core the streets bend with the ground: Riverside Dr loops round the north side, Alder St round the south, and the residential streets, the hillside drive and the lanes of the poor end all curve off them.
+The town sits between the river to the north and the lake to the south. Highway 10 comes in from both ends of the valley, slows into a commercial strip on the west side and becomes Main Street through four blocks of downtown. Downtown is not a grid: Main Street bends at every avenue as it bows round the square, the avenues fan out toward the lake at different angles, and Riverside Dr and Alder St wander behind, so every block is a different wedge with its own width and depth and its terraces, alleys and back lots follow the slanted sides. Around that core the streets bend with the ground: Riverside Dr loops round the north side, Alder St round the south, and the residential streets, the hillside drive and the lanes of the poor end all curve off them.
 
 **Road hierarchy.** Thirteen road classes, each with its own width, kerbs, markings and speed:
 
@@ -19,16 +19,16 @@ The town sits between the river to the north and the lake to the south. Highway 
 | **Residential** | Maple St, Lake Hill Rd, 2nd and 3rd Aves, Division St S, Birch Ct, Heron Ct |
 | **Hillside** | Ridgecrest Dr, Lakeview Ct |
 | **Lane** | Tannery St |
-| **Alleys** | Alley S, Alley NW, Alley NE behind the Main Street blocks |
+| **Alleys** | A service alley behind each Main Street terrace, following the bend of its block |
 | **Rural and gravel** | County Rd 5, Mill Rd, Cannery Rd, Freight Rd, Depot Rd, Slough Rd, Pine Loop and the farm roads |
 
 | District | What's there |
 |---|---|
 | **Main Street** | Continuous two-storey brick terraces on both sides (hardware, barber, pharmacy, records, gazette, bakery, tavern, pawn, antiques, insurance, thrift, video, laundry, liquor) and First Cascade Bank with its own customer lot. Behind every terrace: a service alley, a rear parking lot, back doors with fire escapes, dumpsters, wheelie bins, pallets, cardboard, bags and litter, patched and stained asphalt, drains, pole lines with overhead wires, fences and weeds. |
 | **Town Hall Square** | Pine Hollow Town Hall on its own block with lawns, paths, a flagpole, the bandstand, fountain, statue and war memorial, benches, old street lamps and a car park. |
-| **Courthouse Square** | The Hollow County Courthouse on a separate block with lawns, paths and its own car park, with the Hollow County Sheriff and its patrol cars alongside; the Community Church stands on its own lot. |
+| **Courthouse Square** | The Hollow County Courthouse on a separate block with lawns, paths and its own car park, a memorial lawn with the war memorial, benches and flower beds, and the Hollow County Sheriff alongside with a fenced patrol and impound yard; the Community Church stands on its own lot. |
 | **West strip** | Timberline Gas, Dottie's Diner, the Pine Rest Motel, Hollow Foods Market behind a full car park, and the Hollow Motors used-car lot, each with pole signs, lot lighting and service yards. |
-| **Homes** | Curving residential streets with driveways, parked cars, fences, sheds, bins and yard trees. |
+| **Homes** | Curving residential streets with driveways, parked cars, fences, sheds, bins and yard trees. Each house has a front walk and a household of its own: picket fences with gates or clipped hedges, flower beds, bikes, paddling pools and basketball hoops, a mower or sawhorses left out, a boat on its trailer, a For Sale sign, or weeds and junk at the neglected ones. The streets carry drains, manholes, patched and cracked asphalt, gutter litter, bins out for collection, speed-limit and street-name signs and staked saplings. |
 | **Cedar Ridge** | The wealthy hillside: large houses on big wooded lots along Ridgecrest Dr and Lakeview Ct, with hedges, topiary, pools, patios and better cars. |
 | **The Flats** | The poor end on Tannery St and Slough Rd: small weathered houses close to a patched lane, cars on the verge, chain-link, junk and bare dirt in the yards. |
 | **Whispering Pines** | A trailer park on a gravel loop: single-wides with clotheslines, grills, bikes and kiddie pools, a propane tank, a payphone, a small playground and shared dumpsters. |
@@ -142,7 +142,9 @@ world.update(dt, elapsedSeconds, camera.position, playerPosition);
 - **`src/world/terrain.ts`:** the valley floor, steep walls, close peaks, the river (carved channel and water ribbon) and the lake. Heights come from a pipeline: natural → flattened pads → graded roads → river channel.
 - **`src/world/roads/network.ts`:** Catmull-Rom spline roads with typed cross-sections and terrain-following profiles. It also handles viaducts and ramps, junction height matching and trimming, cul-de-sac bulbs, bridges, piers, parapets, guardrails, stop lines, spatial queries and lanes for traffic.
 - **`src/world/plan/`:** the town plan.
-  - `roads.ts`: the lakeside grid and the valley roads.
+  - `roads.ts`: the bent downtown streets and the valley roads.
+  - `core.ts`: the downtown blocks, built in each street face's own frame, and the civic squares.
+  - `streets.ts`: front yards and street detail on the residential streets.
   - `town2.ts`: Main Street, the civic buildings and the house rows.
   - `districts2.ts`: farms, the lumber yard, the freight district and the lakefront.
   - `dress2.ts`: yards, fences, sheds, alleys and street clutter.
