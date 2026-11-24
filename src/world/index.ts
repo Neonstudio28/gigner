@@ -194,6 +194,18 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   };
   await progress(0.2, 'Raising the town');
   zone('town', () => town(pl));
+  // layout audit: no building (walls or front steps) may stand on a street
+  const onRoad = pl.sites.filter((s) => {
+    const zf = Math.max(s.def.d / 2, s.def.front ?? 0);
+    for (let i = 0; i <= 8; i++)
+      for (let j = 0; j <= 8; j++) {
+        const [x, z] = Placer.world(s.x, s.z, s.ry, -s.def.w / 2 + (s.def.w * i) / 8, -s.def.d / 2 + ((zf + s.def.d / 2) * j) / 8);
+        if (pl.onStreet(x, z, 0)) return true;
+      }
+    return false;
+  });
+  if (onRoad.length) console.error('[layout] buildings on a street:', onRoad.map((s) => `${s.def.id}@${s.x.toFixed(0)},${s.z.toFixed(0)}`).join(' '));
+  (globalThis as { __audit?: unknown }).__audit = { sites: pl.sites.length, onRoad: onRoad.length };
   zone('furnish', () => furnishRoads(pl));
   zone('edges', () => roadEnds(pl));
   // paved after the lots are laid out, so the curbs leave cuts where the driveways cross

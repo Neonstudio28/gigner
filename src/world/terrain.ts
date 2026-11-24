@@ -74,7 +74,7 @@ export interface ValleyInfo {
 const floorRise = (x: number) => Math.max(0, -x - 500) * 0.011 + Math.max(0, x - 1300) * 0.01;
 
 /** Low hills south of town: Cedar Ridge (the view lots) and Church Hill (the old cemetery hill). */
-export const HILLS: { name: string; x: number; z: number; s: number; h: number }[] = [];
+export const HILLS: { name: string; x: number; z: number; s: number; h: number }[] = [{ name: 'Cedar Ridge', x: -612, z: 204, s: 150, h: 20 }];
 
 /** Sunnyside bench: north of Highland Dr the floor climbs gently (≤ 7°) toward the mountains. */
 const benchRise = (x: number, z: number) => 14 * smoothstep(565, 740, -z) * (1 - smoothstep(700, 1000, Math.abs(x)));

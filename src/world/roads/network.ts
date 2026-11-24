@@ -964,9 +964,12 @@ export class RoadNetwork {
       if (mode === 'surface') {
         if (inCarriage && wins) return true;
       } else if (mode === 'mark') {
-        if (inCarriage && !oEndsOnSelf && (wins || o.spec.rank >= self.spec.rank)) return true;
+        // between two kerbed streets every line stops at the crosswalk, leaving the junction box clear
+        if (o.spec.curb && self.spec.curb) {
+          if (a < o.full + STOP_BACK) return true;
+        } else if (inCarriage && !oEndsOnSelf && (wins || o.spec.rank >= self.spec.rank)) return true;
       } else if (mode === 'edge') {
-        if (a < o.spec.hw + 0.3) return true;
+        if (a < (o.spec.curb && self.spec.curb ? o.full + STOP_BACK : o.spec.hw + 0.3)) return true;
       } else {
         if (inCarriage) return true;
         // where a curb return joins the two sidewalks it does the trimming (an obtuse corner ends well inside o's zone)
@@ -981,6 +984,9 @@ export class RoadNetwork {
     return false;
   }
 }
+
+/** How far behind the cross street's sidewalk line the lane lines of a kerbed street stop. */
+const STOP_BACK = 1.0;
 
 // ------------------------------------------------------------------ geometry accumulation
 interface Bucket {
@@ -1340,10 +1346,11 @@ function buildRoad(net: RoadNetwork, r: Road, g: MeshAccumulator, solids: Occupa
       }
     }
   }
+  crosswalks(net, r, g);
   // stop lines where a lesser road meets a bigger one
   for (const end of [0, 1] as const) {
     const on = end ? r.endOn : r.startOn;
-    if (!on || r.def.link || on.road.spec.rank <= r.spec.rank || r.kind === 'alley' || r.kind === 'lane' || r.spec.surface === 'gravel') continue;
+    if (!on || r.def.link || (on.road.spec.curb && r.spec.curb) || on.road.spec.rank <= r.spec.rank || r.kind === 'alley' || r.kind === 'lane' || r.spec.surface === 'gravel') continue;
     const back = on.road.spec.curb ? on.road.full + 0.9 : on.road.spec.hw + (on.road.spec.shoulder?.w ?? 0) + 1.2;
     const s0 = end ? r.length - back : back;
     const p = r.at(s0);
@@ -1358,6 +1365,48 @@ function buildRoad(net: RoadNetwork, r: Road, g: MeshAccumulator, solids: Occupa
       [0, 1],
       [1, 1],
     ]);
+  }
+}
+
+/**
+ * Zebra crosswalks and stop bars on every leg of a junction between kerbed streets. The road is walked along
+ * its centre line; wherever it enters or leaves another street's zone it gets a crosswalk in line with that
+ * street's sidewalks, and a stop bar on the approach lane when it is the one that gives way.
+ */
+function crosswalks(net: RoadNetwork, r: Road, g: MeshAccumulator) {
+  if (!r.spec.curb || r.def.link) return;
+  const zone = (s: number): Road | null => {
+    const p = r.at(s);
+    for (const h of net.near(p.x, p.z)) {
+      const o = h.road;
+      if (o === r || r.chained.has(o) || !o.spec.curb || Math.abs(h.y - p.y) > 2.5) continue;
+      if (Math.abs(h.lat) < o.full + STOP_BACK) return o;
+    }
+    return null;
+  };
+  const L2 = (s: Sample, lat: number) => [s.x + s.tz * lat, s.y + 0.052, s.z - s.tx * lat];
+  const UV: [number, number][] = [[0, 0], [1, 0], [0, 1], [1, 1]];
+  const hw = r.spec.hw;
+  const leg = (sEdge: number, into: 1 | -1, o: Road) => {
+    // distances are measured from the edge of the zone in toward the junction
+    const d0 = o.full + STOP_BACK - Math.max(o.spec.hw + 0.5, o.full - 3.2) - 2.6;
+    const a = r.at(sEdge + into * d0);
+    const b = r.at(sEdge + into * (d0 + 2.6));
+    const ch = `${r.id}|xw${Math.round(sEdge)}`;
+    for (let lat = -hw + 0.45; lat + 0.5 <= hw - 0.4; lat += 1.1) g.quad(ch, 'decal', P.lineWhite, L2(a, lat), L2(a, lat + 0.5), L2(b, lat), L2(b, lat + 0.5), UV);
+    const gives = r.startOn?.road === o || r.endOn?.road === o || o.spec.rank >= r.spec.rank;
+    if (!gives) return;
+    const p = r.at(sEdge + into * 0.15);
+    const q = r.at(sEdge + into * 0.6);
+    const [l0, l1] = into > 0 ? [-hw + 0.3, -0.1] : [0.1, hw - 0.3];
+    g.quad(ch, 'decal', P.lineWhite, L2(p, l0), L2(p, l1), L2(q, l0), L2(q, l1), UV);
+  };
+  let prev = zone(0);
+  for (let s = 0.5; s <= r.length; s += 0.5) {
+    const cur = zone(Math.min(s, r.length));
+    if (cur && !prev) leg(s - 0.25, 1, cur);
+    else if (!cur && prev) leg(s - 0.25, -1, prev);
+    prev = cur;
   }
 }
 

@@ -93,7 +93,7 @@ function farm(pl: Placer, r: Road, x: number, z: number, seed: number, o: { corn
   clearing(pl, f, -86, 84, (o.corn ?? true) ? -112 : -50, 18);
   build(pl, f, rng.pick(HOUSES), 0, 0, 0, seed);
   build(pl, f, D('barn'), -30, -26, 0, seed + 1);
-  build(pl, f, D('machineShed'), -34, 2, PI / 2, seed + 2);
+  build(pl, f, D('machineShed'), -38, -1, PI / 2, seed + 2);
   // gravel yard between them
   for (let gx = -24; gx <= -10; gx += 4) for (let gz = -18; gz <= 14; gz += 4) {
     const [wx, wz] = Placer.world(f.x, f.z, f.ry, gx, gz);

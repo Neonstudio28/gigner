@@ -50,6 +50,12 @@ export class Placer {
   readonly trees: PlacedTree[] = [];
   /** Driveways (and site entrances): street trees, hydrants, lamps and parked cars keep off them. */
   readonly drives = new Occupancy(16);
+  /** Paved pads, car parks and reserved lawns: no building or yard tree goes here. */
+  readonly pads = new Occupancy(16);
+  reserve(x0: number, z0: number, x1: number, z1: number) {
+    this.pads.add((x0 + x1) / 2, (z0 + z1) / 2, x1 - x0, z1 - z0, 0, 0, false);
+    this.clearings.push({ x: (x0 + x1) / 2, z: (z0 + z1) / 2, w: x1 - x0, d: z1 - z0 });
+  }
   readonly cornFields: VegetationInput['cornFields'] = [];
   readonly grassPatches: VegetationInput['grassPatches'] = [];
   readonly clearings: { x: number; z: number; w: number; d: number }[] = [];
@@ -91,6 +97,8 @@ export class Placer {
     for (let i = 0; i <= nx; i++) for (let j = 0; j <= nz; j++) pts.push(Placer.world(x, z, ry, -w / 2 + (w * i) / nx, -d / 2 + (d * j) / nz));
     // cheap rejections first (occupied, water, river banks, map edge), terrain heights only for free lots
     for (const [px, pz] of pts) if (this.c.occ.blocked(px, pz, 0) || Math.hypot(px, pz) > 1820) return null;
+    // never on a street: carriageway, parking strip or sidewalk
+    for (const [px, pz] of pts) if (this.onStreet(px, pz) || this.pads.blocked(px, pz, 0.5)) return null;
     for (const [px, pz] of pts) {
       if (isWater(px, pz)) return null;
       const rv = river.query(px, pz);
@@ -117,6 +125,16 @@ export class Placer {
     }
     this.build(def, x, z, ry, seed, f, o);
     return true;
+  }
+
+  /** True on any road's carriageway, verge or sidewalk (and inside cul-de-sac bulbs). */
+  onStreet(x: number, z: number, pad = 0.3) {
+    for (const h of this.net.near(x, z)) {
+      if (Math.abs(h.lat) < h.road.full + pad) return true;
+      const b = this.net.bulbOf(h.road);
+      if (b && Math.hypot(x - b.x, z - b.z) < b.R + h.road.full - h.road.spec.hw + pad) return true;
+    }
+    return false;
   }
 
   /** Places without the free test (for hand-placed landmarks); still levels the ground under it. */
@@ -146,6 +164,22 @@ export class Placer {
       this.addDrive({ x: sx, z: sz, fx, fz, t0: -0.5, len: reach.len, w: aw, road: hit.road, mat: 'asphalt', color: P.asphalt, ry });
       return;
     }
+  }
+
+  /** Paved entrance from the edge of a lot at (x, z) heading (fx, fz) out to the first street it meets, through a curb cut. */
+  entrance(x: number, z: number, fx: number, fz: number, w = 6, reachMax = 30) {
+    const ry = Math.atan2(fx, fz);
+    const ok = (h: RoadHit) => !h.road.def.link && h.road.kind !== 'interstate' && h.road.kind !== 'ramp' && h.road.kind !== 'alley';
+    for (let d = 0; d <= reachMax; d += 0.25) {
+      const hit = this.net.near(x + fx * d, z + fz * d).find((h) => ok(h) && Math.abs(h.lat) < h.road.full + 0.1);
+      if (!hit) continue;
+      const reach = this.reach(hit.road, x, z, fx, fz);
+      if (!reach) return false;
+      this.drives.add(x + fx * reach.len * 0.5, z + fz * reach.len * 0.5, w + 1, reach.len + 1, ry, 0, false);
+      this.addDrive({ x, z, fx, fz, t0: -0.5, len: reach.len, w, road: hit.road, mat: 'asphalt', color: P.asphalt, ry });
+      return true;
+    }
+    return false;
   }
 
   /**

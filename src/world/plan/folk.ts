@@ -95,8 +95,8 @@ const deputy = (r: Rng): Who => ({ model: r.chance(0.7) ? 'sheriff_deputy_m' : '
 export function townsfolk(pl: Placer) {
   const rng = new Rng(4242);
   // Main Street and the cross streets: groups and loners on the sidewalks, benches against the shopfronts
-  for (const name of ['Main St', 'Alder St', 'River St']) {
-    const r = pl.net.byName(name);
+  for (const name of ['Main St', 'W Main St', 'Alder St', 'Riverside Dr', 'Division St']) {
+    const r = pl.net.roads.find((x) => x.def.name === name);
     if (!r) continue;
     const busy = name === 'Main St';
     for (let s = 20; s < r.length - 20; s += busy ? rng.range(7, 15) : rng.range(26, 50)) {

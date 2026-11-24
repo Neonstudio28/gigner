@@ -5,7 +5,6 @@ import { heightAt, isWater, LAKE } from '../terrain';
 import { put } from '../b2/hull';
 import { gable } from '../b2/parts';
 import { utilityPole, connectPoles, picketFence } from '../props';
-import { GRID, STREETS } from './roads';
 import type * as THREE from 'three';
 
 type Kit = Placer['k'];
@@ -14,12 +13,12 @@ const WOODS: Col[] = [0x8a6a48, 0x7a5a3c, 0x9a7a55, 0x6f6a62, 0xb9a98a];
 
 /** Board fence between two points of the current frame: posts, two rails and a run of boards. */
 /** True when a run would stand in the lake or river (shore lots lose that side of the fence). */
-function wet(ax: number, az: number, bx: number, bz: number) {
+export function wet(ax: number, az: number, bx: number, bz: number) {
   for (let t = 0; t <= 1; t += 0.25) if (isWater(ax + (bx - ax) * t, az + (bz - az) * t) || heightAt(ax + (bx - ax) * t, az + (bz - az) * t) < LAKE.level + 0.35) return true;
   return false;
 }
 
-function boardFence(k: Kit, ax: number, az: number, bx: number, bz: number, col: Col, h = 1.7) {
+export function boardFence(k: Kit, ax: number, az: number, bx: number, bz: number, col: Col, h = 1.7) {
   const len = Math.hypot(bx - ax, bz - az);
   if (len < 0.6) return;
   const ry = Math.atan2(-(bz - az), bx - ax);
@@ -33,7 +32,7 @@ function boardFence(k: Kit, ax: number, az: number, bx: number, bz: number, col:
 }
 
 /** Chain-link run: steel posts, top rail and a see-through mesh panel. */
-function chainLink(k: Kit, ax: number, az: number, bx: number, bz: number, h = 1.3) {
+export function chainLink(k: Kit, ax: number, az: number, bx: number, bz: number, h = 1.3) {
   const len = Math.hypot(bx - ax, bz - az);
   if (len < 0.6) return;
   const ry = Math.atan2(-(bz - az), bx - ax);
@@ -48,7 +47,7 @@ function chainLink(k: Kit, ax: number, az: number, bx: number, bz: number, h = 1
 }
 
 /** Garden shed with a gable roof and a plank door. */
-function shed(k: Kit, rng: Rng, x: number, z: number, ry: number) {
+export function shed(k: Kit, rng: Rng, x: number, z: number, ry: number) {
   const w = rng.range(2.4, 3.4);
   const d = rng.range(2.0, 2.8);
   const col = rng.pick<Col>([0x8a3a2e, 0x6f7a5a, 0xb9a98a, 0x7a8a96, 0xe9e4d6]);
@@ -63,7 +62,7 @@ function shed(k: Kit, rng: Rng, x: number, z: number, ry: number) {
 }
 
 /** Two T-posts with washing lines. */
-function clothesline(k: Kit, x: number, z: number, ry: number, rng: Rng) {
+export function clothesline(k: Kit, x: number, z: number, ry: number, rng: Rng) {
   k.at(x, z, ry, () => {
     for (const s of [-1, 1]) {
       k.box(s * 2.4, 0, 0, 0.07, 1.9, 0.07, 0xb9bdc0, 'metal');
@@ -79,9 +78,9 @@ function clothesline(k: Kit, x: number, z: number, ry: number, rng: Rng) {
 }
 
 /** True where nothing is built and no street runs. */
-function clear(pl: Placer, x: number, z: number, pad = 0.5) {
+export function clear(pl: Placer, x: number, z: number, pad = 0.5) {
   if (isWater(x, z) || heightAt(x, z) < LAKE.level + 0.35) return false;
-  if (pl.c.occ.blocked(x, z, pad)) return false;
+  if (pl.c.occ.blocked(x, z, pad) || pl.pads.blocked(x, z, pad)) return false;
   return !pl.net.near(x, z).some((h) => Math.abs(h.lat) < h.road.full + 1);
 }
 
@@ -104,7 +103,7 @@ export function yards(pl: Placer) {
     if (clear(pl, x, z, 0.2)) pl.trees.push({ kind, x, z, s: sc, ry: ry ?? rng.range(0, PI * 2) });
   };
   for (const s of pl.sites) {
-    if (!s.def.tags.includes('house')) continue;
+    if (!s.def.tags.includes('house') && !s.def.tags.includes('shack')) continue;
     const hw = s.def.w / 2 + 3.4;
     const zb = -s.def.d / 2;
     const yd = rng.range(11, 14);
@@ -161,40 +160,5 @@ export function yards(pl: Placer) {
   }
 }
 
-/** Gravel service alleys down the middle of each block, with the back-lot power line and its clutter. */
-export function alleys(pl: Placer) {
-  const k = pl.k;
-  const rng = new Rng(5151);
-  const rows = [STREETS.river, STREETS.main, STREETS.alder, STREETS.maple, STREETS.shore];
-  for (let r = 0; r < rows.length - 1; r++) {
-    const zm = (rows[r] + rows[r + 1]) / 2;
-    for (let x0 = GRID.x0; x0 < GRID.x1; x0 += GRID.step) {
-      const poles: THREE.Vector3[][] = [];
-      let laid = 0;
-      for (let x = x0 + 10; x <= x0 + GRID.step - 10; x += 3) {
-        if (!clear(pl, x, zm, 1.6) || !clear(pl, x, zm - 1.8, 0) || !clear(pl, x, zm + 1.8, 0)) continue;
-        k.at(x, zm, 0, () => k.box(0, -0.2, 0, 3.02, 0.24, 4.2, 0x9a958a, 'gravel', { cast: false }), heightAt(x, zm));
-        laid++;
-        if (rng.chance(0.1)) pl.trees.push({ kind: rng.pick(['weeds_a', 'weeds_b', 'grass_tall_b']), x: x + rng.range(-1, 1), z: zm + rng.pick([-1, 1]) * 2.3, s: rng.range(0.9, 1.4), ry: rng.range(0, 6) });
-        if (rng.chance(0.06)) k.at(x, zm + rng.pick([-1, 1]) * 2.6, rng.range(0, 6), () => put(k, rng.pick(['trash_can_metal', 'wheelie_bin', 'trash_bag_b', 'cardboard_box_flat', 'tyre', 'trash_can_metal_tipped']), 0, 0, 0, 0, { solid: false }), heightAt(x, zm));
-      }
-      if (laid < 8) continue;
-      // the line stops at anything built across the alley instead of running through it
-      let last = 0;
-      for (let x = x0 + 14; x <= x0 + GRID.step - 14; x += 31) {
-        if (!clear(pl, x, zm + 2.9, 0.4)) continue;
-        let open = true;
-        if (poles.length) for (let xx = last + 3; xx < x && open; xx += 3) open = clear(pl, xx, zm + 2.9, 0.4);
-        if (!open) {
-          connectPoles(k, poles);
-          poles.length = 0;
-        }
-        let att: THREE.Vector3[] = [];
-        k.at(x, zm + 2.9, PI / 2, () => (att = utilityPole(k, 0, 0, 0, { h: 9, transformer: rng.chance(0.35) })), heightAt(x, zm + 2.9));
-        poles.push(att);
-        last = x;
-      }
-      connectPoles(k, poles);
-    }
-  }
-}
+/** Back lots of the commercial blocks (rewritten in the layout rework). */
+export function alleys(_pl: Placer) {}

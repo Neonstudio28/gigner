@@ -74,7 +74,7 @@ export class Traffic {
       }
       return new Route(pts);
     };
-    const town = ['Old Hwy 10 W', 'Main St', 'Old Hwy 10 E'];
+    const town = ['Old Hwy 10 W', 'W Main St', 'Main St', 'E Main St', 'Old Hwy 10 E'];
     this.routes = [mk(town, 1.95, false), mk(town, 1.95, true)];
     const counts = [9, 9];
     const types: VehicleType[] = ['sedan', 'pickup', 'van', 'wagon', 'coupe', 'suv', 'pickup', 'semi', 'sedan', 'sheriff', 'delivery', 'police', 'pickup', 'sedan'];
