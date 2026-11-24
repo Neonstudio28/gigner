@@ -3,7 +3,7 @@ import type { Road } from '../roads/network';
 import { Rng } from '../core/rng';
 import { Placer } from './placer';
 import { SHOPS } from '../b2/shops';
-import { HOUSES, ESTATES, SHACKS, TRAILERS } from '../b2/houses';
+import { HOUSES, ESTATES, SHACKS, TRAILERS, SUBURBAN, CABINS } from '../b2/houses';
 import { CIVIC_B2 } from '../b2/civic';
 import { LANDMARKS } from '../b2/landmarks';
 import { DISTRICT } from '../b2/district';
@@ -14,7 +14,7 @@ const PI = Math.PI;
 export const N = 1 as const; // frontage side of an eastbound street: 1 = north, -1 = south
 export const S = -1 as const;
 
-const B = new Map<string, BuildingDef>([...SHOPS, ...HOUSES, ...ESTATES, ...SHACKS, ...TRAILERS, ...CIVIC_B2, ...LANDMARKS, ...DISTRICT].map((d) => [d.id, d]));
+const B = new Map<string, BuildingDef>([...SHOPS, ...HOUSES, ...SUBURBAN, ...CABINS, ...ESTATES, ...SHACKS, ...TRAILERS, ...CIVIC_B2, ...LANDMARKS, ...DISTRICT].map((d) => [d.id, d]));
 export const D = (id: string) => {
   const d = B.get(id);
   if (!d) throw new Error(`no building ${id}`);
@@ -198,8 +198,7 @@ function blockFace(pl: Placer, rng: Rng, f: Face) {
     const zS = Math.min(nearest(b.zb, ia + 1, ib - 1) - 0.2, z0 + 36);
     const [la, lb] = inner(b, z0, zS);
     backLot(pl, rng, la, lb, z0, zS, 1, f.back, undefined, b);
-    const zE = nearest(b.zb, ia + 1, ib - 1) - 0.4;
-    if (f.row && zE - zS > 12) backRow(pl, rng, b, zS + 0.6, zE, f.row, f.i * 10 + (f.side > 0 ? 0 : 5));
+    if (f.row) backRow(pl, rng, b, zS + 0.6, f.row, f.i * 10 + (f.side > 0 ? 0 : 5));
     const ax = bank ? g.len - BANK_LOT - 2 : xb;
     alleyEdge(pl, rng, xa, ax, z0, 1);
     wear(pl, rng, xa, full + 14, ax, ALLEY + 2.8);
@@ -210,52 +209,51 @@ function blockFace(pl: Placer, rng: Rng, f: Face) {
  * The back of a deep block, from the rear car park (z0) to the back street (z1): a second row of shops facing
  * that street, with small customer lots between pairs and a paved service strip behind.
  */
-function backRow(pl: Placer, rng: Rng, b: Bounds, z0: number, z1: number, ids: string[], seed: number) {
-  const [xa, xb] = inner(b, z0, z1);
-  const deep = z1 - z0;
+function backRow(pl: Placer, rng: Rng, b: Bounds & { zb: (x: number) => number }, z0: number, ids: string[], seed: number) {
+  const zB = (x0: number, x1: number) => nearest(b.zb, x0, x1) - 0.4;
+  const [xa, xb] = inner(b, z0, z0 + 24);
+  const defs = ids.map(D);
   let x = xa + 1.5;
   let n = 0;
-  const lot = (x0: number, x1: number) => {
-    if (x1 - x0 < 9) return pave(pl, x0, z0, x1, z1 - 0.4, OLD_ASPHALT), hedgeRow(x0, x1);
-    carPark(pl, rng, x0, z0, x1, z1 - 0.4, { fill: 0.5, stops: true, lights: false });
-    fentrance(pl, (x0 + x1) / 2, z1 - 0.4, 0, 1, 6);
-  };
-  const hedgeRow = (x0: number, x1: number) => {
-    for (let t = x0 + 1.5; t < x1 - 1; t += 2.4) ftree(pl, 'hedge_straight', t, z1 - 1.2);
-  };
-  const fits = ids.map(D).filter((d) => d.d + 4 <= deep);
-  if (!fits.length) return pocketPark(pl, rng, xa, xb, z0, z1);
-  while (x < xb - 8) {
-    const def = fits[n % fits.length];
-    if (x + def.w > xb - 1.5) break;
-    const zc = z1 - 3 - def.d / 2;
-    fbuild(pl, def, x + def.w / 2, zc, 0, 600 + seed + n, def.name);
-    // apron to the sidewalk, service strip behind
-    pave(pl, x - 0.4, zc + def.d / 2, x + def.w + 0.4, z1 - 0.4, 0xa9a59c, 'concrete', 0.06);
-    if (zc - def.d / 2 - z0 > 1.5) {
-      pave(pl, x - 0.4, z0, x + def.w + 0.4, zc - def.d / 2, OLD_ASPHALT);
-      trashCorner(pl, rng, x + def.w * 0.7, zc - def.d / 2 - 1.2, 0, 3, false);
+  let paired = false;
+  while (x < xb - 4) {
+    const def = defs[n % defs.length];
+    const z1 = zB(x, x + def.w);
+    if (x + def.w <= xb - 1.5 && z1 - z0 >= def.d + 4) {
+      const zc = z1 - 3 - def.d / 2;
+      fbuild(pl, def, x + def.w / 2, zc, 0, 600 + seed + n, def.name);
+      pave(pl, x - 0.4, zc + def.d / 2, x + def.w + 0.4, z1, 0xa9a59c, 'concrete', 0.06);
+      if (zc - def.d / 2 - z0 > 1.5) {
+        pave(pl, x - 0.4, z0, x + def.w + 0.4, zc - def.d / 2, OLD_ASPHALT);
+        trashCorner(pl, rng, x + def.w * 0.7, zc - def.d / 2 - 1.2, 0, 3, false);
+      }
+      x += def.w;
+      n++;
+      paired = !paired;
+      if (paired) continue;
     }
-    x += def.w;
-    n++;
-    const gap = n % 2 ? 1.2 : 16;
-    if (x + gap > xb - 1.5) break;
-    if (gap > 2) lot(x + 0.4, x + gap - 0.4);
-    else pave(pl, x, z0, x + gap, z1 - 0.4, OLD_ASPHALT);
-    x += gap;
+    // a customer lot after every pair, or a pocket of green where the strip is too shallow for a shop
+    const w = Math.min(16, xb - 1.5 - x);
+    if (w < 4) break;
+    const z1g = zB(x, x + w);
+    if (z1g - z0 > 14 && w > 10) {
+      carPark(pl, rng, x + 0.4, z0, x + w - 0.4, z1g, { fill: 0.5, stops: true, lights: false });
+      fentrance(pl, x + w / 2, z1g, 0, 1, 6);
+    } else if (z1g - z0 > 3) pocketPark(pl, rng, x, x + w, z0, z1g);
+    x += w;
+    paired = false;
   }
-  if (xb - x > 4) lot(x + 0.4, xb - 0.4);
-  if (x - xa < 4) return;
-  lamps(pl, [[xa + 3, z1 - 1, 0], [xb - 3, z1 - 1, 0]]);
+  lamps(pl, [[xa + 3, zB(xa, xa + 6) - 0.8, 0], [xb - 3, zB(xb - 6, xb) - 0.8, 0]]);
 }
 
 /** A strip too shallow for shops: a pocket park of lawn, a tree row, benches and picnic tables behind a low hedge. */
 function pocketPark(pl: Placer, rng: Rng, xa: number, xb: number, z0: number, z1: number) {
   const zm = (z0 + z1) / 2;
-  path(pl, xa + 2, zm, xb - 2, zm, 2.2);
-  for (let x = xa + 5; x < xb - 4; x += 9) {
-    ftree(pl, rng.pick(['maple_large', 'oak_medium', 'birch_cluster', 'maple_medium']), x + rng.range(-1, 1), zm - 4.5 + rng.range(-0.8, 0.8), rng.range(0.85, 1.05));
-    ftree(pl, rng.pick(['oak_medium', 'maple_medium', 'apple_tree']), x + 4.5, zm + 4.5 + rng.range(-0.8, 0.8), rng.range(0.8, 1));
+  const wide = z1 - z0 > 11;
+  if (wide) path(pl, xa + 2, zm, xb - 2, zm, 2.2);
+  for (let x = xa + 4; x < xb - 3; x += 9) {
+    ftree(pl, rng.pick(['maple_large', 'oak_medium', 'birch_cluster', 'maple_medium']), x + rng.range(-1, 1), wide ? zm - 4.5 + rng.range(-0.8, 0.8) : zm, rng.range(0.85, 1.05));
+    if (wide) ftree(pl, rng.pick(['oak_medium', 'maple_medium', 'apple_tree']), x + 4.5, zm + 4.5 + rng.range(-0.8, 0.8), rng.range(0.8, 1));
     prop(pl, rng.chance(0.5) ? 'bench_wood' : 'picnic_table', x + 2.2, zm + (rng.chance(0.5) ? 2.4 : -2.4), rng.chance(0.5) ? 0 : PI, 0.5);
     if (rng.chance(0.4)) ftree(pl, 'flower_bed', x + 6.5, zm - 2);
   }

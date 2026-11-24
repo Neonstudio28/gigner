@@ -1,4 +1,5 @@
-import type { Col } from '../core/kit';
+import * as THREE from 'three';
+import type { Col, Kit } from '../core/kit';
 import type { Ctx } from '../buildings/common';
 import type { BuildingDef } from '../buildings/catalog';
 import { room, addZone } from '../buildings/interiors';
@@ -38,6 +39,12 @@ export interface HouseO {
   /** Sun-bleached paint, patched roof, no TV aerial: the Flats. */
   worn?: boolean;
   chimney?: boolean;
+  /** 'aframe': steep roof down to the ground over a narrower hull; 'split': a bedroom storey over the garage. */
+  form?: 'aframe' | 'split';
+  /** Brick or stone wainscot below the windows (material key). */
+  skirt?: string;
+  /** Craftsman knee braces under the gable and exposed rafter tails. */
+  braces?: boolean;
   /** Interior wall colours: living, kitchen, bedroom, bath. */
   paint?: [Col, Col, Col, Col];
 }
@@ -50,7 +57,9 @@ const garageW = (o: HouseO) => (o.garage === 2 ? 6.6 : o.garage ? 4.2 : 0);
 export function house(c: Ctx, x: number, z: number, ry: number, seed: number, o: HouseO) {
   const { kit: k } = c;
   const rng = new Rng(seed * 31 + o.w * 7);
-  const { w, d } = o;
+  const af = o.form === 'aframe';
+  const w = af ? o.w - 4.4 : o.w;
+  const { d } = o;
   const y0 = 0.62;
   const h = 2.75;
   const trim = o.trim ?? WHITE;
@@ -60,7 +69,7 @@ export function house(c: Ctx, x: number, z: number, ry: number, seed: number, o:
   const pd = 2.4;
   const gw = garageW(o);
   const h2 = o.storeys === 2 ? 2.8 : 0;
-  c.occ.add(x + gw / 2, z + pd / 2, w + gw + 0.6, d + pd + 1.2, ry, 0.8, false);
+  c.occ.add(x + gw / 2, z + pd / 2, o.w + gw + 0.6, d + pd + 1.2, ry, 0.8, false);
   const P = o.paint ?? [rng.pick(WALLS), rng.pick(WALLS), rng.pick(WALLS), 0xcfe6ea];
   const base = { floor: 0xb98e62, floorMat: 'woodFloor', lights: 'dome', step: 3.6, trim } as const;
   const L: Look = { ...base, wall: P[0], wains: undefined };
@@ -121,10 +130,12 @@ export function house(c: Ctx, x: number, z: number, ry: number, seed: number, o:
       });
       for (const sd of ['f', 'b', 'l', 'r'] as const) face(k, sd, w, d, (len) => k.box(0, y0 + h - 0.08, 0.03, len + 0.08, 0.2, 0.07, trim));
     }
-    const rise = gable(k, w, d, y0 + h + h2, { pitch: o.pitch ?? 0.62, color: roofC, mat: o.roofMat ?? 'shingle', turn: o.turn, trim, fill: o.wall, fillMat: mat, oh: 0.55, goh: 0.45 });
     const top = y0 + h + h2;
-    if (o.turn) face(k, 'f', w, d, () => k.box(0, top + rise * 0.3, 0.02, 0.9, 0.9, 0.08, trim));
-    if (o.turn) face(k, 'f', w, d, () => k.box(0, top + rise * 0.3 + 0.1, 0.05, 0.7, 0.7, 0.06, 0x3c4a50, 'glass'));
+    const rise = af ? aframe(k, o.w, d, top, roofC, o.roofMat ?? 'shingle', trim, o.wall, mat) : gable(k, w, d, top, { pitch: o.pitch ?? 0.62, color: roofC, mat: o.roofMat ?? 'shingle', turn: o.turn, trim, fill: o.wall, fillMat: o.braces ? 'boards' : mat, oh: o.braces ? 0.8 : 0.55, goh: o.braces ? 0.7 : 0.45 });
+    if (o.braces) braces(k, w, d, top, rise, !!o.turn, trim);
+    if (o.skirt) skirt(k, w, d, y0, doorX, o.skirt);
+    if (o.turn && !af) face(k, 'f', w, d, () => k.box(0, top + rise * 0.3, 0.02, 0.9, 0.9, 0.08, trim));
+    if (o.turn && !af) face(k, 'f', w, d, () => k.box(0, top + rise * 0.3 + 0.1, 0.05, 0.7, 0.7, 0.06, 0x3c4a50, 'glass'));
     if (o.chimney !== false) stack(k, -w / 2 + 1.4, top + rise * 0.35, o.turn ? -d / 4 : 0, rise * 0.65 + 1.3);
     if (o.twin) stack(k, w / 2 - 1.4, top + rise * 0.35, o.turn ? -d / 4 : 0, rise * 0.65 + 1.3);
     if (o.worn) {
@@ -135,7 +146,7 @@ export function house(c: Ctx, x: number, z: number, ry: number, seed: number, o:
         k.box(-w * 0.22, top + rise * 0.36, d * 0.33, 2.2, 0.06, 1.6, 0x3f6fa8, 'paint', { rx: sl, cast: false });
       }
       face(k, 'l', w, d, () => k.box(0.6, y0 + 0.5, 0.05, 1.3, 1.0, 0.05, 0x8a6a48, 'boards'));
-    } else put(k, 'antenna_tv', w / 4, top + rise * (o.turn ? 0.5 : 1) - 0.1, o.turn ? -d / 4 : 0);
+    } else if (!af) put(k, 'antenna_tv', w / 4, top + rise * (o.turn ? 0.5 : 1) - 0.1, o.turn ? -d / 4 : 0);
     if (o.dormers && !o.turn) {
       const pt = o.pitch ?? 0.62;
       for (const dx of [-w * 0.24, w * 0.24]) {
@@ -172,7 +183,16 @@ export function house(c: Ctx, x: number, z: number, ry: number, seed: number, o:
       k.push(w / 2 + gw / 2, 0, -d / 2 + 3.4);
       const gl: Look = { wall: 0xd8d4c8, floor: 0x9a968e, floorMat: 'concrete', ceil: 0xc9c4b6, ceilMat: 'boards', lights: 'bulb' };
       hull(k, { w: gw, d: 6.8, y0: 0.06, h: 2.5, wall: o.wall, wallMat: mat, look: gl, frame: trim, skip: 'l', f: gw > 5 ? [{ x: -1.6, w: 2.7, h: 2.15, kind: 'garage', color: trim }, { x: 1.6, w: 2.7, h: 2.15, kind: 'garage', color: trim }] : [{ x: 0, w: 3.0, h: 2.15, kind: 'garage', color: trim }], r: [{ x: 0, w: 0.9, y: 1.2, h: 0.9, kind: 'win', win: { frame: trim, sill: trim } }], base: 0x8f8c87 });
-      gable(k, gw, 6.8, 2.56, { pitch: 0.5, color: roofC, mat: o.roofMat ?? 'shingle', turn: true, trim, fill: o.wall, fillMat: mat, oh: 0.35 });
+      if (o.form === 'split') {
+        // bedroom storey over the garage, its own gable facing the street
+        k.box(0, 2.56, 0, gw, 2.7, 6.8, o.wall, mat);
+        k.box(0, 2.5, 3.42, gw + 0.1, 0.18, 0.08, trim);
+        for (const wx of gw > 5 ? [-1.5, 1.5] : [0]) k.at(wx, 3.43, 0, () => win(k, 0, 3.3, 1.5, 1.4, { frame: trim, sill: trim, mx: 2, my: 2, shutters: o.shutters }));
+        k.at(0, -3.43, Math.PI, () => win(k, 0, 3.4, 1.2, 1.2, { frame: trim, sill: trim, mx: 2, my: 2 }));
+        k.at(3.43 * 0 + gw / 2 + 0.01, 0, Math.PI / 2, () => win(k, 0, 3.4, 1.2, 1.2, { frame: trim, sill: trim, mx: 2, my: 2 }));
+        for (const sxn of [-1, 1]) for (const szn of [-1, 1]) k.box(sxn * (gw / 2 + 0.01), 2.56, szn * 3.41, 0.14, 2.7, 0.14, trim);
+        gable(k, gw, 6.8, 5.26, { pitch: 0.55, color: roofC, mat: o.roofMat ?? 'shingle', turn: true, trim, fill: o.wall, fillMat: mat, oh: 0.45, goh: 0.4 });
+      } else gable(k, gw, 6.8, 2.56, { pitch: 0.5, color: roofC, mat: o.roofMat ?? 'shingle', turn: true, trim, fill: o.wall, fillMat: mat, oh: 0.35 });
       room(k, 0.06, () => {
         put(k, 'workbench', 0, 0, -2.9);
     
@@ -182,6 +202,68 @@ export function house(c: Ctx, x: number, z: number, ry: number, seed: number, o:
       k.pop();
     }
   });
+}
+
+/** A-frame roof from just above the ground to a tall ridge over the hull; glazed front gable, sided back. Returns the rise above `top`. */
+function aframe(k: Kit, W: number, d: number, top: number, color: Col, mat: string, trim: Col, wall: Col, wallMat: string) {
+  const W2 = W / 2;
+  const R = 9.2;
+  const y0 = 0.3;
+  k.at(0, 0, Math.PI / 2, () => k.roof(0, y0, 0, d + 0.2, [[-W2, 0], [0, R], [W2, 0]], color, mat, { eaveOH: 0.3, gableOH: 0.8, trim, thick: 0.24 }));
+  const tri = (zf: number, col: Col, m: string) => {
+    const hw = W2 * (1 - (top - y0) / R) - 0.2;
+    const sh = new THREE.Shape();
+    sh.moveTo(-hw, top);
+    sh.lineTo(0, y0 + R - 0.3);
+    sh.lineTo(hw, top);
+    sh.closePath();
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.08, bevelEnabled: false });
+    k.add(g, col, m, new THREE.Matrix4().makeTranslation(0, 0, zf - 0.04));
+    return hw;
+  };
+  const hw = tri(d / 2 - 0.1, 0x3c4a50, 'glass');
+  tri(-d / 2 + 0.06, wall, wallMat);
+  // glazing bars and a balcony rail across the gable
+  const rh = y0 + R - 0.3 - top;
+  for (const fx of [-0.5, 0, 0.5]) {
+    const hh = rh * (1 - Math.abs(fx));
+    k.box(fx * hw, top, d / 2 - 0.02, 0.1, hh, 0.08, trim);
+  }
+  for (const fy of [0.35, 0.68]) k.box(0, top + rh * fy, d / 2 - 0.02, 2 * hw * (1 - fy), 0.1, 0.08, trim);
+  k.box(0, top - 0.12, d / 2 + 0.6, 2 * hw, 0.12, 1.3, 0x8a6a48, 'woodFloor');
+  for (let i = 0; i <= 8; i++) k.box(-hw + (2 * hw * i) / 8, top, d / 2 + 1.2, 0.06, 1.0, 0.06, trim);
+  k.box(0, top + 1.0, d / 2 + 1.2, 2 * hw, 0.08, 0.1, trim);
+  return y0 + R - top;
+}
+
+/** Craftsman details: knee braces at the gable ends and rafter tails along the eaves. */
+function braces(k: Kit, w: number, d: number, top: number, rise: number, turn: boolean, trim: Col) {
+  const span = turn ? w : d;
+  const len = turn ? d : w;
+  const gableSides = turn ? (['f', 'b'] as const) : (['l', 'r'] as const);
+  for (const sd of gableSides)
+    face(k, sd, w, d, () => {
+      for (const t of [-0.62, 0, 0.62]) {
+        const y = top + rise * (1 - Math.abs(t)) - 0.55;
+        k.boxC(t * span * 0.5, y, 0.32, 0.14, 0.14, 0.75, trim, 'paint', { rx: -0.6 });
+        k.boxC(t * span * 0.5, y + 0.28, 0.4, 0.16, 0.16, 0.9, trim);
+      }
+    });
+  const eaveSides = turn ? (['l', 'r'] as const) : (['f', 'b'] as const);
+  for (const sd of eaveSides)
+    face(k, sd, w, d, () => {
+      for (let x = -len / 2 + 0.3; x <= len / 2 - 0.2; x += 0.6) k.boxC(x, top + 0.02, 0.45, 0.07, 0.14, 0.75, trim, 'paint', { rx: -0.45 });
+    });
+}
+
+/** Masonry wainscot below the window sills, broken at the front door. */
+function skirt(k: Kit, w: number, d: number, y0: number, doorX: number, mat: string) {
+  const hgt = 0.78;
+  face(k, 'f', w, d, () => {
+    for (const [a, b] of [[-w / 2, doorX - 0.62], [doorX + 0.62, w / 2]]) if (b - a > 0.3) k.box((a + b) / 2, y0 - 0.05, 0.05, b - a + 0.06, hgt, 0.1, 0xffffff, mat);
+    k.box(0, y0 + hgt - 0.08, 0.1, w + 0.1, 0.07, 0.14, 0x9a968e, 'concrete');
+  });
+  for (const sd of ['l', 'r'] as const) face(k, sd, w, d, (len) => k.box(0, y0 - 0.05, 0.05, len + 0.1, hgt, 0.1, 0xffffff, mat));
 }
 
 const H = (o: HouseO, tag = 'house'): BuildingDef => {
@@ -198,6 +280,30 @@ export const HOUSES: BuildingDef[] = [
   H({ id: 'house_white', name: 'White cottage', w: 10, d: 8.2, wall: 0xf1ede2, roof: 0x4f6a5a, shutters: 0x27407a, doorCol: 0x27407a, porch: 0, chimney: true }),
   H({ id: 'house_tan', name: 'Tan house with garage', w: 11, d: 9, wall: 0xcdb590, roof: 0x55504a, garage: true, porch: 0.5, doorCol: 0x4a3324, trim: 0x5a4636 }),
   H({ id: 'house_pink', name: 'Rose house', w: 11, d: 9.4, wall: 0xdba9a0, roof: 0x4b4f55, turn: true, porch: 0.6, shutters: 0xf1ede2, beds: 2 }),
+  H({ id: 'house_craftsman_olive', name: 'Olive craftsman bungalow', w: 10.5, d: 10, wall: 0x7f8a5c, trim: 0xe8dcc0, roof: 0x4a3f36, turn: true, pitch: 0.46, porch: 1, braces: true, skirt: 'stone', doorCol: 0x7a3b22, beds: 2, chimney: true }),
+  H({ id: 'house_craftsman_brown', name: 'Brown craftsman bungalow', w: 11, d: 9.6, wall: 0x8a6a4a, trim: 0xefe3c8, roof: 0x3d3a36, turn: true, pitch: 0.44, porch: 1, braces: true, skirt: 'brickBrown', doorCol: 0x2f4a3a }),
+  H({ id: 'house_craftsman_slate', name: 'Slate craftsman bungalow', w: 10.5, d: 9.8, wall: 0x6f7f88, trim: 0xf1ede2, roof: 0x5a4a42, turn: true, pitch: 0.48, porch: 0.8, braces: true, skirt: 'brickRed', doorCol: 0xa3262e, beds: 2 }),
+  H({ id: 'house_cape_grey', name: 'Grey Cape Cod cottage', w: 11.5, d: 8.6, wall: 0xb9b6ad, trim: 0xf4f1e8, roof: 0x3f444a, pitch: 0.95, dormers: true, shutters: 0x27407a, doorCol: 0x7a1f1c, porch: 0, chimney: true }),
+  H({ id: 'house_cape_white', name: 'White Cape Cod cottage', w: 12, d: 8.8, wall: 0xf1ede2, trim: 0xf4f1e8, roof: 0x55504a, pitch: 0.95, dormers: true, shutters: 0x23302c, doorCol: 0x23302c, porch: 0.3, garage: true }),
+];
+
+/** New-build subdivisions: low ranch houses and split-levels with double garages, and boxy two-storey colonials. */
+export const SUBURBAN: BuildingDef[] = [
+  H({ id: 'house_ranch_brick', name: 'Brick ranch house', w: 16, d: 9, wall: 0xe9e1cf, trim: 0xf4f1e8, roof: 0x4a4038, pitch: 0.36, skirt: 'brickRed', garage: 2, porch: 0.3, shutters: 0x3a2a20, doorCol: 0x3a2a20, beds: 2 }),
+  H({ id: 'house_ranch_blue', name: 'Blue ranch house', w: 15.5, d: 9.4, wall: 0x9fb3c0, trim: 0xf4f1e8, roof: 0x3f444a, pitch: 0.34, skirt: 'brickTan', garage: 2, porch: 0, doorCol: 0xd9a21c, beds: 2 }),
+  H({ id: 'house_ranch_sand', name: 'Sand ranch house', w: 16.5, d: 9, wall: 0xd9c8a4, trim: 0x6a4f3a, roof: 0x55362c, pitch: 0.32, skirt: 'stone', garage: 2, porch: 0.4, doorCol: 0x6a4f3a, beds: 2 }),
+  H({ id: 'house_split_tan', name: 'Tan split-level', w: 11.5, d: 9, wall: 0xc9b48e, trim: 0xf1ede2, roof: 0x4b4640, pitch: 0.4, form: 'split', garage: 2, porch: 0, shutters: 0x5a3f2a, doorCol: 0x5a3f2a, skirt: 'brickTan' }),
+  H({ id: 'house_split_green', name: 'Green split-level', w: 11, d: 9.2, wall: 0x93a58a, trim: 0xf4f1e8, roof: 0x3d4248, pitch: 0.42, form: 'split', garage: 2, porch: 0.3, doorCol: 0xa3262e }),
+  H({ id: 'house_colonial_white', name: 'Two-storey colonial', w: 12, d: 9, wall: 0xf4f1e8, trim: 0xf4f1e8, roof: 0x3d4248, storeys: 2, shutters: 0x1f2a36, doorCol: 0x7a1f1c, porch: 0.3, beds: 2, twin: true }),
+  H({ id: 'house_colonial_yellow', name: 'Yellow two-storey colonial', w: 12.5, d: 9.2, wall: 0xe9d595, trim: 0xf4f1e8, roof: 0x4a4038, storeys: 2, shutters: 0x2f4a3a, doorCol: 0x2f4a3a, porch: 0.34, beds: 2, garage: true }),
+  H({ id: 'house_colonial_red', name: 'Red two-storey colonial', w: 12, d: 9, wall: 0xffffff, wallMat: 'brickRed', trim: 0xf4f1e8, roof: 0x3b3f44, storeys: 2, shutters: 0x1f2a36, doorCol: 0x1f2a36, porch: 0.3, beds: 2, garage: 2 }),
+];
+
+/** Woods and lake shore: A-frame cabins with glazed gables and decks. */
+export const CABINS: BuildingDef[] = [
+  H({ id: 'cabin_aframe_cedar', name: 'Cedar A-frame cabin', w: 12, d: 10, wall: 0x9a6a44, wallMat: 'boards', trim: 0x4a3324, roof: 0x3a3f3a, form: 'aframe', turn: true, porch: 1, chimney: false, doorCol: 0x2f4a3a }),
+  H({ id: 'cabin_aframe_red', name: 'Red A-frame cabin', w: 12, d: 10.5, wall: 0x8a3a30, wallMat: 'boards', trim: 0xefe3c8, roof: 0x2f3438, roofMat: 'roofMetal', form: 'aframe', turn: true, porch: 1, chimney: false, doorCol: 0xefe3c8 }),
+  H({ id: 'cabin_aframe_grey', name: 'Grey A-frame cabin', w: 11.5, d: 9.6, wall: 0x7d7a72, wallMat: 'boards', trim: 0xe9e6dc, roof: 0x5a4a42, form: 'aframe', turn: true, porch: 1, chimney: false, doorCol: 0xa3262e }),
 ];
 
 /** Cedar Ridge: big two-storey houses with double garages, dormers and twin chimneys. */
