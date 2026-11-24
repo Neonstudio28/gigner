@@ -134,6 +134,10 @@ function shopBacks(pl: Placer, rng: Rng, xa: number, xb: number, units: Unit[], 
   weedLine(pl, rng, xa, zA, xb, zA, 4);
 }
 
+/** Block faces use the road plan's convention (see face()): +1 is the south side of Main Street, -1 the north. */
+const SOUTH = 1 as const;
+const NORTH = -1 as const;
+
 interface Face {
   i: number;
   side: 1 | -1;
@@ -177,7 +181,10 @@ function blockFace(pl: Placer, rng: Rng, f: Face) {
     poleLine(pl, [0, 0.36, 0.68, 1].map((t) => [pa + (pb - pa) * t, zp] as [number, number]), { lamps: true, h: 9 });
     // behind the alley: the lot's rectangle sits inside the block's slanted sides, its paving runs out to them
     const z0 = ALLEY + 2.9;
-    const zS = nearest(b.zb, b.xl(z0) + 2, b.xr(z0) - 2) - 0.2;
+    // (a deep block keeps a 36 m lot; the houses of the street behind take the rest, see homes())
+    const mid = (b.xl(z0) + b.xr(z0)) / 2;
+    const [ia, ib] = inner(b, z0, Math.min(b.zb(mid), z0 + 36));
+    const zS = Math.min(nearest(b.zb, ia + 1, ib - 1) - 0.2, z0 + 36);
     const [la, lb] = inner(b, z0, zS);
     backLot(pl, rng, la, lb, z0, zS, 1, f.back, () => {
       (f.homes ?? []).forEach((id, n) => {
@@ -197,13 +204,13 @@ function blockFace(pl: Placer, rng: Rng, f: Face) {
 export function core(pl: Placer) {
   const rng = new Rng(9090);
   const faces: Face[] = [
-    { i: 0, side: S, ids: ['laundry', 'liquor', 'thrift', 'video', 'pawn', 'barber', 'records', 'bakery'], back: 'yard', passAt: 4 },
-    { i: 1, side: S, ids: ['hardware', 'barber', 'pharmacy', 'records', 'gazette', 'bakery', 'insurance', 'video', 'antiques', 'liquor'], back: 'park', passAt: 5 },
-    { i: 2, side: S, ids: ['tavern', 'pawn', 'antiques', 'insurance', 'thrift', 'video', 'liquor', 'laundry'], back: 'split', homes: ['house_white', 'house_green'], passAt: 2 },
-    { i: 3, side: S, ids: ['bakery', 'hardware', 'laundry', 'pharmacy', 'liquor', 'gazette', 'records', 'barber', 'tavern', 'thrift'], back: 'split', homes: ['house_cream', 'house_pink'], passAt: 4 },
-    { i: 0, side: N, ids: ['antiques', 'gazette', 'tavern', 'insurance', 'thrift', 'pawn', 'barber', 'video'], back: 'split', homes: ['house_blue', 'house_tan'] },
-    { i: 1, side: N, ids: ['pharmacy', 'records', 'antiques', 'laundry', 'bakery', 'tavern', 'liquor', 'barber', 'hardware', 'insurance'], back: 'market', passAt: 5 },
-    { i: 3, side: N, ids: ['records', 'thrift', 'hardware', 'insurance', 'gazette', 'bakery', 'video', 'pawn'], back: 'park', passAt: 9 },
+    { i: 0, side: SOUTH, ids: ['laundry', 'liquor', 'thrift', 'video', 'pawn', 'barber', 'records', 'bakery'], back: 'yard', passAt: 4 },
+    { i: 1, side: SOUTH, ids: ['hardware', 'barber', 'pharmacy', 'records', 'gazette', 'bakery', 'insurance', 'video', 'antiques', 'liquor'], back: 'park', passAt: 5 },
+    { i: 2, side: SOUTH, ids: ['tavern', 'pawn', 'antiques', 'insurance', 'thrift', 'video', 'liquor', 'laundry'], back: 'split', homes: ['house_white', 'house_green'], passAt: 2 },
+    { i: 3, side: SOUTH, ids: ['bakery', 'hardware', 'laundry', 'pharmacy', 'liquor', 'gazette', 'records', 'barber', 'tavern', 'thrift'], back: 'split', homes: ['house_cream', 'house_pink'], passAt: 4 },
+    { i: 0, side: NORTH, ids: ['antiques', 'gazette', 'tavern', 'insurance', 'thrift', 'pawn', 'barber', 'video'], back: 'split', homes: ['house_blue', 'house_tan'] },
+    { i: 1, side: NORTH, ids: ['pharmacy', 'records', 'antiques', 'laundry', 'bakery', 'tavern', 'liquor', 'barber', 'hardware', 'insurance'], back: 'market', passAt: 5 },
+    { i: 3, side: NORTH, ids: ['records', 'thrift', 'hardware', 'insurance', 'gazette', 'bakery', 'video', 'pawn'], back: 'park', passAt: 9 },
   ];
   for (const f of faces) blockFace(pl, rng, f);
   townHallSquare(pl);
@@ -221,36 +228,40 @@ function townHallSquare(pl: Placer) {
   inFrame(g.x, g.z, g.ry, () => {
     const b = shape(pl, g.len);
     const hall = D('townhall');
-    const zf = 52; // hall front
-    const [xa, xb] = inner(b, full + 0.5, zf);
+    const zR = nearest(b.zb, g.len / 2 - 20, g.len / 2 + 20) - 1;
+    const zf = zR - hall.d - 16; // the hall stands at the back of the block; the green fills the rest
+    const zc = (full + zf) / 2 + 1; // fountain
+    const [xa, xb] = inner(b, full + 0.5, zR);
     const cx = (xa + xb) / 2;
     const at = fbuild(pl, hall, cx, zf + hall.d / 2, PI, 11, 'Pine Hollow Town Hall', 'civic');
-    pl.landmarks.push({ name: 'Town Hall Square', x: (at.x + W(cx, 30)[0]) / 2, z: (at.z + W(cx, 30)[1]) / 2, kind: 'park' });
-    freserve(pl, xa, full, xb, zf);
+    pl.landmarks.push({ name: 'Town Hall Square', x: (at.x + W(cx, zc)[0]) / 2, z: (at.z + W(cx, zc)[1]) / 2, kind: 'park' });
+    freserve(pl, xa, full, xb, zR);
     // walks: Main Street to the steps round the fountain, and across the green between the avenues
-    path(pl, cx, full - 0.2, cx, 24.5, 3.2);
-    path(pl, cx, 35.5, cx, zf - 0.5, 3.2);
+    path(pl, cx, full - 0.2, cx, zc - 5.5, 3.2);
+    path(pl, cx, zc + 5.5, cx, zf - 0.5, 3.2);
     for (const sx of [-1, 1]) {
-      path(pl, cx + sx * 5.6, 24.5, cx + sx * 5.6, 35.5, 2.2);
-      path(pl, cx + sx * 6.5, 30, sx > 0 ? b.xr(30) : b.xl(30), 30, 2.2);
+      path(pl, cx + sx * 5.6, zc - 5.5, cx + sx * 5.6, zc + 5.5, 2.2);
+      path(pl, cx + sx * 6.5, zc, sx > 0 ? b.xr(zc) : b.xl(zc), zc, 2.2);
+      // diagonal walks in from the two Main Street corners
+      path(pl, cx + sx * 6.2, zc - 5, sx > 0 ? b.xr(full + 1) - 1 : b.xl(full + 1) + 1, full + 0.6, 2);
     }
-    for (const z of [24.5, 35.5]) path(pl, cx - 6.7, z, cx + 6.7, z, 2.2);
-    prop(pl, 'fountain_park', cx, 30);
-    prop(pl, 'bandstand_gazebo', cx + 24, 30);
-    prop(pl, 'war_memorial', cx - 23, 36, PI);
-    prop(pl, 'statue_plinth', cx - 23, 23, PI);
+    for (const z of [zc - 5.5, zc + 5.5]) path(pl, cx - 6.7, z, cx + 6.7, z, 2.2);
+    prop(pl, 'fountain_park', cx, zc);
+    prop(pl, 'bandstand_gazebo', cx + 24, zc + 9);
+    prop(pl, 'war_memorial', cx - 23, zc + 10, PI);
+    prop(pl, 'statue_plinth', cx - 22, zc - 4, PI / 2);
     for (const sx of [-1, 1]) {
       prop(pl, 'flagpole_tall', cx + sx * 7.5, zf - 3, 0, 0.4);
-      for (const z of [18, 42]) prop(pl, 'street_lamp_old', cx + sx * 3.2, z, 0, 0.3);
-      for (const z of [27, 33]) prop(pl, 'bench_wood', cx + sx * 8, z, sx * PI / 2, 0.6);
-      prop(pl, 'trash_can_street', cx + sx * 3.2, 15.5, 0, 0.4);
+      for (const z of [zc - 14, zc + 13]) prop(pl, 'street_lamp_old', cx + sx * 3.2, z, 0, 0.3);
+      for (const z of [zc - 3, zc + 3]) prop(pl, 'bench_wood', cx + sx * 8, z, sx * PI / 2, 0.6);
+      prop(pl, 'bench_wood', cx + sx * 16, zc + 1.9, PI, 0.6);
+      prop(pl, 'trash_can_street', cx + sx * 3.2, zc - 17, 0, 0.4);
       for (let i = 0; i < 4; i++) ftree(pl, 'flower_bed', cx + sx * (3.4 + i * 1.7), zf - 1.4);
-      for (const z of [17, 43]) for (const dx of [14, 30]) ftree(pl, rng.pick(['oak_medium', 'maple_large', 'oak_medium']), cx + sx * dx + rng.range(-1.5, 1.5), z + rng.range(-1.5, 1.5), rng.range(0.7, 0.9), rng.range(0, 6));
+      for (const z of [zc - 15, zc + 16]) for (const dx of [13, 29]) ftree(pl, rng.pick(['oak_medium', 'maple_large', 'oak_medium']), cx + sx * dx + rng.range(-1.5, 1.5), z + rng.range(-1.5, 1.5), rng.range(0.7, 0.9), rng.range(0, 6));
     }
     // staff parking either side of the hall off Riverside Dr, bins at the back door
     const zb = zf + hall.d + 0.6;
-    const zR = nearest(b.zb, xa + 2, xb - 2) - 1;
-    const z1 = Math.min(zb + 12, zR - 3);
+    const z1 = zR - 3;
     for (const sx of [-1, 1]) {
       const [l, r] = sx < 0 ? [Math.max(b.xl(zf + 6), b.xl(z1)) + 1, cx - hall.w / 2 - 3] : [cx + hall.w / 2 + 3, Math.min(b.xr(zf + 6), b.xr(z1)) - 1];
       carPark(pl, rng, l, zf + 6, r, z1, { fill: sx < 0 ? 0.6 : 0.45, stops: true, lights: false });

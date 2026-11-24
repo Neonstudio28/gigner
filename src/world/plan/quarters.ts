@@ -146,7 +146,8 @@ export function homes(pl: Placer) {
   both('Alder St');
   pl.along(R('Lakeshore Dr'), N, 10, R('Lakeshore Dr').length - 10, pickOf(HOUSES), o);
   both('E Main St', pickOf(HOUSES), tight);
-  pl.along(R('Riverside Dr'), S, sAt(R('Riverside Dr'), 206, 'x'), R('Riverside Dr').length - 12, pickOf(HOUSES), tight);
+  // Riverside Dr faces the park: houses all along its town side wherever the downtown blocks leave room behind their lots
+  pl.along(R('Riverside Dr'), S, sAt(R('Riverside Dr'), -196, 'x'), R('Riverside Dr').length - 12, pickOf(HOUSES), tight);
   both('Heron Ct');
   both('Birch Ct');
   pl.bulb(R('Heron Ct'), pickOf(HOUSES), 4, o);
