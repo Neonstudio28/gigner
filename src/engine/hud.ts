@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import type { TownWorld } from '../world';
 import { heightAt, groundColor, isWater, forestDensity, MAP_RADIUS, river, LAKE, PEAKS } from '../world/terrain';
 import { DISTRICTS, districtAt, KIND_COLORS } from '../world/plan/districts';
-import { EXITS, i90z } from '../world/plan/roads';
 
 const EXTENT = 1950;
 const RASTER = 420;
@@ -362,33 +361,6 @@ export class DriveHUD {
       text('South Fork River', sx(p.x), sz(p.z), 'italic 600 15px Oswald, sans-serif', '#1f4f6b', { halo: 'rgba(255,255,255,0.7)', angle: a });
     }
     for (const p of PEAKS) if (p.x > MAP.x0 && p.x < MAP.x1 && p.z > MAP.z0 && p.z < MAP.z1) text(`▲ ${p.name}`, sx(p.x), sz(p.z), '600 13px Oswald, sans-serif', '#3a3d42', { halo: 'rgba(255,255,255,0.6)' });
-    const shield = (x: number, label: string) => {
-      const X = sx(x);
-      const Y = sz(i90z(x));
-      g.save();
-      g.fillStyle = '#1f4f9b';
-      g.strokeStyle = '#ffffff';
-      g.lineWidth = 2;
-      g.beginPath();
-      g.moveTo(X - 13, Y - 12);
-      g.lineTo(X + 13, Y - 12);
-      g.lineTo(X + 13, Y + 3);
-      g.quadraticCurveTo(X + 13, Y + 13, X, Y + 15);
-      g.quadraticCurveTo(X - 13, Y + 13, X - 13, Y + 3);
-      g.closePath();
-      g.fill();
-      g.stroke();
-      g.fillStyle = '#ffffff';
-      g.font = '700 13px Oswald, sans-serif';
-      g.textAlign = 'center';
-      g.textBaseline = 'middle';
-      g.fillText(label, X, Y + 1);
-      g.restore();
-      placed.push([X - 15, Y - 14, X + 15, Y + 17]);
-    };
-    for (const x of [-1500, -450, 600, 1600]) shield(x, '90');
-    for (const e of EXITS) text(`EXIT ${e.n}`, sx(e.x), sz(i90z(e.x)) - 26, '700 12px Oswald, sans-serif', '#1b1b1d', { halo: '#f2c94c', haloW: 5, force: true });
-
     // district names
     for (const d of DISTRICTS) {
       if (d.minor || d.kind === 'lake') continue;

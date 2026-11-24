@@ -54,7 +54,7 @@ interface Car {
   h: number;
 }
 
-/** Spline-following traffic on I-90 (both carriageways) and the old highway through town. */
+/** Spline-following traffic on Highway 10, which is Main Street through town. */
 export class Traffic {
   readonly group = new THREE.Group();
   private cars: Car[] = [];
@@ -75,15 +75,15 @@ export class Traffic {
       return new Route(pts);
     };
     const town = ['Old Hwy 10 W', 'Main St', 'Old Hwy 10 E'];
-    this.routes = [mk(['I-90'], 3.4, false), mk(['I-90'], 7.0, false), mk(['I-90'], 3.4, true), mk(['I-90'], 7.0, true), mk(town, 1.95, false), mk(town, 1.95, true)];
-    const counts = [5, 4, 5, 4, 8, 8];
+    this.routes = [mk(town, 1.95, false), mk(town, 1.95, true)];
+    const counts = [9, 9];
     const types: VehicleType[] = ['sedan', 'pickup', 'van', 'wagon', 'coupe', 'suv', 'pickup', 'semi', 'sedan', 'sheriff', 'delivery', 'police', 'pickup', 'sedan'];
     this.routes.forEach((route, ri) => {
       for (let i = 0; i < counts[ri]; i++) {
         const b = new Batcher(1, false);
         const k = new Kit(b, mats);
         let type = rng.pick(types);
-        if (ri >= 4 && type === 'semi') type = 'pickup';
+        if (type === 'semi' && rng.chance(0.6)) type = 'pickup';
         vehicle(k, signs, type, 0, 0, 0, rng.pick(CAR_COLORS), { accent: rng.chance(0.3) ? 0xf2f1ec : undefined, trailer: type === 'semi', stripes: rng.chance(0.5) });
         const g = new THREE.Group();
         g.name = `car-${type}`;

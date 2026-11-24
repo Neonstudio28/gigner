@@ -16,8 +16,7 @@ import { SHOTS, type Shot } from './shots';
 import type { Ctx } from './buildings/common';
 import { buildNetwork } from './plan/roads';
 import { Placer, furnishRoads } from './plan/placer';
-import { registerPads, civic, downtown, strip, neighbourhoods, lakeside, industry, dressing } from './plan/zones';
-import { registerFarmPads } from './farms';
+import { registerTownPads, town } from './plan/town2';
 import type { RoadNetwork, RoadHit } from './roads/network';
 
 export interface TownWorldOptions {
@@ -170,8 +169,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
 
   clearZones();
   await progress(0.08, 'Grading the valley and laying out roads');
-  const padY = registerPads();
-  registerFarmPads();
+  registerTownPads();
   const net = buildNetwork();
   net.occupy(occ);
   const pl = new Placer(ctx, net);
@@ -183,21 +181,12 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
       console.error(`[layout] ${label} failed`, err);
     }
   };
-  await progress(0.2, 'Raising the courthouse, town hall and civic buildings');
-  zone('civic', () => civic(pl));
-  zone('downtown', () => downtown(pl));
-  await progress(0.28, 'Opening the highway strip');
-  zone('strip', () => strip(pl));
-  await progress(0.33, 'Building Old Town, Maple Grove and Cedar Ridge');
-  zone('neighbourhoods', () => neighbourhoods(pl));
-  zone('lakeside', () => lakeside(pl));
-  await progress(0.4, 'Farms, mill, mine and the power grid');
-  zone('industry', () => industry(pl, padY));
+  await progress(0.2, 'Raising the town');
+  zone('town', () => town(pl));
   zone('furnish', () => furnishRoads(pl));
-  zone('dressing', () => dressing(pl));
   zone('edges', () => roadEnds(pl));
   // paved after the lots are laid out, so the curbs leave cuts where the driveways cross
-  await progress(0.44, 'Paving roads, bridges and the I-90 viaduct');
+  await progress(0.44, 'Paving roads and bridges');
   net.build(kit, solids);
   await progress(0.48, 'Merging static geometry');
   const statics = new THREE.Group();

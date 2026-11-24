@@ -35,7 +35,7 @@ function ridged(x: number, z: number, oct = 5): number {
   return s;
 }
 
-export const LAKE = { x: 1180, z: 330, rx: 250, rz: 150, level: -0.7 };
+export const LAKE = { x: 40, z: 590, rx: 600, rz: 280, level: -0.7 };
 /** Drivable/explorable radius. */
 export const MAP_RADIUS = 1850;
 const GRID_HALF = 2000;
@@ -48,7 +48,7 @@ const RING_OUT = 15000;
 // rise gently at first, so the town has room to breathe and the peaks sit back on the skyline.
 const VX = [-2600, -1900, -1500, -1100, -600, 0, 600, 1100, 1500, 1900, 2600];
 const VN = [-520, -600, -680, -700, -700, -700, -700, -700, -680, -560, -520];
-const VS = [-60, -40, 260, 520, 600, 610, 640, 660, 420, 60, 40];
+const VS = [-60, -40, 300, 700, 920, 960, 960, 900, 560, 60, 40];
 
 function knot(arr: number[], x: number): number {
   if (x <= VX[0]) return arr[0];
@@ -74,11 +74,7 @@ export interface ValleyInfo {
 const floorRise = (x: number) => Math.max(0, -x - 500) * 0.011 + Math.max(0, x - 1300) * 0.01;
 
 /** Low hills south of town: Cedar Ridge (the view lots) and Church Hill (the old cemetery hill). */
-export const HILLS = [
-  { name: 'Cedar Ridge', x: 80, z: 500, s: 250, h: 30 },
-  { name: 'Summit', x: 390, z: 470, s: 190, h: 20 },
-  { name: 'Church Hill', x: -420, z: 440, s: 190, h: 20 },
-];
+export const HILLS: { name: string; x: number; z: number; s: number; h: number }[] = [];
 
 /** Sunnyside bench: north of Highland Dr the floor climbs gently (≤ 7°) toward the mountains. */
 const benchRise = (x: number, z: number) => 14 * smoothstep(565, 740, -z) * (1 - smoothstep(700, 1000, Math.abs(x)));
@@ -231,11 +227,12 @@ export const RIVER_CTRL: [number, number][] = [
   [150, -158],
   [400, -168],
   [620, -160],
-  [800, -120],
-  [930, -40],
-  [1030, 70],
-  [1110, 190],
-  [1160, 260],
+  [800, -110],
+  [900, 0],
+  [935, 150],
+  [870, 300],
+  [740, 420],
+  [610, 510],
 ];
 export const river = new RiverPath(RIVER_CTRL);
 
