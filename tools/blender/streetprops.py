@@ -5,13 +5,14 @@ Development switches after `--`: --only <group,...> (preview only these groups),
 --noexport, --nopreview, --fast (low-res previews), --check (magenta back faces, previews go to --out), --out <dir>.
 """
 import bpy, sys, os, math, importlib
+from mathutils import Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
 import streetprops_kit as K
 import streetprops_atlas
 
-MODULES = ['streetprops_waste', 'streetprops_furniture', 'streetprops_road', 'streetprops_utility', 'streetprops_yard',
+MODULES = ['streetprops_waste', 'streetprops_furniture', 'streetprops_furniture2', 'streetprops_road', 'streetprops_utility', 'streetprops_yard',
            'streetprops_gas']
 
 
@@ -99,6 +100,14 @@ def main():
             if a.extras:
                 extras[a.name] = a.extras
     bpy.context.view_layer.update()
+    # lib.bounds() places child boxes with the parent's matrix; assets with movable parts get their true box here
+    # (extras are merged last into the manifest entry, so these replace lib's size/min)
+    for ob in allobs:
+        if ob.children_recursive:
+            pts = [o.matrix_world @ Vector(c) for o in [ob, *ob.children_recursive] for c in o.bound_box]
+            lo = [min(p[i] for p in pts) for i in range(3)]
+            hi = [max(p[i] for p in pts) for i in range(3)]
+            extras.setdefault(ob.name, {}).update(size=[round(hi[i] - lo[i], 3) for i in range(3)], min=[round(v, 3) for v in lo])
     for g, obs in groups.items():
         print(f'[{g}] {len(obs)} assets, {sum(lib.tris(o) + sum(lib.tris(c) for c in o.children_recursive) for o in obs)} tris')
         for o in obs:

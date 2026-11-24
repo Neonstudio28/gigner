@@ -158,10 +158,12 @@ class Painter:
         if self._cap is None:
             v = self._glyphs('H', 0.0)[0]
             self._cap = max(p[1] for p in v)
-        if 'M' in s:
-            bold = min(bold, 0.008)           # the M of the bundled font self-intersects when offset further
-        v, t, x0, x1 = self._glyphs(s, bold)
+        # weight is added by redrawing the outline shifted around a small circle: Blender's curve offset makes
+        # the M and B of the bundled font self-intersect
+        v, t, x0, x1 = self._glyphs(s, 0.0)
         k = h / self._cap
+        r = bold * k
+        x0, x1 = x0 - bold, x1 + bold
         wid = (x1 - x0) * k * sx
         if maxw and wid > maxw:
             sx *= maxw / wid
@@ -173,8 +175,10 @@ class Painter:
         for px, py in v:
             lx, ly = (px - x0) * k * sx + ax, h / 2 - py * k
             pts.append((x + lx * ca - ly * sa, y + lx * sa + ly * ca))
-        for a, b, c in t:
-            self.tri(pts[a], pts[b], pts[c], col)
+        shifts = [(0.0, 0.0)] + ([(r * math.cos(i * math.tau / 6), r * math.sin(i * math.tau / 6)) for i in range(6)] if r > 0.2 else [])
+        for dx, dy in shifts:
+            for a, b, c in t:
+                self.tri((pts[a][0] + dx, pts[a][1] + dy), (pts[b][0] + dx, pts[b][1] + dy), (pts[c][0] + dx, pts[c][1] + dy), col)
         return wid
 
     # ---------------------------------------------------------- output
