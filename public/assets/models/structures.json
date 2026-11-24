@@ -124,6 +124,25 @@
   ],
   "tris": 5628
  },
+ "carport": {
+  "footprint": [
+   3.2,
+   5.6
+  ],
+  "min": [
+   -1.822,
+   -3.084,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.644,
+   6.145,
+   2.796
+  ],
+  "tris": 1000
+ },
  "cellar_bulkhead": {
   "min": [
    -0.77,
@@ -138,6 +157,40 @@
    0.88
   ],
   "tris": 652
+ },
+ "cement_mixer": {
+  "min": [
+   -0.555,
+   -0.533,
+   -0.017
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.119,
+   1.401,
+   1.417
+  ],
+  "tris": 1032
+ },
+ "chicken_coop": {
+  "footprint": [
+   3.2,
+   1.0
+  ],
+  "min": [
+   -2.55,
+   -1.456,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.62,
+   2.076,
+   1.768
+  ],
+  "tris": 1632
  },
  "chimney_brick_a": {
   "min": [
@@ -262,6 +315,23 @@
   ],
   "tris": 732
  },
+ "construction_fence_panel": {
+  "height": 2.12,
+  "length": 3.5,
+  "min": [
+   -1.85,
+   -0.35,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.7,
+   0.7,
+   2.137
+  ],
+  "tris": 564
+ },
  "cornice_corbel": {
   "anchor": "bottom",
   "length": 1.0,
@@ -311,6 +381,25 @@
    3.47
   ],
   "tris": 1314
+ },
+ "dirt_pile": {
+  "footprint": [
+   4.6,
+   3.6
+  ],
+  "min": [
+   -2.349,
+   -1.731,
+   -0.074
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   4.876,
+   3.828,
+   1.613
+  ],
+  "tris": 472
  },
  "door_barn_x": {
   "anchor": "bottom",
@@ -712,6 +801,22 @@
   ],
   "tris": 3622
  },
+ "feed_trough": {
+  "length": 2.4,
+  "min": [
+   -1.24,
+   -0.431,
+   -0.032
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.48,
+   0.863,
+   0.912
+  ],
+  "tris": 240
+ },
  "fire_escape": {
   "anchor": "platform",
   "min": [
@@ -780,6 +885,41 @@
    3.7
   ],
   "tris": 2288
+ },
+ "fuel_tank_stand": {
+  "height": 2.5,
+  "min": [
+   -0.95,
+   -0.608,
+   -0.004
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.9,
+   1.158,
+   2.74
+  ],
+  "tris": 832
+ },
+ "garden_shed": {
+  "footprint": [
+   2.4,
+   1.8
+  ],
+  "min": [
+   -1.4,
+   -1.5,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.8,
+   2.58,
+   2.74
+  ],
+  "tris": 1092
  },
  "gas_canopy": {
   "face": [
@@ -974,6 +1114,44 @@
   ],
   "tris": 4476
  },
+ "gravel_pile": {
+  "footprint": [
+   5.4,
+   4.4
+  ],
+  "min": [
+   -2.07,
+   -2.662,
+   -0.071
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   5.362,
+   4.904,
+   1.696
+  ],
+  "tris": 500
+ },
+ "greenhouse_small": {
+  "footprint": [
+   2.4,
+   3.0
+  ],
+  "min": [
+   -1.22,
+   -1.555,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.44,
+   3.075,
+   2.59
+  ],
+  "tris": 1752
+ },
  "gutter": {
   "anchor": "top",
   "length": 3.0,
@@ -990,6 +1168,53 @@
    0.21
   ],
   "tris": 240
+ },
+ "hay_bale_round": {
+  "diameter": 1.5,
+  "min": [
+   -0.6,
+   -1.072,
+   -0.135
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.2,
+   1.81,
+   1.611
+  ],
+  "tris": 530,
+  "width": 1.2
+ },
+ "hay_bale_square": {
+  "min": [
+   -0.504,
+   -0.23,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.008,
+   0.46,
+   0.364
+  ],
+  "tris": 68
+ },
+ "hay_stack": {
+  "min": [
+   -1.632,
+   -1.439,
+   -0.18
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.295,
+   2.161,
+   1.274
+  ],
+  "tris": 962
  },
  "highway_billboard": {
   "face": [
@@ -1048,6 +1273,108 @@
   ],
   "tris": 832
  },
+ "log_deck": {
+  "length": 5.0,
+  "min": [
+   -2.1,
+   -2.72,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   4.2,
+   5.486,
+   2.483
+  ],
+  "tris": 1800,
+  "width": 3.9
+ },
+ "lumber_shed": {
+  "clear_height": 3.5,
+  "face": [
+   0.0,
+   -2.985,
+   4.72,
+   3.6,
+   0.6
+  ],
+  "faces": [
+   [
+    0.0,
+    -2.985,
+    4.72,
+    3.6,
+    0.6,
+    0.0
+   ]
+  ],
+  "footprint": [
+   12.0,
+   6.0
+  ],
+  "min": [
+   -6.36,
+   -3.589,
+   -0.088
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   12.72,
+   7.094,
+   5.366
+  ],
+  "tris": 4128
+ },
+ "lumber_stack_a": {
+  "length": 3.6,
+  "min": [
+   -1.839,
+   -0.58,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.679,
+   1.16,
+   0.525
+  ],
+  "tris": 852
+ },
+ "lumber_stack_b": {
+  "length": 4.8,
+  "min": [
+   -2.458,
+   -0.63,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   4.917,
+   1.26,
+   0.836
+  ],
+  "tris": 1416
+ },
+ "lumber_stack_c": {
+  "length": 3.0,
+  "min": [
+   -1.566,
+   -0.929,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.167,
+   1.409,
+   0.75
+  ],
+  "tris": 752
+ },
  "motel_arrow_sign": {
   "face": [
    0.0,
@@ -1104,6 +1431,21 @@
   ],
   "tris": 3204
  },
+ "oil_tank": {
+  "min": [
+   -0.76,
+   -0.349,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.69,
+   0.697,
+   2.047
+  ],
+  "tris": 736
+ },
  "pilaster": {
   "anchor": "bottom",
   "height": 4.5,
@@ -1120,6 +1462,22 @@
    4.5
   ],
   "tris": 380
+ },
+ "plywood_stack": {
+  "length": 2.44,
+  "min": [
+   -1.37,
+   -0.694,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.755,
+   1.508,
+   0.635
+  ],
+  "tris": 552
  },
  "pole_sign_rect": {
   "face": [
@@ -1321,6 +1679,38 @@
   "tris": 248,
   "width": 1.5
  },
+ "portable_toilet": {
+  "height": 2.25,
+  "min": [
+   -0.59,
+   -0.66,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.18,
+   1.3,
+   2.55
+  ],
+  "tris": 1196
+ },
+ "propane_tank_large": {
+  "length": 3.0,
+  "min": [
+   -1.5,
+   -0.615,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.0,
+   1.108,
+   1.53
+  ],
+  "tris": 872
+ },
  "roof_billboard": {
   "face": [
    0.0,
@@ -1435,6 +1825,105 @@
    2.064
   ],
   "tris": 772
+ },
+ "scaffold_tower": {
+  "deck": 4.065,
+  "height": 5.05,
+  "min": [
+   -1.17,
+   -0.73,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.34,
+   1.46,
+   5.05
+  ],
+  "tris": 1376
+ },
+ "scarecrow": {
+  "height": 2.0,
+  "min": [
+   -0.849,
+   -0.295,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.698,
+   0.59,
+   2.005
+  ],
+  "tris": 816
+ },
+ "shipping_container": {
+  "doors": {
+   "door_l": 0,
+   "door_r": 0
+  },
+  "height": 2.59,
+  "length": 6.06,
+  "min": [
+   -3.04,
+   -1.23,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {
+   "door_l": [
+    3.0,
+    -1.075,
+    0.18
+   ],
+   "door_r": [
+    3.0,
+    1.075,
+    0.18
+   ]
+  },
+  "size": [
+   6.08,
+   2.46,
+   2.59
+  ],
+  "tris": 2064,
+  "width": 2.44
+ },
+ "shipping_container_open": {
+  "doors": {
+   "door_l": -112,
+   "door_r": 258
+  },
+  "height": 2.59,
+  "length": 6.06,
+  "min": [
+   -3.04,
+   -1.23,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {
+   "door_l": [
+    3.0,
+    -1.075,
+    0.18
+   ],
+   "door_r": [
+    3.0,
+    1.075,
+    0.18
+   ]
+  },
+  "size": [
+   6.08,
+   2.46,
+   2.59
+  ],
+  "tris": 2264,
+  "width": 2.44
  },
  "silo_pair_elevator": {
   "face": [
@@ -1639,6 +2128,21 @@
    1.02
   ],
   "tris": 388
+ },
+ "well_pump": {
+  "min": [
+   -0.65,
+   -0.65,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.3,
+   1.513,
+   1.27
+  ],
+  "tris": 768
  },
  "windmill_farm": {
   "min": [
