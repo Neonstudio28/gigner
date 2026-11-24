@@ -223,9 +223,11 @@ function backRow(pl: Placer, rng: Rng, b: Bounds, z0: number, z1: number, ids: s
   const hedgeRow = (x0: number, x1: number) => {
     for (let t = x0 + 1.5; t < x1 - 1; t += 2.4) ftree(pl, 'hedge_straight', t, z1 - 1.2);
   };
+  const fits = ids.map(D).filter((d) => d.d + 4 <= deep);
+  if (!fits.length) return pocketPark(pl, rng, xa, xb, z0, z1);
   while (x < xb - 8) {
-    const def = D(ids[n % ids.length]);
-    if (x + def.w > xb - 1.5 || def.d + 4 > deep) break;
+    const def = fits[n % fits.length];
+    if (x + def.w > xb - 1.5) break;
     const zc = z1 - 3 - def.d / 2;
     fbuild(pl, def, x + def.w / 2, zc, 0, 600 + seed + n, def.name);
     // apron to the sidewalk, service strip behind
@@ -245,6 +247,20 @@ function backRow(pl: Placer, rng: Rng, b: Bounds, z0: number, z1: number, ids: s
   if (xb - x > 4) lot(x + 0.4, xb - 0.4);
   if (x - xa < 4) return;
   lamps(pl, [[xa + 3, z1 - 1, 0], [xb - 3, z1 - 1, 0]]);
+}
+
+/** A strip too shallow for shops: a pocket park of lawn, a tree row, benches and picnic tables behind a low hedge. */
+function pocketPark(pl: Placer, rng: Rng, xa: number, xb: number, z0: number, z1: number) {
+  const zm = (z0 + z1) / 2;
+  path(pl, xa + 2, zm, xb - 2, zm, 2.2);
+  for (let x = xa + 5; x < xb - 4; x += 9) {
+    ftree(pl, rng.pick(['maple_large', 'oak_medium', 'birch_cluster', 'maple_medium']), x + rng.range(-1, 1), zm - 4.5 + rng.range(-0.8, 0.8), rng.range(0.85, 1.05));
+    ftree(pl, rng.pick(['oak_medium', 'maple_medium', 'apple_tree']), x + 4.5, zm + 4.5 + rng.range(-0.8, 0.8), rng.range(0.8, 1));
+    prop(pl, rng.chance(0.5) ? 'bench_wood' : 'picnic_table', x + 2.2, zm + (rng.chance(0.5) ? 2.4 : -2.4), rng.chance(0.5) ? 0 : PI, 0.5);
+    if (rng.chance(0.4)) ftree(pl, 'flower_bed', x + 6.5, zm - 2);
+  }
+  for (let t = xa + 1.5; t < xb - 1; t += 2.4) ftree(pl, 'hedge_straight', t, z1 - 1.2);
+  lamps(pl, [[xa + 6, zm + 1.6, 0], [(xa + xb) / 2, zm + 1.6, 0], [xb - 6, zm + 1.6, 0]], 'street_lamp_old');
 }
 
 /** Downtown: four blocks of Main Street, no two the same shape; shop rows corner to corner, service alleys, worked back lots. */
@@ -396,7 +412,18 @@ function courthouseSquare(pl: Placer) {
     prop(pl, 'street_lamp_old', mx - 1.9, mz - 8, 0, 0.3);
     prop(pl, 'trash_can_street', mx + 1.9, mz - 6.2, 0, 0.4);
     prop(pl, 'picnic_table', mx - 7.5, mz + 3.2, 0.3, 0.9);
-    prop(pl, 'flagpole_tall', mx, mz + 6, 0, 0.3);
+    // behind the statue: the wall of names with its flame, a field gun either side, plaques on the walks
+    if (lz1 - mz > 13) {
+      pave(pl, mx - 9, mz + 5, mx + 9, mz + 11.5, CONCRETE, 'concrete');
+      prop(pl, 'memorial_wall', mx, mz + 10, PI, 0.6);
+      for (const sd of [-1, 1]) {
+        prop(pl, 'cannon_field', mx + sd * 7.4, mz + 1.5, sd > 0 ? PI : 0, 0.6);
+        prop(pl, 'flagpole_tall', mx + sd * 10.5, mz + 8, 0, 0.3);
+        ftree(pl, 'topiary_ball', mx + sd * 9.5, mz + 11, 1, 0);
+      }
+      prop(pl, 'plaque_stand', mx + 1.8, mz - 5.6, PI, 0.4);
+      prop(pl, 'plaque_stand', mx - 5.4, mz - 1.9, PI / 2, 0.4);
+    } else prop(pl, 'flagpole_tall', mx, mz + 6, 0, 0.3);
     hedge(pl, lx0, lz1, lx1, lz1);
   }
   pave(pl, sx - sh.d / 2, zs + sh.w / 2 + 0.4, xb, zs + sh.w / 2 + 13, 0x7c8087);
@@ -409,8 +436,52 @@ function courthouseSquare(pl: Placer) {
 }
 
 /** Community church west of Division on Alder St (same kind of frame, on Alder's western leg): lawn, walk, gravel car park beside it. */
+/**
+ * The old churchyard west of the church, out to the avenue: an iron fence on a stone curb with a gate on Alder St,
+ * gravel walks, rows of headstones of every age, an obelisk at the crossing, yews and cedars.
+ */
+function churchyard(pl: Placer, rng: Rng, x1: number, zA: number, zEnd: number) {
+  const b = shape(pl, 0, x1 - 30);
+  const z0 = zA + 5;
+  const z1 = Math.min(b.zb(x1 - 20), zA + 86) - 4;
+  const xl = (z: number) => b.xl(z) + 4;
+  const x0 = Math.max(xl(z0), xl(z1));
+  const xm = (x0 + x1) / 2;
+  const zm = (z0 + z1) / 2;
+  // fence: front with the gate, then the sides and back in 3 m sections
+  const run = (ax: number, az: number, bx: number, bz: number, gap?: number) => {
+    const L = Math.hypot(bx - ax, bz - az);
+    const ry = Math.atan2(-(bz - az), bx - ax);
+    for (let t = 1.5; t < L - 1; t += 3) {
+      const [x, z] = [ax + ((bx - ax) * t) / L, az + ((bz - az) * t) / L];
+      if (gap !== undefined && Math.abs(t - gap) < 3.6) continue;
+      prop(pl, 'iron_fence', x, z, ry, 0.3);
+    }
+  };
+  run(x0, z0, x1, z0, xm - x0);
+  run(x0, z1, x1, z1);
+  run(x0, z0, x0, z1);
+  run(x1, z0, x1, zEnd);
+  prop(pl, 'cemetery_gate', xm, z0, PI, 0.4);
+  path(pl, xm, zA - 0.2, xm, z1 - 2, 2.4);
+  path(pl, x0 + 3, zm, x1 - 3, zm, 2);
+  prop(pl, 'obelisk', xm, zm, 0, 0.6);
+  for (const sx of [-1, 1]) prop(pl, 'bench_wood', xm + sx * 3.4, zm + 4, sx * PI / 2, 0.5);
+  const kinds = ['headstone_round', 'headstone_round', 'headstone_cross', 'headstone_flat', 'headstone_flat'];
+  for (let z = z0 + 4; z < z1 - 3; z += 2.6) {
+    if (Math.abs(z - zm) < 3) continue;
+    for (let x = x0 + 3; x < x1 - 2.5; x += 1.6) {
+      if (Math.abs(x - xm) < 2.6 || rng.chance(0.16)) continue;
+      prop(pl, rng.pick(kinds), x + rng.range(-0.1, 0.1), z, PI + rng.range(-0.05, 0.05), false);
+    }
+  }
+  for (let z = z0 + 6; z < z1 - 2; z += 11) for (const x of [x0 + 1.5, x1 - 1.5]) ftree(pl, rng.pick(['cedar_broad', 'fir_young', 'oak_medium']), x, z + rng.range(-2, 2), rng.range(0.8, 1));
+  pl.landmarks.push({ name: 'Old Churchyard', x: W(xm, zm)[0], z: W(xm, zm)[1], kind: 'park' });
+}
+
 function churchLot(pl: Placer) {
   const rng = new Rng(79);
+  const b = shape(pl, 0, -45);
   const z0 = pl.net.byName('Alder St').full + 0.3;
   const ch = D('church');
   const fx = -34;
@@ -421,5 +492,13 @@ function churchLot(pl: Placer) {
   carPark(pl, rng, fx + ch.w / 2 + 4, z0 + 10, xb, z0 + 38, { fill: 0.35, color: 0x9a9282, lights: false });
   fentrance(pl, xb, z0 + 24, 1, 0, 6);
   prop(pl, 'donation_bin', fx + ch.w / 2 + 5.4, z0 + 8.6, PI, 0.5);
+  churchyard(pl, rng, fx - ch.w / 2 - 6, z0, z0 + ch.d + 9);
+  // behind the church: the parish lawn with a playground, picnic tables and old trees
+  const zl = z0 + 41;
+  const zf = Math.min(b.zb(fx), b.zb(xb), z0 + 80) - 3;
+  for (const [n, x, z, r] of [['playground_swing', fx + 14, zl + 10, 0], ['playground_slide', fx + 24, zl + 12, PI / 2], ['picnic_table', fx + 6, zl + 22, 0.3], ['picnic_table', fx + 14, zl + 24, -0.2], ['bench_wood', fx + 19, zl + 3, 0]] as const)
+    if (z < zf) prop(pl, n, x, z, r, 0.6);
+  for (let x = fx - 2; x < xb - 3; x += 10) ftree(pl, rng.pick(['oak_large', 'maple_large', 'oak_medium']), x + rng.range(-2, 2), zf - 2 + rng.range(-1, 1), rng.range(0.85, 1.05));
+  path(pl, fx, z0 + 9 + ch.d, fx, zf - 4, 2.2);
   treeEdge(pl, rng, fx + ch.w / 2 + 4, z0 + 2.5, xb - 1, z0 + 2.5, ['oak_medium', 'maple_medium'], 10);
 }

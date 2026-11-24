@@ -435,15 +435,134 @@ def loafing_shed():
     return k.done(G, height=Hf + 0.3)
 
 
+
+# --- churchyard and memorials --------------------------------------------------------------------------------
+
+M = 'memorial'
+K.PAL.update({'granite': ('paint', '#8e8c88'), 'granite2': ('paint', '#6f6e6b'), 'marble': ('paint', '#dcd8cf'), 'moss': ('paint', '#6f7a4a'),
+              'flame': ('light', '#ffb347'), 'gilt': ('metal', '#c9a24a')})
+
+
+def headstone(name, kind, mat='granite'):
+    k = Kit(name)
+    k.box('dconc', 0, 0, 0, 1.0, 0.5, 0.14, 0.02)
+    if kind == 'round':
+        k.box(mat, 0, 0, 0.14, 0.7, 0.16, 0.62, 0.02)
+        k.cyl(mat, 0, 0.08, 0.76, 0.35, 0.16, 16, axis='-Y', a0=0)
+        k.cbox('granite2', 0, -0.085, 0.55, 0.42, 0.01, 0.06)
+        k.cbox('granite2', 0, -0.085, 0.42, 0.3, 0.01, 0.04)
+        k.cbox('moss', 0.22, -0.02, 0.17, 0.2, 0.17, 0.04)
+    elif kind == 'cross':
+        k.box(mat, 0, 0, 0.14, 0.5, 0.3, 0.24, 0.02)
+        k.box(mat, 0, 0, 0.38, 0.14, 0.12, 1.0, 0.01)
+        k.cbox(mat, 0, 0, 1.1, 0.56, 0.12, 0.14, 0.01)
+    elif kind == 'flat':
+        k.box(mat, 0, 0, 0.14, 0.9, 0.3, 0.4, 0.03)
+        k.cbox('granite2', 0, -0.152, 0.38, 0.6, 0.01, 0.05)
+        k.cbox('granite2', 0, -0.152, 0.28, 0.4, 0.01, 0.04)
+        k.cyl('bronze', 0.32, -0.0, 0.54, 0.04, 0.2, 6)
+    else:
+        k.box(mat, 0, 0, 0.14, 0.62, 0.62, 0.3, 0.02)
+        k.box(mat, 0, 0, 0.44, 0.44, 0.44, 0.24, 0.01)
+        k.lathe(mat, [(0.0, 0.68), (0.18, 0.68), (0.11, 2.3), (0.0, 2.5)], 4, a0=45)
+    k.box('dirt2', 0, 0.85, 0, 0.9, 1.6, 0.03, 0.01)
+    return k.done(M, height=2.5 if kind == 'obelisk' else 1.2)
+
+
+def iron_fence():
+    k = Kit('iron_fence')
+    L, H = 3.0, 1.2
+    k.ext('stone2', -L / 2, L / 2, -0.12, 0.12, 0, 0.3, 0.02)
+    for y in (0.5, H - 0.1):
+        k.ext('iron', -L / 2, L / 2, -0.015, 0.015, y, y + 0.04)
+    for i in range(20):
+        x = -L / 2 + 0.075 + i * 0.15
+        k.cbox('iron', x, 0, 0.3 + (H - 0.3) / 2 + 0.05, 0.022, 0.022, H - 0.2)
+        k.cbox('iron', x, 0, H + 0.08, 0.05, 0.05, 0.1, rz=45)
+    for sx in (-1, 1):
+        k.box('stone2', sx * L / 2, 0, 0, 0.36, 0.36, H + 0.25, 0.02)
+        k.box('stone', sx * L / 2, 0, H + 0.25, 0.44, 0.44, 0.1, 0.02)
+    return k.done(M, length=L, height=H + 0.35)
+
+
+def cemetery_gate():
+    k = Kit('cemetery_gate')
+    W, H = 4.0, 2.4
+    for sx in (-1, 1):
+        k.box('stone2', sx * (W / 2 + 0.3), 0, 0, 0.6, 0.6, H, 0.03)
+        k.box('stone', sx * (W / 2 + 0.3), 0, H, 0.72, 0.72, 0.14, 0.03)
+        k.lathe('stone', [(0, H + 0.14), (0.2, H + 0.14), (0.22, H + 0.3), (0, H + 0.55)], 10, x=sx * (W / 2 + 0.3))
+        for i in range(12):
+            x = sx * (0.1 + i * 0.16)
+            k.cbox('iron', x, 0, 1.0, 0.025, 0.025, 1.9)
+        k.ext('iron', sx * 0.05, sx * (W / 2), -0.02, 0.02, 0.12, 0.16)
+        k.ext('iron', sx * 0.05, sx * (W / 2), -0.02, 0.02, 1.85, 1.9)
+    k.tube('iron', [(-W / 2, 0, H - 0.1)] + [(-W / 2 + W * t / 8, 0, H + 0.8 * math.sin(math.pi * t / 8)) for t in range(1, 8)] + [(W / 2, 0, H - 0.1)], 0.03, 5)
+    k.cbox('iron', 0, 0, H + 0.62, 1.6, 0.03, 0.34)
+    k.cbox('gilt', 0, -0.02, H + 0.62, 1.4, 0.01, 0.22)
+    return k.done(M, height=H + 0.9)
+
+
+def memorial_wall():
+    """Low granite wall of names in three angled panels, with a centre plaque, flag sockets and a flame bowl."""
+    k = Kit('memorial_wall')
+    for i, ang in ((-1, 18), (0, 0), (1, -18)):
+        with k.at(i * 3.55, abs(i) * 0.55, 0, rz=ang):
+            k.box('granite2', 0, 0, 0, 3.6, 0.7, 0.3, 0.02)
+            k.box('granite', 0, 0, 0.3, 3.4, 0.45, 1.25 if i else 1.7, 0.03)
+            k.box('granite2', 0, 0, 1.55 if i else 2.0, 3.5, 0.55, 0.08, 0.02)
+            for r in range(9 if i else 12):
+                for c in range(3):
+                    k.cbox('marble', -1.1 + c * 1.1, -0.228, 0.45 + r * 0.12, 0.8, 0.005, 0.03)
+    k.cbox('bronze', 0, -0.24, 1.75, 1.1, 0.02, 0.35)
+    k.cbox('gilt', 0, -0.252, 1.85, 0.8, 0.006, 0.05)
+    k.box('granite2', 0, -1.9, 0, 1.2, 1.2, 0.5, 0.04)
+    k.lathe('bronze', [(0, 0.5), (0.45, 0.6), (0.52, 0.75), (0.4, 0.8), (0, 0.72)], 16, y=-1.9)
+    k.cyl('flame', 0, -1.9, 0.76, 0.15, 0.35, 8, r2=0.02)
+    for x in (-2.0, 0.0, 2.0):
+        k.cyl('dsteel', x, 1.0, 0, 0.06, 0.1, 8)
+    return k.done(M, height=2.1)
+
+
+def cannon_field():
+    k = Kit('cannon_field')
+    for sy in (-1, 1):
+        k.torus('wood3', 0.2, sy * 0.5, 0.72, 0.68, 0.05, 16, 4, axis='Y')
+        k.cyl('iron', 0.2, sy * 0.5, 0.72, 0.1, 0.16, 8, axis='Y')
+        for a in range(0, 180, 30):
+            c, s = math.cos(math.radians(a)), math.sin(math.radians(a))
+            k.rod('wood3', (0.2 - 0.66 * c, sy * 0.5, 0.72 - 0.66 * s), (0.2 + 0.66 * c, sy * 0.5, 0.72 + 0.66 * s), 0.03, 4)
+        k.beam('wood2', (0.2, sy * 0.25, 0.75), (-1.9, sy * 0.1, 0.05), 0.12, 0.2)
+    k.box('granite2', 0, 0, 0, 3.8, 1.6, 0.06, 0.02)
+    with k.at(0.2, 0, 0.92, ry=-6):
+        k.cyl('bronze', -0.6, 0, 0, 0.2, 2.2, 12, axis='X', r2=0.13)
+        k.cyl('bronze', -0.75, 0, 0, 0.23, 0.12, 12, axis='X')
+        k.cyl('bronze', 1.58, 0, 0, 0.15, 0.06, 12, axis='X')
+    return k.done(M, height=1.45)
+
+
+def plaque_stand():
+    k = Kit('plaque_stand')
+    k.box('granite2', 0, 0, 0, 0.9, 0.6, 0.15, 0.02)
+    k.box('granite', 0, 0, 0.15, 0.6, 0.35, 0.8, 0.02)
+    with k.at(0, -0.05, 0.95, rx=35):
+        k.cbox('bronze', 0, 0, 0, 0.75, 0.5, 0.05, 0.01)
+        k.cbox('gilt', 0, -0.0, 0.027, 0.55, 0.06, 0.005)
+    return k.done(M, height=1.25)
+
+
 ALL = (hv_pylon, pig, lambda: pig('pig_spotted', True), sheep, lambda: sheep('sheep_white', 'cream_b'), horse,
        lambda: horse('horse_grey', 'grey_horse', 'dgrey', False), lambda: horse('horse_chestnut', 'chest', 'bay', True), goat,
        lambda: goat('goat_brown', 'goat2', 'black'), house_slab, house_frame_a, house_frame_b, house_frame_c, truss_stack,
-       stable_barn, hog_barn, feed_bin, loafing_shed)
+       stable_barn, hog_barn, feed_bin, loafing_shed,
+       lambda: headstone('headstone_round', 'round'), lambda: headstone('headstone_cross', 'cross', 'marble'), lambda: headstone('headstone_flat', 'flat'),
+       lambda: headstone('obelisk', 'obelisk', 'marble'), iron_fence, cemetery_gate, memorial_wall, cannon_field, plaque_stand)
 
 SHEETS = [
     ('farm_pylon', ['hv_pylon'], 'shot', dict(gap=1.0, elev=8, azim=-30)),
     ('farm_stock', ['pig', 'pig_spotted', 'sheep', 'sheep_white', 'goat', 'goat_brown', 'horse_bay', 'horse_grey', 'horse_chestnut'], 'shot', dict(gap=0.5, elev=14, azim=-40, cols=5)),
     ('farm_frames', ['house_slab', 'house_frame_a', 'house_frame_b', 'house_frame_c', 'truss_stack'], 'shot', dict(gap=1.0, elev=22, azim=-34, cols=3)),
+    ('farm_memorial', ['headstone_round', 'headstone_cross', 'headstone_flat', 'obelisk', 'iron_fence', 'cemetery_gate', 'memorial_wall', 'cannon_field', 'plaque_stand'], 'shot', dict(gap=0.6, elev=14, azim=-30, cols=5)),
     ('farm_barns', ['stable_barn', 'hog_barn', 'feed_bin', 'loafing_shed'], 'shot', dict(gap=1.5, elev=16, azim=-30, cols=2)),
 ]
 

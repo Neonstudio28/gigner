@@ -179,6 +179,22 @@
   "tris": 500,
   "water_z": 0.0
  },
+ "cannon_field": {
+  "height": 1.45,
+  "min": [
+   -1.936,
+   -0.8,
+   -0.045
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.836,
+   1.6,
+   1.495
+  ],
+  "tris": 656
+ },
  "carport": {
   "footprint": [
    3.2,
@@ -227,6 +243,22 @@
    1.417
   ],
   "tris": 1032
+ },
+ "cemetery_gate": {
+  "height": 3.3,
+  "min": [
+   -2.66,
+   -0.36,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   5.32,
+   0.72,
+   3.229
+  ],
+  "tris": 702
  },
  "chicken_coop": {
   "footprint": [
@@ -1319,6 +1351,54 @@
   ],
   "tris": 894
  },
+ "headstone_cross": {
+  "height": 1.2,
+  "min": [
+   -0.5,
+   -0.25,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.0,
+   1.9,
+   1.38
+  ],
+  "tris": 220
+ },
+ "headstone_flat": {
+  "height": 1.2,
+  "min": [
+   -0.5,
+   -0.25,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.0,
+   1.9,
+   0.74
+  ],
+  "tris": 176
+ },
+ "headstone_round": {
+  "height": 1.2,
+  "min": [
+   -0.5,
+   -0.25,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.0,
+   1.9,
+   1.11
+  ],
+  "tris": 228
+ },
  "highway_billboard": {
   "face": [
    0.0,
@@ -1533,6 +1613,23 @@
   ],
   "tris": 6448
  },
+ "iron_fence": {
+  "height": 1.5499999999999998,
+  "length": 3.0,
+  "min": [
+   -1.72,
+   -0.22,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.44,
+   0.44,
+   1.55
+  ],
+  "tris": 724
+ },
  "lifeguard_chair": {
   "min": [
    -0.806,
@@ -1684,6 +1781,22 @@
   ],
   "tris": 752
  },
+ "memorial_wall": {
+  "height": 2.1,
+  "min": [
+   -5.364,
+   -2.5,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   10.728,
+   3.933,
+   2.08
+  ],
+  "tris": 1752
+ },
  "motel_arrow_sign": {
   "face": [
    0.0,
@@ -1762,6 +1875,22 @@
   ],
   "tris": 1232,
   "waterline": 0.2
+ },
+ "obelisk": {
+  "height": 2.5,
+  "min": [
+   -0.5,
+   -0.31,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.0,
+   1.96,
+   2.5
+  ],
+  "tris": 192
  },
  "oil_tank": {
   "min": [
@@ -1892,6 +2021,22 @@
    4.5
   ],
   "tris": 380
+ },
+ "plaque_stand": {
+  "height": 1.25,
+  "min": [
+   -0.45,
+   -0.3,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.9,
+   0.6,
+   1.108
+  ],
+  "tris": 144
  },
  "playground_slide": {
   "height": 1.8,
