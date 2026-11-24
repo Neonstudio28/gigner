@@ -43,7 +43,7 @@ if 'noprev' not in opt:
         for tag, names, kind, kw in MODS[name].SHEETS:
             if want and tag not in want:
                 continue
-            objs = [by_name[n] for n in names]
+            objs = [by_name[n] for n in names if n in by_name]
             for a in K.ASSETS:      # only the sheet's assets are visible
                 for o in (a, *a.children_recursive):
                     o.hide_render = a not in objs

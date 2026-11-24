@@ -489,7 +489,7 @@ def shot(family, tag, assets, elev=16.0, azim=-32.0, res=(1920, 1080), samples=2
         for i in range(r * cols, min(len(assets), (r + 1) * cols)):
             lo, hi = bb[i]
             a = assets[i]
-            a.location = (a.location.x + x - lo[0], a.location.y - y - hi[1], a.location.z)
+            a.location = (a.location.x + x - lo[0], a.location.y - y - hi[1], a.location.z - min(lo[2], 0.0))
             x += hi[0] - lo[0] + gap
         y += rowd[r]
     bpy.context.view_layer.update()

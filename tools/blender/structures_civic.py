@@ -55,15 +55,15 @@ def church_spire():
 def clock_face():
     k = Kit('clock_face')
     k.lathe('stone', [(0.8, 0.0), (0.8, 0.1), (0.75, 0.15), (0.69, 0.15), (0.67, 0.07)], 24, axis='-Y')
-    k.cyl('white', 0, -0.0, 0, 0.675, 0.07, 24, axis='-Y')
+    k.cyl('white', 0, 0.0, 0, 0.66, 0.082, 24, axis='-Y')
     for i in range(12):
         a = math.radians(i * 30)
         big = i % 3 == 0
-        k.cbox('black', 0.56 * math.sin(a), -0.076, 0.56 * math.cos(a), 0.05 if big else 0.03, 0.012, 0.16 if big else 0.1, ry=i * 30)
-    k.cyl('brass', 0, -0.07, 0, 0.06, 0.06, 10, 0.01, axis='-Y')
-    h = k.part('hand_hour', 0, -0.09, 0)
+        k.cbox('black', 0.56 * math.sin(a), -0.088, 0.56 * math.cos(a), 0.05 if big else 0.03, 0.012, 0.16 if big else 0.1, ry=i * 30)
+    k.cyl('brass', 0, -0.08, 0, 0.06, 0.06, 10, 0.01, axis='-Y')
+    h = k.part('hand_hour', 0, -0.102, 0)
     h.prism('black', [(-0.035, -0.1), (0.035, -0.1), (0.045, 0.22), (0, 0.36), (-0.045, 0.22)], -0.008, 0.008, 'XZ')
-    m = k.part('hand_minute', 0, -0.11, 0)
+    m = k.part('hand_minute', 0, -0.122, 0)
     m.prism('black', [(-0.025, -0.12), (0.025, -0.12), (0.03, 0.4), (0, 0.56), (-0.03, 0.4)], -0.008, 0.008, 'XZ')
     ob = k.done(G, 'wall', hands={'hour': 'clock_face.hand_hour', 'minute': 'clock_face.hand_minute', 'axis': 'y'})
     for c in ob.children:       # shown at ten past ten; the engine turns the hands about their local Y (wall normal)
