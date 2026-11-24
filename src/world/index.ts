@@ -11,6 +11,7 @@ import { Pedestrians } from './pedestrians';
 import { roadEnds } from './plan/edges';
 import { clearZones, zoneAt, rooms, type Zone } from './buildings/interiors';
 import { loadFonts } from './fonts';
+import { loadAssets, atlases } from './assets';
 import { SHOTS, type Shot } from './shots';
 import type { Ctx } from './buildings/common';
 import { buildNetwork } from './plan/roads';
@@ -98,6 +99,9 @@ export interface TownWorld {
   dispose: () => void;
 }
 
+/** Blender-built model families (public/assets/models/<family>.glb). */
+const ASSET_FAMILIES = ['structures', 'streetprops', 'furniture', 'vegetation', 'vehicles2', 'people'];
+
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
 
 /** Builds the Pine Hollow low-poly Pacific Northwest town (Wallace, Idaho inspired). Deterministic. */
@@ -111,6 +115,9 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   await progress(0.05, 'Painting textures');
   const materials = new MaterialLib(createLayers(await loadPhotoSet(import.meta.env.BASE_URL)));
   const signs = new SignBook((i, tex) => materials.addSignPage(i, tex));
+  await progress(0.07, 'Unpacking the model kit');
+  await loadAssets(import.meta.env.BASE_URL, ASSET_FAMILIES);
+  for (const [family, tex] of atlases()) materials.addAtlas(family, tex);
 
   const root = new THREE.Group();
   root.name = 'PineHollow';

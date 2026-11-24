@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { clamp } from './rng';
+import { asset as findAsset, stamp, type Asset, type Tints } from '../assets';
 
 export type Col = THREE.ColorRepresentation;
 export interface PartOpts {
@@ -360,6 +361,59 @@ export class Kit {
     const uv = g.attributes.uv as THREE.BufferAttribute;
     for (let i = 0; i < uv.count; i++) uv.setXY(i, ref.u0 + uv.getX(i) * (ref.u1 - ref.u0), ref.v0 + uv.getY(i) * (ref.v1 - ref.v0));
     this.add(g, 0xffffff, `signs${ref.page}`, this.local(x, y, z, o), o?.cast ?? false);
+  }
+
+  /**
+   * Places a Blender-built model (origin on the ground, front towards +Z; vehicles face +X). `tint` recolours
+   * its labelled parts. Returns the asset, or undefined when the model is not available.
+   */
+  asset(name: string, x: number, y: number, z: number, ry = 0, o: { tint?: Tints; s?: number; cast?: boolean; solid?: boolean | number; only?: string[]; skip?: string[] } = {}): Asset | undefined {
+    const a = findAsset(name);
+    if (!a) return undefined;
+    const s = o.s ?? 1;
+    const root = new THREE.Matrix4().compose(_v.set(x, y, z), _q.setFromAxisAngle(UP, ry), new THREE.Vector3(s, s, s));
+    const world = new THREE.Matrix4().multiplyMatrices(this.matrix, root);
+    const put = (parts: Asset['parts'], m: THREE.Matrix4) => {
+      for (const p of parts) {
+        const recolor = p.label ? o.tint?.[p.label] : undefined;
+        if (p.key === 'atlas') {
+          this.batch.add(stamp(p, m, 0.7, 0), this.lib.spec(`atlas:${a.family}`).bucket, o.cast ?? true);
+        } else if (p.key === 'paint' || p.key === 'gloss' || p.key === 'metal' || p.key === 'chrome' || p.key === 'rubber') {
+          const spec = this.lib.spec(`${p.key}~`);
+          this.batch.add(stamp(p, m, spec.rough, spec.metal, this.tint, recolor), spec.bucket, o.cast ?? true);
+        } else {
+          // glass, see-through glazing and lit parts join the ordinary buckets
+          const g = p.geo.clone();
+          const col = p.label ? new THREE.Color(recolor ?? p.color) : new THREE.Color(1, 1, 1);
+          if (p.label) g.deleteAttribute('color');
+          const spec = this.lib.spec(p.key);
+          const out = prepare(g, col, spec);
+          g.dispose();
+          out.applyMatrix4(m);
+          if (p.key === 'light' && this.onLight) {
+            out.computeBoundingBox();
+            const b = out.boundingBox!;
+            const size = Math.max(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z);
+            const c = out.attributes.color as THREE.BufferAttribute;
+            if (size >= 0.25) this.onLight(b.getCenter(new THREE.Vector3()), new THREE.Color(c.getX(0), c.getY(0), c.getZ(0)), clamp(size / 0.7, 0.4, 3), this.indoor);
+          }
+          this.batch.add(out, spec.bucket, false);
+        }
+      }
+    };
+    put(a.parts, world);
+    for (const [cn, c] of a.children) {
+      if (o.skip?.includes(cn) || (o.only && !o.only.includes(cn))) continue;
+      put(c.parts, new THREE.Matrix4().multiplyMatrices(world, new THREE.Matrix4().makeTranslation(c.pivot.x, c.pivot.y, c.pivot.z)));
+    }
+    if (o.solid) {
+      const ox = (a.min.x + a.w / 2) * s;
+      const oz = (a.min.z + a.d / 2) * s;
+      const c = Math.cos(ry);
+      const sn = Math.sin(ry);
+      this.solid(x + ox * c + oz * sn, z - ox * sn + oz * c, a.w * s, a.d * s, ry, y + (typeof o.solid === 'number' ? o.solid : a.h * s));
+    }
+    return a;
   }
 
   /** A sign board: optional backing box plus a textured face on its +Z side. */

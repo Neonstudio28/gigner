@@ -21,8 +21,8 @@ const LAYER_SIZE = 512;
  * One MeshStandardMaterial for almost everything: tiling textures live in a texture array and
  * roughness/metalness come from vertex attributes, so a merged chunk needs a single draw call.
  */
-function worldMaterial(layers: THREE.DataArrayTexture, decal: boolean): THREE.MeshStandardMaterial {
-  const m = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1, metalness: 1 });
+function worldMaterial(layers: THREE.DataArrayTexture, decal: boolean, flat = true): THREE.MeshStandardMaterial {
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: flat, roughness: 1, metalness: 1 });
   if (decal) {
     m.polygonOffset = true;
     m.polygonOffsetFactor = -2;
@@ -102,6 +102,9 @@ export class MaterialLib implements MatResolver {
 
     this.set('world', worldMaterial(tex, false));
     this.set('decal', worldMaterial(tex, true));
+    // Blender-built assets keep their own normals (smooth with sharp edges) instead of per-face shading
+    this.set('smooth', worldMaterial(tex, false, false));
+    for (const key of ['paint', 'gloss', 'metal', 'chrome', 'rubber']) this.specs.set(`${key}~`, { ...this.specs.get(key)!, bucket: 'smooth' });
     const glass = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.08, metalness: 0.4, envMapIntensity: 1.8 });
     glass.onBeforeCompile = (s) => {
       s.uniforms.uWindowGlow = surfaceUniforms.uWindowGlow;
@@ -139,7 +142,7 @@ export class MaterialLib implements MatResolver {
   }
 
   spec(key: string): MatSpec {
-    if (key.startsWith('signs')) return { bucket: key, layer: -1, tile: 1, rough: 0.55, metal: 0 };
+    if (key.startsWith('signs') || key.startsWith('atlas:')) return { bucket: key, layer: -1, tile: 1, rough: 0.55, metal: 0 };
     const s = this.specs.get(key);
     if (!s) throw new Error(`Unknown material ${key}`);
     return s;
@@ -147,6 +150,11 @@ export class MaterialLib implements MatResolver {
 
   addSignPage(index: number, tex: THREE.Texture) {
     this.set(`signs${index}`, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, alphaTest: 0.5 }));
+  }
+
+  /** Printed faces (labels, sign symbols, screens) of one Blender asset family share a small atlas texture. */
+  addAtlas(family: string, tex: THREE.Texture) {
+    this.set(`atlas:${family}`, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, metalness: 0 }));
   }
 
   get(bucket: string): THREE.Material {
