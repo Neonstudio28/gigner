@@ -12,6 +12,7 @@ import { CIVIC_B2 } from '../b2/civic';
 import { LANDMARKS } from '../b2/landmarks';
 import { put } from '../b2/hull';
 import { yards, alleys } from './dress2';
+import { townsfolk } from './folk';
 import { DISTRICT } from '../b2/district';
 import { farms, lumberYard, freight, lakefront } from './districts2';
 
@@ -141,4 +142,5 @@ export function town(pl: Placer) {
   freight(pl);
   yards(pl);
   alleys(pl);
+  townsfolk(pl);
 }
