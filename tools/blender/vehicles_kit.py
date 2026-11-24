@@ -690,8 +690,12 @@ class Vehicle:
         for ch in self.children:
             ch.parent = ob
             lib.finish(compact(ch))
-        lo, hi = lib.bounds(ob)
-        self.extra.update(length=round(hi[0] - lo[0], 3), width=round(hi[1] - lo[1], 3))
+        # lib.bounds ignores the offset of child parts, so the true envelope is measured here and overrides size / min
+        pts = [Vector(c) for c in ob.bound_box] + [ch.matrix_basis @ Vector(c) for ch in self.children for c in ch.bound_box]
+        lo = [min(p[i] for p in pts) for i in range(3)]
+        hi = [max(p[i] for p in pts) for i in range(3)]
+        self.extra.update(length=round(hi[0] - lo[0], 3), width=round(hi[1] - lo[1], 3),
+                          size=[round(hi[i] - lo[i], 3) for i in range(3)], min=[round(x, 3) for x in lo])
         return ob
 
     def child(self, part, kit, origin, rot=None):
