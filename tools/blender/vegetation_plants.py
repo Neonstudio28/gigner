@@ -35,6 +35,7 @@ def bush_into(b, p, far=False):
         z = (h - r * 0.85) if i == 0 else rng.uniform(r * 0.75, max(r * 0.8, h * 0.6))
         cl.append((Vector((math.cos(a) * sx / 2 * k, math.sin(a) * sy / 2 * k, z)), r))
     if far:
+        cl = [(Vector((c.x, c.y, max(c.z, r * 1.2))), r) for c, r in cl]
         cl = cl[:1] + sorted(cl[1:], key=lambda q: -(q[0].x ** 2 + q[0].y ** 2))[:5]
     else:
         for i in range(p.get('stems', 4)):
@@ -63,8 +64,10 @@ def leafbox(b, lo, hi, seg, rng, far=False, flat_x=(False, False), chips=0, leaf
     """Clipped hedge block: chamfered, faceted, lumpy box with leaf chips. flat_x ends are left flat to butt-join."""
     lo, hi = Vector(lo), Vector(hi)
     nx, ny, nz = (max(1, s // 2) for s in seg) if far else seg
+    if far:
+        lo.z = 0.0
     grid = {}
-    jit = 0.0 if far else 0.035
+    jit = 0.035
 
     def vert(i, j, k):
         if (i, j, k) not in grid:
@@ -86,13 +89,10 @@ def leafbox(b, lo, hi, seg, rng, far=False, flat_x=(False, False), chips=0, leaf
     def quad(a, c, d, e, nrm):
         vs = [vert(*a), vert(*c), vert(*d), vert(*e)]
         tone = 'leaf3' if nrm.z < 0 else ('leaf2' if rng.random() < 0.6 else 'leaf4') if nrm.z > 0.5 else rng.choice(('leaf', 'leaf', 'leaf2', 'leaf3'))
-        if far:
-            faces.append(b.face(vs, tone))
-        else:  # split into two triangles on a random diagonal for a faceted, clipped-leaf surface
-            if rng.random() < 0.5:
-                vs = vs[1:] + vs[:1]
-            faces.append(b.face(vs[:3], tone))
-            faces.append(b.face((vs[0], vs[2], vs[3]), tone if rng.random() < 0.6 else rng.choice(('leaf', 'leaf2'))))
+        if rng.random() < 0.5:  # two triangles on a random diagonal: a faceted, clipped-leaf surface
+            vs = vs[1:] + vs[:1]
+        faces.append(b.face(vs[:3], tone))
+        faces.append(b.face((vs[0], vs[2], vs[3]), tone if rng.random() < 0.6 else rng.choice(('leaf', 'leaf2'))))
     for i in range(nx):
         for j in range(ny):
             quad((i, j, nz), (i + 1, j, nz), (i + 1, j + 1, nz), (i, j + 1, nz), UP)

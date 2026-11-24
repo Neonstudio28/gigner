@@ -131,7 +131,7 @@ def tree_into(b, p, far=False):
     cl, cr, flat, C = L['clumps'], L['cr'], L['flat'], L['C']
     if leafless:
         for c, r in cl[:-1]:
-            for k in range(1 if far else 3):
+            for k in range(1 if far else 4):
                 d = rand_dir(rng, -0.1, 1.0)
                 e = c + d * r * rng.uniform(0.7, 1.3)
                 b.tube([c - d * 0.1, c.lerp(e, 0.5) + rand_dir(rng) * r * 0.12, e], [0.05 + tr * 0.06, 0.03 + tr * 0.03, 0],
@@ -159,14 +159,14 @@ def tree_into(b, p, far=False):
             out = Vector((c.x - C.x, c.y - C.y, 0))
             if out.length < L['R'] * 0.3:
                 continue
-            for _ in range(2 if far else p['droop']):
+            for _ in range(1 if far else p['droop']):
                 a = rng.uniform(0, TAU)
                 s = c + Vector((math.cos(a) * r * 0.8, math.sin(a) * r * 0.8, -r * flat * 0.2))
                 ln = min(s.z - p.get('droop_min', 0.9), rng.uniform(0.3, 0.6) * H)
                 if ln < 0.6:
                     continue
                 o = Vector((s.x, s.y, 0)).normalized()
-                wd = p.get('strand_w', 0.26) * (2.4 if far else 1.0) * rng.uniform(0.8, 1.2)
+                wd = p.get('strand_w', 0.26) * (3.2 if far else 1.0) * rng.uniform(0.8, 1.2)
                 pts = [s, s - UP * ln * 0.35 + o * ln * 0.05, s - UP * ln * 0.7 + o * ln * 0.03, s - UP * ln]
                 b.blade(pts[::2] + pts[3:] if far else pts, [wd, wd * 0.6, 0] if far else [wd, wd * 0.9, wd * 0.6, 0],
                         rng.choice(('leaf', 'leaf2', 'leaf2', 'leaf4')), 'leaf3', ridge=0.4, side=(-o.y, o.x, 0))
@@ -185,7 +185,7 @@ def conifer_into(b, p, far=False):
     lean = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), 0)) * p.get('lean', 0.012) * H
     prof = [(0, p.get('flare', 1.7)), (0.015, 1.3), (0.05, 1.05), (0.3, 0.82), (0.6, 0.55), (0.85, 0.27), (1.0, 0.0)]
     if snag:
-        prof = prof[:3] + [(0.4, 0.85), (0.75, 0.66), (1.0, 0.5)]
+        prof = prof[:3] + [(0.2, 0.96), (0.4, 0.85), (0.6, 0.76), (0.8, 0.64), (1.0, 0.5)]
     at = lambda z: Vector((lean.x * (z / H) ** 2, lean.y * (z / H) ** 2, z))
 
     def rad(z):
@@ -202,7 +202,7 @@ def conifer_into(b, p, far=False):
         b.tube([at(f * H) for f in fs], [rad(f * H) for f in fs], 5, 'bark', level0=True)
     else:
         ph = rng.uniform(0, TAU)
-        b.tube([at(f * H) for f, m in prof], [tr * m for f, m in prof], 8, 'bark', level0=True, phase=ph,
+        b.tube([at(f * H) for f, m in prof], [tr * m for f, m in prof], 12 if snag else 8, 'bark', level0=True, phase=ph,
                ringfn=lambda i, a: 1 + (0.3 if i == 0 else 0.1 if i == 1 else 0) * max(0.0, math.cos(4 * (a - ph))),
                facekey=lambda i, j: 'bark2' if (i * 5 + j * 3 + seed) % 5 == 0 else None)
     if snag and not p.get('no_trunk'):
@@ -211,6 +211,21 @@ def conifer_into(b, p, far=False):
             d = rand_dir(r2, 0, 0) * rad(H) * 0.55
             b.tube([top + d - UP * 0.3, top + d * 1.1 + UP * r2.uniform(0.3, 1.3)], [rad(H) * 0.45, 0], 3 if far else 4,
                    'bark2' if k % 2 else 'bark')
+    if snag and not p.get('no_trunk') and not far:  # roots, peeling bark slabs, woodpecker holes
+        for k in range(5):
+            a = TAU * k / 5 + 0.3
+            d = Vector((math.cos(a), math.sin(a), 0))
+            b.tube([d * tr * 0.7 + UP * tr * 1.6, d * tr * 2.0 + UP * tr * 0.5, d * tr * r2.uniform(3.0, 4.0)], [tr * 0.42, tr * 0.3, 0], 5,
+                   'bark2' if k % 2 else 'bark')
+        for k in range(8):
+            z, a = H * r2.uniform(0.08, 0.8), r2.uniform(0, TAU)
+            d = Vector((math.cos(a), math.sin(a), 0))
+            b.box(at(z) + d * rad(z) * 0.97, (0.07, rad(z) * r2.uniform(0.6, 0.9), r2.uniform(0.7, 1.7)), 'bark' if k % 3 else 'bark2',
+                  rot=Matrix.Rotation(a, 4, 'Z') @ Matrix.Rotation(r2.uniform(-0.08, 0.08), 4, 'X'), bevel=0.015)
+        for k in range(3):
+            z, a = H * r2.uniform(0.35, 0.8), r2.uniform(0, TAU)
+            d = Vector((math.cos(a), math.sin(a), 0))
+            b.blob(at(z) + d * rad(z) * 0.93, (0.1, 0.1, 0.14), '#2a2420', r2, sub=1, jit=0.0)
     stubs = p.get('stubs', 5 if cb > 2.5 else 0)
     for k in range(stubs // (3 if far else 1)):
         z = r2.uniform(0.25, 0.95) * (H if snag else cb)
@@ -219,9 +234,15 @@ def conifer_into(b, p, far=False):
         c = at(z)
         b.tube([c, c + d * ln * 0.6 - UP * ln * 0.05, c + d * ln - UP * ln * r2.uniform(0.0, 0.3)],
                [rad(z) * 0.3, rad(z) * 0.2, 0], 3 if far else 4, 'bark2')
+        if snag and not far and not p.get('no_trunk'):
+            for q in range(2):
+                d2 = (d + rand_dir(r2) * 0.8).normalized()
+                s2 = c + d * ln * r2.uniform(0.35, 0.7) - UP * ln * 0.04
+                b.tube([s2, s2 + d2 * ln * 0.45], [rad(z) * 0.1 + 0.012, 0], 4, 'bark')
     if snag:
         return
     n = p['tiers']
+    fl = lambda v: Vector((v.x, v.y, max(v.z, 0.25)))  # boughs never dip into the ground
     tiers = []
     for i in range(n):
         t = i / (n - 1)
@@ -239,14 +260,14 @@ def conifer_into(b, p, far=False):
             c = at(z)
             znext = groups[gi + 1][0][0] if gi + 1 < len(groups) else H
             apex = b.v(at(min(H, z + max(Lb * 0.45, (znext - z) * 1.7))))
-            under = b.v(c + UP * (Lb * (math.sin(el) * 0.5 - dr * 0.25) - 0.1 * Lb))
-            ks, ring = max(5, k), []
+            under = b.v(fl(c + UP * (Lb * (math.sin(el) * 0.5 - dr * 0.25) - 0.1 * Lb)))
+            ks, ring = max(6, k), []
             for j in range(2 * ks):
                 a, u = a0 + TAU * j / (2 * ks), (1.03 if j % 2 == 0 else 0.55)
-                ring.append(b.v(c + Vector((math.cos(a), math.sin(a), 0)) * Lb * u + UP * Lb * (math.sin(el) * u - dr * u * u)))
+                ring.append(b.v(fl(c + Vector((math.cos(a), math.sin(a), 0)) * Lb * u + UP * Lb * (math.sin(el) * u - dr * u * u))))
             for j in range(2 * ks):
                 q = ring[(j + 1) % (2 * ks)]
-                b.face((apex, ring[j], q), ('leaf', 'leaf2', 'leaf', 'leaf4')[(j + gi) % 4] if j % 3 else 'leaf2')
+                b.face((apex, ring[j], q), ('leaf', 'leaf3', 'leaf', 'leaf2', 'leaf', 'leaf4')[(j + gi) % 6])
                 b.face((under, q, ring[j]), 'leaf3')
         return
     fingers = p.get('fingers', 4)
@@ -273,13 +294,13 @@ def conifer_into(b, p, far=False):
             W = max(Lj * p.get('bw', 0.24), 0.16)
             k1, k2 = r2.choice((('leaf', 'leaf2'), ('leaf2', 'leaf'), ('leaf', 'leaf'), ('leaf2', 'leaf4')))
             tip = r2.random() < 0.4
-            b.blade([P(0), P(0.35), P(0.75), P(1)], [W * 0.3, W * 0.9, W * 0.85, 0],
+            b.blade([fl(P(0)), fl(P(0.35)), fl(P(0.75)), fl(P(1))], [W * 0.3, W * 0.9, W * 0.85, 0],
                     (lambda i: 'leaf4' if tip and i >= 2 else k1), 'leaf3', ridge=0.35, sag=0.3, key2=k2)
             for u0, sg in ((0.4, 1), (0.4, -1), (0.7, 1), (0.7, -1))[:fingers if Lj > 0.9 else 2]:
                 d2 = Matrix.Rotation(sg * r2.uniform(0.6, 0.9), 3, 'Z') @ d
                 L2, s = Lj * (1 - u0) * r2.uniform(0.75, 1.0) + 0.08 * Lj, P(u0)
                 Q = lambda u: s + d2 * (L2 * u) + UP * (L2 * (math.sin(el) * 0.5 * u - (dr + 0.15) * u * u))
-                b.blade([Q(0), Q(0.5), Q(1)], [W * 0.45, W * 0.7, 0], k2 if sg > 0 else k1, 'leaf3', ridge=0.35, sag=0.3)
+                b.blade([fl(Q(0)), fl(Q(0.5)), fl(Q(1))], [W * 0.45, W * 0.7, 0], k2 if sg > 0 else k1, 'leaf3', ridge=0.35, sag=0.3)
 
 
 def _stakes(b, far):
@@ -317,7 +338,7 @@ BROAD = {
     'dead_tree': dict(seed=71, h=9, spread=8, trunk_r=0.32, fork=2.4, limbs=5, subs=3, fill=0, clump=0.3, leafless=True,
                       bark='dead', leaf=0.5, plates=0),
     'sapling_staked': dict(seed=81, h=3.2, spread=1.7, trunk_r=0.035, fork=1.7, limbs=3, subs=1, fill=4, clump=0.5,
-                           plates=14, leaf=0.3, roots=0, flare=1.3, sides=6, wobble=0.004, far_clumps=8, extra=_stakes),
+                           plates=18, leaf=0.3, roots=0, flare=1.3, sides=6, wobble=0.004, far_clumps=8, extra=_stakes),
     'pine_tall': dict(seed=91, h=22, spread=9, trunk_r=0.36, fork=12, canopy_base=12.5, limbs=6, subs=2, fill=8,
                       clump=0.34, flat=0.5, plates=17, leaf=0.8, curve=0.15, pal='pine', bark='pine', plate_up=0.9,
                       aspect=2.0, limb_el=(-0.2, 0.6), limb_z=(0.85, 1.5), far_clumps=16, stubs=6),
@@ -326,7 +347,7 @@ BROAD = {
                         aspect=2.0, limb_el=(-0.2, 0.6), limb_z=(0.85, 1.5), far_clumps=15, stubs=4),
 }
 BIRCH = [dict(seed=101 + i, h=h, spread=4.6, trunk_r=r, fork=3.6, limbs=3, subs=1, fill=3, clump=0.42, flat=0.75, plates=9,
-              leaf=0.5, pal='birch', bark='birch', marks=True, sides=8, lobes=4, roots=2, far_clumps=5, offset=o, wobble=0.01)
+              leaf=0.5, pal='birch', bark='birch', marks=True, sides=8, lobes=4, roots=2, far_clumps=4, offset=o, wobble=0.01)
          for i, (h, r, o) in enumerate(((10.5, 0.12, (1.3, 0.2, 0)), (9.2, 0.1, (-0.9, 1.0, 0)), (8.4, 0.09, (-0.5, -1.3, 0))))]
 CONIFER = {
     'douglas_fir_tall': dict(seed=201, h=28, r=4.6, trunk_r=0.5, crown_base=7.5, tiers=17, boughs=7, far_skirts=15),
@@ -336,7 +357,7 @@ CONIFER = {
                         droop_low=0.3, bw=0.26, taper=0.95, pal='spruce', far_skirts=12),
     'cedar_broad': dict(seed=205, h=17, r=5.2, trunk_r=0.6, crown_base=2.2, tiers=12, boughs=6, el_low=-0.1, el_top=0.5,
                         droop_low=0.75, droop_top=0.35, bw=0.26, flare=2.3, pal='cedar', bark='cedar', far_skirts=12),
-    'snag_conifer': dict(seed=206, h=14, trunk_r=0.4, snag=True, stubs=14, bark='dead'),
+    'snag_conifer': dict(seed=206, h=14, trunk_r=0.4, snag=True, stubs=26, bark='dead'),
 }
 
 

@@ -142,12 +142,17 @@ class B:
 
     def paint(self, faces, key, flat=True):
         """Assigns one key (str) or key(normal, centre) to faces."""
+        B.last = self
         for f in faces:
             f.normal_update()
+            self.cur = f
             f.material_index = self.mi(key if isinstance(key, str) else key(f.normal, f.calc_center_median()))
             f[self.fl] = 1 if flat else 0
 
     def done(self, angle=35.0):
+        for v in self.bm.verts:  # nothing below the ground plane
+            if v.co.z < 0:
+                v.co.z = 0.0
         ob = lib.to_object(self.name, self.bm, self.mats, angle)
         bm = bmesh.new()
         bm.from_mesh(ob.data)

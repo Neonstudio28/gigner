@@ -35,7 +35,7 @@ def check(ob):
     """Flags inside-out closed parts (negative volume islands) and stray loose geometry."""
     bm = bmesh.new()
     bm.from_mesh(ob.data)
-    seen, bad = set(), 0
+    seen, bad, opn = set(), 0, 0
     for f0 in bm.faces:
         if f0 in seen:
             continue
@@ -56,10 +56,15 @@ def check(ob):
                 for i in range(1, len(vs) - 1):
                     vol += vs[0].dot(vs[i].cross(vs[i + 1]))
             bad += vol < 0
+        else:  # open island (blade, uncapped stem): normals should point away from its middle
+            ctr = sum((f.calc_center_median() for f in isl), f0.calc_center_median() * 0) / len(isl)
+            for f in isl:
+                f.normal_update()
+            opn += sum(f.calc_area() * f.normal.dot(f.calc_center_median() - ctr) for f in isl) < 0
     loose = sum(1 for v in bm.verts if not v.link_faces)
     bm.free()
-    if bad or loose:
-        print(f'[check] {ob.name}: {bad} inverted islands, {loose} loose verts')
+    if bad or loose or opn:
+        print(f'[check] {ob.name}: {bad} inverted closed islands, {opn} suspect open islands, {loose} loose verts')
 
 
 for a in assets:

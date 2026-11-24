@@ -87,7 +87,7 @@ def build(reg):
                 continue
             w, t = rng.uniform(9, 14), rng.uniform(20, 32)
             ph = rng.uniform(0, TAU)
-            base = [b.v((x + math.cos(ph + TAU * k / 3) * w, y + math.sin(ph + TAU * k / 3) * w, z - 7)) for k in range(3)]
+            base = [b.v((x + math.cos(ph + TAU * k / 3) * w, y + math.sin(ph + TAU * k / 3) * w, max(0.0, z - 7))) for k in range(3)]
             top = b.v((x, y, z + t))
             keys = ('forest3', 'forest', 'forest2')
             for k in range(3):
