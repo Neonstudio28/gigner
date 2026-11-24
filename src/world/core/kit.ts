@@ -232,7 +232,7 @@ export class Kit {
   add(geo: THREE.BufferGeometry, color: Col, mat = 'paint', local?: THREE.Matrix4, cast = true) {
     const spec = this.lib.spec(mat);
     if (this.tint && mat !== 'light' && mat !== 'clear' && mat !== 'glass') color = new THREE.Color(color).multiply(this.tint);
-    const g = prepare(geo, color, spec);
+    const g = prepare(geo, color, this.indoor ? { ...spec, rough: spec.rough + 2 } : spec);
     geo.dispose();
     g.applyMatrix4(local ? _m.multiplyMatrices(this.matrix, local) : this.matrix);
     // anything lit (lamp lenses, canopy panels, neon) also lights the fog around it; tiny bulbs don't count
@@ -380,7 +380,7 @@ export class Kit {
           this.batch.add(stamp(p, m, 0.7, 0), this.lib.spec(`atlas:${a.family}`).bucket, o.cast ?? true);
         } else if (p.key === 'paint' || p.key === 'gloss' || p.key === 'metal' || p.key === 'chrome' || p.key === 'rubber') {
           const spec = this.lib.spec(`${p.key}~`);
-          this.batch.add(stamp(p, m, spec.rough, spec.metal, this.tint, recolor), spec.bucket, o.cast ?? true);
+          this.batch.add(stamp(p, m, spec.rough + (this.indoor ? 2 : 0), spec.metal, this.tint, recolor), spec.bucket, o.cast ?? true);
         } else {
           // glass, see-through glazing and lit parts join the ordinary buckets
           const g = p.geo.clone();

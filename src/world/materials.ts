@@ -6,7 +6,7 @@ import { windowMaterial } from './windowMaterial';
 /** Shared uniform used by foliage/flag vertex animation. */
 export const windUniform = { value: 0 };
 /** Weather/time-of-day uniforms shared by the world and glass materials. */
-export const surfaceUniforms = { uWet: { value: 0 }, uWindowGlow: { value: 0 } };
+export const surfaceUniforms = { uWet: { value: 0 }, uWindowGlow: { value: 0 }, uIndoor: { value: 0.3 } };
 
 const NOISE_GLSL = `
 float wHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -31,16 +31,18 @@ function worldMaterial(layers: THREE.DataArrayTexture, decal: boolean, flat = tr
   m.onBeforeCompile = (s) => {
     s.uniforms.uLayers = { value: layers };
     s.uniforms.uWet = surfaceUniforms.uWet;
+    s.uniforms.uIndoor = surfaceUniforms.uIndoor;
     s.vertexShader = s.vertexShader
       .replace('#include <common>', '#include <common>\nattribute float layer;\nattribute vec2 pbr;\nvarying float vLayer;\nvarying vec2 vPbr;\nvarying vec2 vTileUv;\nvarying vec2 vWetXZ;')
       .replace('#include <uv_vertex>', '#include <uv_vertex>\nvLayer = layer;\nvPbr = pbr;\nvTileUv = uv;')
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWetXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
     s.fragmentShader = s.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform sampler2DArray uLayers;\nuniform float uWet;\nvarying float vLayer;\nvarying vec2 vPbr;\nvarying vec2 vTileUv;\nvarying vec2 vWetXZ;' + NOISE_GLSL)
+      .replace('#include <common>', '#include <common>\nuniform sampler2DArray uLayers;\nuniform float uWet;\nuniform float uIndoor;\nvarying float vLayer;\nvarying vec2 vPbr;\nvarying vec2 vTileUv;\nvarying vec2 vWetXZ;' + NOISE_GLSL)
       .replace('#include <map_fragment>', '#include <map_fragment>\nif (vLayer > -0.5) diffuseColor.rgb *= texture(uLayers, vec3(vTileUv, floor(vLayer + 0.5))).rgb;')
       .replace(
         '#include <roughnessmap_fragment>',
-        `float roughnessFactor = vPbr.x;
+        `float indoorK = step(1.5, vPbr.x);
+        float roughnessFactor = vPbr.x - 2.0 * indoorK;
         {
           // rain-soaked look: up-facing surfaces darken, turn glossy and collect puddles
           vec3 wn = cross(dFdx(vViewPosition), dFdy(vViewPosition));
@@ -51,7 +53,9 @@ function worldMaterial(layers: THREE.DataArrayTexture, decal: boolean, flat = tr
           diffuseColor.rgb *= 1.0 - wet * (0.22 + 0.25 * puddle);
         }`,
       )
-      .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vPbr.y;');
+      .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vPbr.y;')
+      // rooms are lit by their own lamps: a flat fill on everything built indoors
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * indoorK * uIndoor;');
   };
   m.customProgramCacheKey = () => 'pinehollow-world';
   return m;

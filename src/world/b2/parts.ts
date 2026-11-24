@@ -22,7 +22,7 @@ export function parapetRoof(k: Kit, w: number, d: number, y: number, o: { h?: nu
 
 /** Scatter of rooftop plant on a flat roof at height `y` (AC units, vents, hatch, skylight, aerial, ducts). */
 export function roofGear(k: Kit, rng: Rng, w: number, d: number, y: number, n = 3) {
-  const names = ['ac_unit_roof', 'ac_unit_roof_2', 'roof_vent_turbine', 'roof_vent_box', 'roof_hatch', 'skylight', 'exhaust_stack', 'antenna_tv', 'satellite_dish', 'duct_run'];
+  const names = ['ac_unit_roof_a', 'ac_unit_roof_b', 'roof_vent_turbine', 'roof_vent_box', 'roof_hatch', 'skylight', 'exhaust_stack', 'antenna_tv', 'satellite_dish', 'duct_run'];
   for (let i = 0; i < n; i++) {
     const x = rng.range(-w / 2 + 1.6, w / 2 - 1.6);
     const z = rng.range(-d / 2 + 1.6, d / 2 - 2.2);
