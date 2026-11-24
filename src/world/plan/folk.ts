@@ -27,15 +27,21 @@ function ground(pl: Placer, x: number, z: number) {
   return Math.max(heightAt(x, z), r > -1e8 ? r : -1e9, zoneAt(x, z)?.floor ?? -1e9);
 }
 
+/** True on or within `pad` of a carriageway: nobody is posted in the street (a junction cuts through the sidewalk line). */
+function inStreet(pl: Placer, x: number, z: number, pad: number) {
+  for (const [dx, dz] of [[0, 0], [pad, 0], [-pad, 0], [0, pad], [0, -pad]]) if (pl.net.roadAt(x + dx, z + dz)) return true;
+  return false;
+}
+
 function stand(pl: Placer, x: number, z: number, ry: number, o: Who, tag = 'street', extra: Partial<Post> = {}) {
-  if (taken(pl, x, z, 0.3)) return false;
+  if (taken(pl, x, z, 0.3) || inStreet(pl, x, z, 0.5)) return false;
   addPost({ kind: 'stand', x, z, y: ground(pl, x, z), ry, tag, ...o, ...extra });
   return true;
 }
 
 /** A few people talking in a ring. */
 function group(pl: Placer, rng: Rng, x: number, z: number, n: number, tag = 'street') {
-  if (taken(pl, x, z, 0.7)) return;
+  if (taken(pl, x, z, 0.7) || inStreet(pl, x, z, 1.3)) return;
   const ring = newRing();
   const R = 0.55 + n * 0.14;
   const a0 = rng.range(0, 6.28);
@@ -47,7 +53,7 @@ function group(pl: Placer, rng: Rng, x: number, z: number, n: number, tag = 'str
 
 /** A bench with one or two people sitting on it. */
 function bench(pl: Placer, rng: Rng, x: number, z: number, ry: number, tag = 'street') {
-  if (taken(pl, x, z, 0.8)) return;
+  if (taken(pl, x, z, 0.8) || inStreet(pl, x, z, 1.4)) return;
   const y = ground(pl, x, z);
   pl.k.at(x, z, ry, () => put(pl.k, 'bench_wood', 0, 0, 0, 0, { solid: 0.9 }), y);
   const n = rng.pick([1, 2, 2]);

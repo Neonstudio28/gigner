@@ -24,7 +24,7 @@ The town is a compact grid, about 720 m by 360 m, between the river to the north
 
 **Interiors.** The landmarks, shops, houses and district buildings have furnished interiors behind real glass: wood floors, wainscot walls, tiled ceilings and furniture modelled for that kind of place (courtroom and clerk's office, diner booths and counter, bank counter and vault, jail cells, church pews, shop shelving, motel rooms, kitchens and living rooms, barn stalls and loft, warehouse racking).
 
-**People.** About 430 townsfolk live in the town. They are 36 boxy characters modelled and rigged in Blender (deputies, farmer, mechanic, lumberjack, waitress, cook, priest, kids, tourists and more), on one skeleton with 56 authored animations and 15 hand props.
+**People.** About 380 townsfolk live in the town. They are 36 boxy characters modelled and rigged in Blender (deputies, farmer, mechanic, lumberjack, waitress, cook, priest, kids, tourists and more), on one skeleton with 56 authored animations and 15 hand props.
 
 - **Lives.** Each person has a name, a job and workplace or a role (local, kid, elder, tourist, jogger), a home, traits, friends and five needs (hunger, energy, company, fun, errands). A daily schedule and the needs are scored against each other to pick what to do next.
 - **Getting around.** They walk the sidewalks, wait at the kerb for traffic, cross at the corners, go in and out of buildings through the doors and take a seat or a spot at the counter inside. Cars slow for people on a crossing.

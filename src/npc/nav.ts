@@ -6,6 +6,8 @@ export interface NavNode extends P3 {
   lane: number;
   edges: NavEdge[];
   comp: number;
+  /** Out on a carriageway (where a sidewalk line runs through a junction): walked over, never stopped on. */
+  road: boolean;
 }
 export interface NavEdge {
   to: number;
@@ -139,7 +141,7 @@ export class Nav {
   }
 
   private add(x: number, y: number, z: number, lane: number): NavNode {
-    const n: NavNode = { id: this.nodes.length, x, y, z, lane, edges: [], comp: 0 };
+    const n: NavNode = { id: this.nodes.length, x, y, z, lane, edges: [], comp: 0, road: !!this.grid.w.roadAt(x, z, y) };
     this.nodes.push(n);
     const key = Math.floor(x / HASH) * 4096 + Math.floor(z / HASH);
     const cell = this.hash.get(key);
@@ -310,7 +312,7 @@ export class Nav {
 
   /** A random sidewalk node within r of a point (for strolls), or null. */
   wander(x: number, z: number, r: number, pick: () => number): NavNode | null {
-    const c = this.near(x, z, r).filter((n) => n.comp === this.main);
+    const c = this.near(x, z, r).filter((n) => n.comp === this.main && !n.road);
     return c.length ? c[Math.floor(pick() * c.length)] : null;
   }
 }
