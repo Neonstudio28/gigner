@@ -22,13 +22,16 @@ def rock_into(b, rng, c, size, n=16, moss=0.0, bevel=0.04, sink=0.0):
         e = e / max(abs(e.x), abs(e.y)) ** 0.7
         pts.append(c + rot @ Vector((e.x * sx * 0.47, e.y * sy * 0.47, 0)) - UP * sink)
 
+    b_area = lambda: B.last.cur.calc_area()
+
     def tone(nrm, ctr):
-        if nrm.z > 0.75:
-            return ('moss' if rng.random() < 0.7 else 'moss2') if rng.random() < moss else 'rock3'
+        if nrm.z > 0.75:  # moss only on real top facets, not on chamfer strips
+            return ('moss' if rng.random() < 0.7 else 'moss2') if rng.random() < moss and b_area() > 0.03 * sx * sy else 'rock3'
         if nrm.z < 0.05:
             return 'rock2' if rng.random() < 0.6 else 'rock'
         return rng.choice(('rock', 'rock', 'rock3', 'rock2'))
     b.hull(pts, tone, bevel=bevel * min(size), planar=14.0)
+
 
 
 def log_into(b, p0, p1, r0, r1, sides=10, rng=None, bark='bark', seed=0, stubs=0, heart=True):
