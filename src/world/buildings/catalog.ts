@@ -13,6 +13,8 @@ export interface BuildingDef {
   d: number;
   /** Distance from footprint centre to the front face of the main wall (for setbacks). */
   front?: number;
+  /** Local x of the front door and its steps (front walks start here). */
+  door?: number;
   /** Local x of a garage/carport driveway at the front edge (layout runs the driveway from there to the road). */
   drive?: number;
   /** Lot entrance for sites set back from the street: local x and width of the paved apron to the road. */

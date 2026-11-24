@@ -582,7 +582,7 @@ export function furnishRoads(pl: Placer) {
     // parallel-parked cars downtown and along older streets
     if (sp.parking || r.kind === 'residential') {
       const lat = sp.parking ? sp.hw - 1.3 : sp.hw - 1.1;
-      const prob = sp.parking ? 0.62 : 0.12;
+      const prob = sp.parking ? 0.62 : 0.2;
       for (let s = 10; s < r.length - 10; s += 6.6) {
         for (const side of [1, -1] as const) {
           if (!rng.chance(prob)) continue;

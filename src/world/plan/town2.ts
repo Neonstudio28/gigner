@@ -1,3 +1,4 @@
+import { streets } from './streets';
 import type { BuildingDef } from '../buildings/catalog';
 import type { Ctx } from '../buildings/common';
 import type { Road } from '../roads/network';
@@ -46,5 +47,6 @@ export function town(pl: Placer) {
   flats(pl);
   trailerCourt(pl);
   yards(pl);
+  streets(pl);
   townsfolk(pl);
 }

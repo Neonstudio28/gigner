@@ -175,6 +175,16 @@ function blockFace(pl: Placer, rng: Rng, f: Face) {
       for (const z of [full + 8, full + 16]) prop(pl, 'bollard_yellow_black', xb - bank.w - 3.4, z, 0, 0.3);
       fentrance(pl, xb - bank.w - 5.4, full + 0.5, 0, -1, 4.6);
     }
+    // where a slanted avenue leaves a wedge beside the end shop it becomes a pocket of street furniture
+    for (const sx of [-1, 1]) {
+      const kit = ['planter_box', 'bench_wood', 'newspaper_box_a', 'trash_can_street', 'planter_box'];
+      for (let z = full + 2.2, n = f.i + (sx > 0 ? 2 : 0); z < full + 17; z += 3.6, n++) {
+        const [e, lim] = sx < 0 ? [xa, b.xl(z) + 0.5] : [xb, b.xr(z) - 0.5];
+        if (Math.abs(lim - e) < 2.3 || (bank && sx > 0)) continue;
+        const name = kit[n % kit.length];
+        prop(pl, name, (e + lim) / 2 + sx * 0.3, z, name === 'bench_wood' ? -sx * PI / 2 : 0, 0.5);
+      }
+    }
     // the back-lot power line along the far side of the alley, with yard lights
     const zp = ALLEY + 3.6;
     const [pa, pb] = [b.xl(zp) + 3, b.xr(zp) - 3];

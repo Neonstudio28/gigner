@@ -186,7 +186,7 @@ export function house(c: Ctx, x: number, z: number, ry: number, seed: number, o:
 
 const H = (o: HouseO, tag = 'house'): BuildingDef => {
   const gw = garageW(o);
-  return { id: o.id, name: o.name, w: o.w + gw, d: o.d + 3.6, front: o.d / 2 + 2.4, drive: gw ? o.w / 2 + gw / 2 : undefined, tags: [tag], build: (c, x, z, ry, seed) => house(c, x - (gw / 2) * Math.cos(ry), z + (gw / 2) * Math.sin(ry), ry, seed, o) };
+  return { id: o.id, name: o.name, w: o.w + gw, d: o.d + 3.6, front: o.d / 2 + 2.4, door: -gw / 2 - 0.068 * o.w + 0.084, drive: gw ? o.w / 2 + gw / 2 : undefined, tags: [tag], build: (c, x, z, ry, seed) => house(c, x - (gw / 2) * Math.cos(ry), z + (gw / 2) * Math.sin(ry), ry, seed, o) };
 };
 
 export const HOUSES: BuildingDef[] = [
