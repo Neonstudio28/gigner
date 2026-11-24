@@ -214,6 +214,22 @@
   ],
   "tris": 1000
  },
+ "carport_metal": {
+  "height": 2.6999999999999997,
+  "min": [
+   -1.92,
+   -3.35,
+   -0.05
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.765,
+   6.7,
+   2.611
+  ],
+  "tris": 348
+ },
  "cellar_bulkhead": {
   "min": [
    -0.77,
@@ -259,6 +275,22 @@
    3.229
   ],
   "tris": 702
+ },
+ "chest_freezer": {
+  "height": 0.95,
+  "min": [
+   -0.66,
+   -0.395,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.32,
+   0.765,
+   0.93
+  ],
+  "tris": 160
  },
  "chicken_coop": {
   "footprint": [
@@ -339,6 +371,22 @@
   ],
   "tris": 2074
  },
+ "cinder_blocks": {
+  "height": 0.7,
+  "min": [
+   -0.613,
+   -0.152,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.32,
+   0.304,
+   0.65
+  ],
+  "tris": 84
+ },
  "clock_face": {
   "hands": {
    "axis": "y",
@@ -369,6 +417,22 @@
    1.6
   ],
   "tris": 580
+ },
+ "cluster_mailbox": {
+  "height": 1.5,
+  "min": [
+   -0.55,
+   -0.35,
+   -0.05
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.1,
+   0.7,
+   1.53
+  ],
+  "tris": 520
  },
  "column_doric_45": {
   "height": 4.5,
@@ -952,6 +1016,22 @@
    4.116
   ],
   "tris": 472
+ },
+ "firepit_ring": {
+  "height": 0.3,
+  "min": [
+   -0.757,
+   -0.763,
+   -0.116
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.521,
+   1.522,
+   0.384
+  ],
+  "tris": 932
  },
  "flagpole_tall": {
   "min": [
@@ -1630,6 +1710,54 @@
   ],
   "tris": 724
  },
+ "kids_slide": {
+  "height": 0.9,
+  "min": [
+   -0.39,
+   -1.17,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.78,
+   1.88,
+   0.864
+  ],
+  "tris": 96
+ },
+ "lawn_chair": {
+  "height": 0.95,
+  "min": [
+   -0.292,
+   -0.258,
+   -0.009
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.585,
+   0.57,
+   0.931
+  ],
+  "tris": 304
+ },
+ "lawn_chair_b": {
+  "height": 0.95,
+  "min": [
+   -0.292,
+   -0.258,
+   -0.009
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.585,
+   0.57,
+   0.931
+  ],
+  "tris": 304
+ },
  "lifeguard_chair": {
   "min": [
    -0.806,
@@ -2022,6 +2150,22 @@
   ],
   "tris": 380
  },
+ "pink_flamingo": {
+  "height": 0.9,
+  "min": [
+   -0.06,
+   -0.281,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.12,
+   0.478,
+   0.885
+  ],
+  "tris": 212
+ },
  "plaque_stand": {
   "height": 1.25,
   "min": [
@@ -2197,6 +2341,22 @@
   ],
   "tris": 688
  },
+ "pool_above_ground": {
+  "height": 1.5499999999999998,
+  "min": [
+   -2.4,
+   -3.019,
+   -0.01
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   4.8,
+   5.419,
+   1.519
+  ],
+  "tris": 712
+ },
  "pool_diving_board": {
   "board_z": 0.77,
   "min": [
@@ -2254,6 +2414,22 @@
    0.6
   ],
   "tris": 152
+ },
+ "porch_couch": {
+  "height": 1.0,
+  "min": [
+   -1.05,
+   -0.43,
+   -0.07
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.1,
+   0.883,
+   0.883
+  ],
+  "tris": 456
  },
  "porch_lattice": {
   "height": 0.6,
@@ -2657,6 +2833,22 @@
   "tris": 2264,
   "width": 2.44
  },
+ "sign_slow_kids": {
+  "height": 1.75,
+  "min": [
+   -0.35,
+   -0.082,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.7,
+   0.127,
+   1.7
+  ],
+  "tris": 188
+ },
  "silo_pair_elevator": {
   "face": [
    0.0,
@@ -2825,6 +3017,22 @@
   ],
   "tris": 788
  },
+ "tarp_heap": {
+  "height": 1.0,
+  "min": [
+   -1.45,
+   -0.9,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.9,
+   1.83,
+   0.95
+  ],
+  "tris": 104
+ },
  "tent_market": {
   "footprint": [
    3.0,
@@ -2844,6 +3052,38 @@
   ],
   "tris": 1326
  },
+ "tiki_torch": {
+  "height": 1.75,
+  "min": [
+   -0.07,
+   -0.07,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.14,
+   0.14,
+   1.74
+  ],
+  "tris": 68
+ },
+ "trampoline": {
+  "height": 2.55,
+  "min": [
+   -1.96,
+   -1.96,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.92,
+   3.92,
+   2.45
+  ],
+  "tris": 972
+ },
  "truss_stack": {
   "height": 0.7,
   "min": [
@@ -2859,6 +3099,22 @@
    0.61
   ],
   "tris": 588
+ },
+ "tyre_planter": {
+  "height": 0.4,
+  "min": [
+   -0.46,
+   -0.453,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.92,
+   0.906,
+   0.335
+  ],
+  "tris": 1060
  },
  "wall_vent": {
   "anchor": "center",
@@ -2973,6 +3229,22 @@
    1.27
   ],
   "tris": 768
+ },
+ "wind_spinner": {
+  "height": 1.45,
+  "min": [
+   -0.224,
+   -0.07,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.824,
+   0.082,
+   1.429
+  ],
+  "tris": 188
  },
  "windmill_farm": {
   "min": [

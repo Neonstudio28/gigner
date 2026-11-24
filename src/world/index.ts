@@ -12,7 +12,7 @@ import { npcLib } from '../npc/lib';
 import { roadEnds } from './plan/edges';
 import { clearZones, zoneAt, rooms, doorways, type Zone, type Doorway } from './buildings/interiors';
 import { loadFonts } from './fonts';
-import { loadAssets, atlases } from './assets';
+import { loadAssets, atlases, asset } from './assets';
 import { loadNpcLib } from '../npc/lib';
 import { clearPosts, posts, type Post } from '../npc/posts';
 import { Nav } from '../npc/nav';
@@ -223,7 +223,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
     return n ? [`${h.def.id}@${h.x.toFixed(0)},${h.z.toFixed(0)}~${zoneOf(n)}:${n.def.id}`] : [];
   });
   if (inZone.length || nextTo.length) console.warn('[zoning] homes in zoned land:', inZone.map((h) => `${h.def.id}@${h.x.toFixed(0)},${h.z.toFixed(0)}`).join(' '), '| next to non-residential:', nextTo.join(' '));
-  (globalThis as { __audit?: unknown }).__audit = { sites: pl.sites.length, onRoad: onRoad.length, homesInZone: inZone.length, homesBesideNonRes: nextTo.length, homes: homes.length, zoning: [...inZone.map((h) => h.def.id + '@' + h.x.toFixed(0) + ',' + h.z.toFixed(0)), ...nextTo] };
+  (globalThis as { __audit?: unknown }).__audit = { sites: pl.sites.length, onRoad: onRoad.length, homesInZone: inZone.length, homesBesideNonRes: nextTo.length, homes: homes.length, shrubsDropped: (globalThis as { __shrubsDropped?: number }).__shrubsDropped, zoning: [...inZone.map((h) => h.def.id + '@' + h.x.toFixed(0) + ',' + h.z.toFixed(0)), ...nextTo] };
   zone('furnish', () => furnishRoads(pl));
   zone('edges', () => roadEnds(pl));
   // paved after the lots are laid out, so the curbs leave cuts where the driveways cross
@@ -243,6 +243,45 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
   pl.finish(lateKit);
   late.build((key) => materials.get(key), statics);
   await progress(0.7, 'Growing the forest');
+  // shrubs and hedges never grow through each other: an oriented-footprint test drops any that overlap one kept earlier
+  {
+    const SHRUB = /^(hedge_|bush_|topiary_)/;
+    const kept: { x: number; z: number; c: number; s: number; hx: number; hz: number }[] = [];
+    const sep = (a: (typeof kept)[number], b: (typeof kept)[number]) => {
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      for (const [ax, az] of [[a.c, -a.s], [a.s, a.c], [b.c, -b.s], [b.s, b.c]]) {
+        const d = Math.abs(dx * ax + dz * az);
+        const ra = a.hx * Math.abs(a.c * ax - a.s * az) + a.hz * Math.abs(a.s * ax + a.c * az);
+        const rb = b.hx * Math.abs(b.c * ax - b.s * az) + b.hz * Math.abs(b.s * ax + b.c * az);
+        if (d >= ra + rb) return true;
+      }
+      return false;
+    };
+    const grid = new Map<string, number[]>();
+    const key = (x: number, z: number) => `${Math.floor(x / 6)},${Math.floor(z / 6)}`;
+    let dropped = 0;
+    const out = pl.trees.filter((t) => {
+      if (!SHRUB.test(t.kind)) return true;
+      const size = (asset(t.kind)?.info as { size?: number[] } | undefined)?.size ?? [1.5, 1.5];
+      const s = t.s ?? 1;
+      // a hedge run may butt end to end, so trim a little off each face before testing
+      const me = { x: t.x, z: t.z, c: Math.cos(t.ry ?? 0), s: Math.sin(t.ry ?? 0), hx: Math.max(0.1, (size[0] * s) / 2 - 0.12), hz: Math.max(0.1, (size[1] * s) / 2 - 0.12) };
+      const gx = Math.floor(t.x / 6);
+      const gz = Math.floor(t.z / 6);
+      for (let i = -1; i <= 1; i++)
+        for (let j = -1; j <= 1; j++)
+          for (const n of grid.get(`${gx + i},${gz + j}`) ?? []) if (!sep(me, kept[n])) { dropped++; return false; }
+      const k = key(t.x, t.z);
+      if (!grid.has(k)) grid.set(k, []);
+      grid.get(k)!.push(kept.length);
+      kept.push(me);
+      return true;
+    });
+    pl.trees.length = 0;
+    pl.trees.push(...out);
+    (globalThis as { __shrubsDropped?: number }).__shrubsDropped = dropped;
+  }
   const { veg: vegetation, trees } = createVegetation({ occ, trees: pl.trees, cornFields: pl.cornFields, grassPatches: pl.grassPatches, clearings: pl.clearings });
   await progress(0.88, 'Starting traffic');
   const traffic = new Traffic(materials, signs, net);
