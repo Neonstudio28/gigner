@@ -35,7 +35,7 @@ def bush_into(b, p, far=False):
         z = (h - r * 0.85) if i == 0 else rng.uniform(r * 0.75, max(r * 0.8, h * 0.6))
         cl.append((Vector((math.cos(a) * sx / 2 * k, math.sin(a) * sy / 2 * k, z)), r))
     if far:
-        cl = [(Vector((c.x, c.y, max(c.z, r * 1.2))), r) for c, r in cl]
+        cl = [(Vector((c.x, c.y, max(c.z, r * 1.0))), r) for c, r in cl]
         cl = cl[:1] + sorted(cl[1:], key=lambda q: -(q[0].x ** 2 + q[0].y ** 2))[:5]
     else:
         for i in range(p.get('stems', 4)):

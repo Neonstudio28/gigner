@@ -239,7 +239,7 @@ class B:
         vs = bmesh.ops.create_icosphere(self.bm, subdivisions=sub, radius=1.0)['verts']
         for v in vs:
             v.co = m @ (v.co * (1 + rng.uniform(-jit, jit)))
-        self.paint({f for v in vs for f in v.link_faces}, key, flat)
+        self.paint(list(dict.fromkeys(f for v in vs for f in v.link_faces)), key, flat)
         cc = Vector(c)
         return [(v.co.copy(), (v.co - cc).normalized()) for v in vs]
 
