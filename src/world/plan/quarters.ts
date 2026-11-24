@@ -1,7 +1,7 @@
 import type { BuildingDef } from '../buildings/catalog';
 import { Rng } from '../core/rng';
 import { Placer } from './placer';
-import { HOUSES, ESTATES, SHACKS, TRAILERS } from '../b2/houses';
+import { HOUSES, ESTATES, SHACKS, TRAILERS, SUBURBAN, CABINS } from '../b2/houses';
 import { heightAt, isWater } from '../terrain';
 import { put } from '../b2/hull';
 import { CAR_COLORS } from '../palette';
@@ -144,15 +144,16 @@ export function homes(pl: Placer) {
   // the streets people live on first, then the avenues take whatever corner lots are left
   both('Maple St');
   both('Alder St');
-  pl.along(R('Lakeshore Dr'), N, 10, R('Lakeshore Dr').length - 10, pickOf(HOUSES), o);
+  pl.along(R('Lakeshore Dr'), N, 10, R('Lakeshore Dr').length - 10, pickOf([...HOUSES, ...CABINS, ...CABINS]), o);
   both('E Main St', pickOf(HOUSES), tight);
   // Riverside Dr faces the park: houses all along its town side wherever the downtown blocks leave room behind their lots
   pl.along(R('Riverside Dr'), S, sAt(R('Riverside Dr'), -196, 'x'), R('Riverside Dr').length - 12, pickOf(HOUSES), tight);
-  both('Heron Ct');
-  both('Birch Ct');
-  pl.bulb(R('Heron Ct'), pickOf(HOUSES), 4, o);
-  pl.bulb(R('Birch Ct'), pickOf(HOUSES), 4, o);
-  both('Lake Hill Rd');
+  const newer = pickOf([...HOUSES.slice(8), ...SUBURBAN]);
+  both('Heron Ct', newer);
+  both('Birch Ct', newer);
+  pl.bulb(R('Heron Ct'), newer, 4, o);
+  pl.bulb(R('Birch Ct'), newer, 4, o);
+  both('Lake Hill Rd', pickOf([...HOUSES, ...SUBURBAN]));
   for (const n of ['Division St S', '1st Ave W S', '1st Ave E S']) both(n);
   both('2nd Ave E', pickOf(HOUSES), tight);
   both('3rd Ave E', mixed, tight);

@@ -205,7 +205,25 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
     return false;
   });
   if (onRoad.length) console.error('[layout] buildings on a street:', onRoad.map((s) => `${s.def.id}@${s.x.toFixed(0)},${s.z.toFixed(0)}`).join(' '));
-  (globalThis as { __audit?: unknown }).__audit = { sites: pl.sites.length, onRoad: onRoad.length };
+  // zoning audit: no home in a zoned no-homes polygon, and none hard up against a civic, shop-row or works building
+  const HOME = ['house', 'shack', 'estate', 'trailer'];
+  const isHome = (s: (typeof pl.sites)[number]) => !!s.def.tags?.some((t) => HOME.includes(t));
+  const zoneOf = (s: (typeof pl.sites)[number]) => {
+    const t = s.def.tags ?? [];
+    if (t.includes('civic')) return 'civic';
+    if (t.includes('main') || t.includes('highway') || t.includes('store') || t.includes('office')) return 'commercial';
+    if (t.some((x) => ['industrial', 'works', 'warehouse', 'factory', 'yard'].includes(x))) return 'industrial';
+    return '';
+  };
+  const homes = pl.sites.filter(isHome);
+  const zoned = pl.sites.filter((s) => !isHome(s) && zoneOf(s));
+  const inZone = homes.filter((h) => pl.zonedOut(h.x, h.z));
+  const nextTo = homes.flatMap((h) => {
+    const n = zoned.find((s) => Math.hypot(s.x - h.x, s.z - h.z) < Math.max(s.def.w, s.def.d) / 2 + Math.max(h.def.w, h.def.d) / 2 + 14);
+    return n ? [`${h.def.id}@${h.x.toFixed(0)},${h.z.toFixed(0)}~${zoneOf(n)}:${n.def.id}`] : [];
+  });
+  if (inZone.length || nextTo.length) console.warn('[zoning] homes in zoned land:', inZone.map((h) => `${h.def.id}@${h.x.toFixed(0)},${h.z.toFixed(0)}`).join(' '), '| next to non-residential:', nextTo.join(' '));
+  (globalThis as { __audit?: unknown }).__audit = { sites: pl.sites.length, onRoad: onRoad.length, homesInZone: inZone.length, homesBesideNonRes: nextTo.length, homes: homes.length, zoning: [...inZone.map((h) => h.def.id + '@' + h.x.toFixed(0) + ',' + h.z.toFixed(0)), ...nextTo] };
   zone('furnish', () => furnishRoads(pl));
   zone('edges', () => roadEnds(pl));
   // paved after the lots are laid out, so the curbs leave cuts where the driveways cross

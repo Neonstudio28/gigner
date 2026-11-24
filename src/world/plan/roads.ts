@@ -101,7 +101,7 @@ export const ROADS: RoadDef[] = [
   { name: 'Birch Ct', kind: 'residential', pts: [[100, 180], [108, 222], [84, 244]], culdesac: true },
   // Meadowbrook: the new subdivision going up west of Lake Hill Rd, three courts off one loop-less drive
   { name: 'Meadowbrook Dr', kind: 'suburban', pts: [[-246, 200], [-300, 186], [-330, 179], [-360, 172], [-390, 166], [-420, 160], [-452, 140]], culdesac: true },
-  { name: 'Fawn Ct', kind: 'suburban', pts: [[-330, 179], [-338, 140], [-330, 104]], culdesac: true },
+  { name: 'Fawn Ct', kind: 'suburban', pts: [[-330, 179], [-338, 146], [-334, 122]], culdesac: true },
   { name: 'Quail Ct', kind: 'suburban', pts: [[-390, 166], [-398, 206], [-388, 244]], culdesac: true },
   { name: 'Sparrow Ct', kind: 'gravel', pts: [[-420, 160], [-428, 120], [-438, 88]], culdesac: true },
 
