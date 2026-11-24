@@ -51,6 +51,14 @@ if 'noprev' not in opt:
                 lib.preview(FAMILY, objs, tag=tag, res=res, samples=samples, **kw)
             else:
                 K.shot(FAMILY, tag, objs, res=res, samples=samples, **kw)
+    for group, objs in K.GROUPS.items():     # one lib.preview() overview grid per group
+        tag = 'all_' + group
+        if want and tag not in want:
+            continue
+        for a in K.ASSETS:
+            for o in (a, *a.children_recursive):
+                o.hide_render = a not in objs
+        lib.preview(FAMILY, objs, tag=tag, res=res, samples=samples, gap=1.0)
     for a in K.ASSETS:
         for o in (a, *a.children_recursive):
             o.hide_render = False

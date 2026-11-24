@@ -423,13 +423,9 @@ def hay_stack():
     for x in (-0.51, 0.51):
         for y in (-0.48, 0.0, 0.48):
             sq_bale(k, x + rnd.uniform(-0.015, 0.015), y, 0, rz=rnd.uniform(-2, 2))
-    for i, y in enumerate((-0.52, 0.0, 0.52)):
-        if i != 2:
-            sq_bale(k, 0.27, y, 0.365, rz=90 + rnd.uniform(-4, 4))
-        if i == 1:
-            sq_bale(k, -0.27, y, 0.365, rz=90 + rnd.uniform(-4, 4))
-    sq_bale(k, -0.5, -0.3, 0.365, rz=rnd.uniform(-5, 5))
-    sq_bale(k, 0.0, -0.05, 0.73, rz=6)
+    for x in (-0.66, -0.17, 0.32):
+        sq_bale(k, x, rnd.uniform(-0.2, -0.08), 0.365, rz=90 + rnd.uniform(-3, 3))
+    sq_bale(k, -0.2, -0.1, 0.73, rz=5)
     sq_bale(k, 1.25, -0.5, 0.0, rz=64)
     sq_bale(k, -1.22, 0.1, 0.18, rz=90, rx=-62)
     k.sphere('hay', 0.5, -1.0, 0.0, 0.45, 7, 4, 0.4)

@@ -555,7 +555,7 @@ SHEETS = [
     ('roof_a', ['ac_unit_roof_a', 'ac_unit_roof_b', 'ac_unit_roof_c', 'roof_hatch', 'skylight', 'duct_run'], 'shot', dict(gap=0.5, elev=24, cols=3)),
     ('roof_b', ['roof_vent_turbine', 'roof_vent_box', 'exhaust_stack', 'chimney_brick_a', 'chimney_brick_b', 'chimney_metal', 'cupola_barn', 'weather_vane', 'satellite_dish', 'antenna_tv'], 'shot', dict(gap=0.4, elev=14)),
     ('wall_a', ['fire_escape', 'fire_escape_ladder', 'roof_ladder_cage', 'downpipe', 'electric_meter_mast'], 'shot', dict(gap=0.6, elev=10, azim=-38)),
-    ('wall_b', ['awning_striped', 'awning_flat_metal', 'gutter'], 'shot', dict(gap=0.4, elev=8, azim=-28)),
+    ('wall_b', ['awning_striped', 'awning_flat_metal', 'gutter'], 'shot', dict(gap=0.4, elev=22, azim=-32)),
     ('wall_c', ['ac_unit_window', 'wall_vent', 'clock_face'], 'shot', dict(gap=0.3, elev=8, azim=-28)),
 ]
 

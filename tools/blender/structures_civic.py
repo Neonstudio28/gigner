@@ -162,16 +162,24 @@ def figure(k, x, y, z, mat='bronze', s=1.0):
         for sx in (-1, 1):
             k.box(mat, sx * 0.12, -0.03, 0, 0.14, 0.3, 0.1, 0.03)
             k.box(mat, sx * 0.12, 0.01, 0.1, 0.15, 0.17, 0.74, 0.03)
-        k.prism(mat, [(-0.27, 0.62), (0.27, 0.62), (0.25, 1.1), (0.3, 1.45), (-0.3, 1.45), (-0.25, 1.1)], -0.13, 0.17, 'XZ', 0.04)
-        k.prism(mat, [(-0.02, 0.62), (0.02, 0.62), (0.05, 1.42), (-0.05, 1.42)], -0.145, -0.1, 'XZ', 0.0)
-        k.box(mat, 0, 0.02, 1.43, 0.2, 0.2, 0.08, 0.03)
+        base = rrect(1.0, 1.0, 0.3, 2)
+        bx = [p[0] for p in base]
+        by = [p[1] for p in base]
+        w0, d0 = max(bx) - min(bx), max(by) - min(by)
+        mx, my = (max(bx) + min(bx)) / 2, (max(by) + min(by)) / 2
+        # long coat: flared skirt, waist, chest, shoulders, collar
+        k.loft(mat, [[((px - mx) / w0 * w, 0.02 + (py - my) / d0 * dd, zz) for px, py in base]
+                     for w, dd, zz in ((0.6, 0.38, 0.5), (0.5, 0.31, 0.95), (0.56, 0.34, 1.3), (0.62, 0.3, 1.44), (0.26, 0.2, 1.5))])
+        k.prism(mat, [(-0.02, 0.52), (0.02, 0.52), (0.06, 1.4), (-0.06, 1.4)], -0.185, -0.14, 'XZ', 0.0)
+        k.cyl(mat, 0, 0.02, 1.48, 0.07, 0.07, 8)
         k.beam(mat, (-0.33, 0.02, 1.4), (-0.38, 0.04, 0.95), 0.12, 0.13, 0.03)
         k.beam(mat, (-0.38, 0.04, 0.98), (-0.34, -0.1, 0.72), 0.1, 0.11, 0.03)
         k.beam(mat, (0.33, 0.02, 1.4), (0.42, -0.14, 1.1), 0.12, 0.13, 0.03)
         k.beam(mat, (0.42, -0.14, 1.12), (0.3, -0.36, 1.3), 0.1, 0.11, 0.03)
         k.rod(mat, (0.3, -0.3, 1.2), (0.3, -0.42, 1.52), 0.035, 6)
-        k.box(mat, 0, 0.01, 1.5, 0.21, 0.23, 0.25, 0.05)
-        k.box(mat, 0, -0.1, 1.57, 0.05, 0.05, 0.07, 0.01)
+        k.sphere(mat, 0, 0.01, 1.635, 0.115, 8, 5, 1.15)
+        k.box(mat, 0, -0.115, 1.6, 0.04, 0.04, 0.06, 0.01)
+        k.box(mat, 0, -0.09, 1.52, 0.13, 0.06, 0.07, 0.02)
         k.cyl(mat, 0, 0.01, 1.74, 0.2, 0.025, 10)
         k.cyl(mat, 0, 0.01, 1.76, 0.125, 0.17, 10, 0.02, r2=0.115)
 
@@ -270,7 +278,7 @@ def war_memorial():
 
 SHEETS = [
     ('civic_a', ['church_spire', 'bandstand_gazebo', 'flagpole_tall'], 'shot', dict(gap=1.5, elev=12)),
-    ('civic_b', ['fountain_park', 'statue_plinth', 'war_memorial', 'clock_face'], 'shot', dict(gap=1.0, elev=14)),
+    ('civic_b', ['fountain_park', 'statue_plinth', 'war_memorial'], 'shot', dict(gap=1.0, elev=14)),
 ]
 
 
