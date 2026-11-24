@@ -9,6 +9,7 @@ import { church, sheriffOffice } from '../buildings/civic';
 import { SHOPS } from '../b2/shops';
 import { HOUSES } from '../b2/houses';
 import { CIVIC_B2 } from '../b2/civic';
+import { LANDMARKS } from '../b2/landmarks';
 import { put } from '../b2/hull';
 
 const PI = Math.PI;
@@ -31,7 +32,7 @@ function legacy(id: string, w: number, d: number, fn: (c: Ctx, x: number, z: num
   };
 }
 
-const B = new Map<string, BuildingDef>([...SHOPS, ...HOUSES, ...CIVIC_B2].map((d) => [d.id, d]));
+const B = new Map<string, BuildingDef>([...SHOPS, ...HOUSES, ...CIVIC_B2, ...LANDMARKS].map((d) => [d.id, d]));
 const D = (id: string) => {
   const d = B.get(id);
   if (!d) throw new Error(`no building ${id}`);
@@ -103,14 +104,17 @@ function mainStreet(pl: Placer) {
   row(pl, main, S, -180, -90, ['laundry', 'liquor', 'thrift', 'barber', 'pawn', 'records']);
   row(pl, main, S, 90, 180, ['bakery', 'hardware', 'video', 'pharmacy', 'liquor', 'insurance']);
   row(pl, main, N, -180, -90, ['antiques', 'gazette', 'tavern', 'laundry', 'bakery', 'insurance']);
-  row(pl, main, N, 90, 180, ['records', 'thrift', 'pharmacy', 'pawn', 'hardware', 'barber']);
+  row(pl, main, N, 110, 180, ['records', 'thrift', 'pharmacy', 'hardware', 'barber']);
   // highway services at either end of the grid
-  front(pl, main, -225, S, legacy('gas86', 42, 36, gasStation), 2, 3, 'Gas & Go');
-  front(pl, main, -225, N, legacy('diner', 18, 14, (c, x, z, ry) => diner(c, x, z, ry)), 8, 4, "Dottie's Diner");
-  front(pl, main, 225, N, legacy('donut', 17, 18, (c, x, z, ry) => donutShop(c, x, z, ry)), 6, 5, 'Hole Lotta Donuts');
-  front(pl, main, 225, S, legacy('sheriffOffice', 26, 19, sheriffOffice, -2.5), 6, 6, "County Sheriff's Office", 'civic');
+  front(pl, main, -225, S, D('gas'), 2, 3, 'Timberline Gas');
+  front(pl, main, -225, N, D('diner'), 9, 4, "Dottie's Diner");
+  front(pl, main, 225, N, D('donut'), 9, 5, 'Hole Lotta Donuts');
+  front(pl, main, 225, S, D('sheriff'), 7, 6, 'Hollow County Sheriff', 'civic');
+  front(pl, main, 315, S, D('motel'), 12, 8, 'Pine Rest Motel');
+  front(pl, main, -315, N, D('grocery'), 16, 9, 'Hollow Foods Market');
+  front(pl, main, 100, N, D('bank'), 3, 10, 'First Cascade Bank');
   const alder = pl.net.byName('Alder St');
-  front(pl, alder, -45, S, legacy('church', 16, 32, church), 8, 7, 'Pine Hollow Community Church', 'civic');
+  front(pl, alder, -45, S, D('church'), 8, 7, 'Pine Hollow Community Church', 'civic');
 }
 
 function homes(pl: Placer) {
