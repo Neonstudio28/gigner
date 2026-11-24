@@ -167,8 +167,8 @@ export async function startApp(container: HTMLElement) {
   // dynamic weather and the clock drive the same look a preset does; picking a preset by hand freezes them
   const weather = new Weather();
   weather.enabled = params.get('weather') === '1' || (!params.has('atmo') && params.get('still') !== '1' && params.get('weather') !== '0');
-  weather.hour = Number(params.get('hour') ?? 9.5);
-  weather.set((params.get('front') as SkyKind | null) ?? 'mist', true);
+  weather.hour = Number(params.get('hour') ?? 11);
+  weather.set((params.get('front') as SkyKind | null) ?? 'clear', true);
   weather.onThunder = (delay) => drive.audio.thunder(delay);
   const rain = new Rain(quality === 'low' ? 4000 : 9000);
   const stars = new Stars();

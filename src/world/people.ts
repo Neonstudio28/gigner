@@ -11,7 +11,7 @@ export const POSES: Record<Pose, Joints> = {
   stand: { arm_l: [0.04, 0, 0.05], arm_r: [-0.03, 0, -0.05], forearm_l: [-0.12, 0, 0], forearm_r: [-0.1, 0, 0] },
   sit: { leg_l: [-1.5, 0, 0.06], leg_r: [-1.5, 0, -0.06], shin_l: [1.45, 0, 0], shin_r: [1.45, 0, 0], arm_l: [-0.45, 0, 0.08], arm_r: [-0.45, 0, -0.08], forearm_l: [-0.9, 0, 0], forearm_r: [-0.9, 0, 0] },
   talk: { arm_l: [-0.25, 0, 0.1], forearm_l: [-1.35, 0, 0.25], arm_r: [0.05, 0, -0.06], forearm_r: [-0.15, 0, 0], head: [0.04, 0.2, 0] },
-  hips: { arm_l: [0.3, 0, 0.9], forearm_l: [-0.3, 0, -1.9], arm_r: [0.3, 0, -0.9], forearm_r: [-0.3, 0, 1.9], leg_l: [0, 0, 0.07], leg_r: [0, 0, -0.07] },
+  hips: { arm_l: [0.3, 0, 0.75], forearm_l: [-0.3, 0, -1.7], arm_r: [0.3, 0, -0.75], forearm_r: [-0.3, 0, 1.7], leg_l: [0, 0, 0.07], leg_r: [0, 0, -0.07] },
   cross: { arm_l: [-0.5, 0, 0.12], forearm_l: [-1.2, 0, -1.2], arm_r: [-0.5, 0, -0.12], forearm_r: [-1.2, 0, 1.2], head: [0, -0.15, 0] },
   point: { arm_r: [-1.35, 0, -0.1], forearm_r: [-0.1, 0, 0], arm_l: [0.05, 0, 0.06], head: [-0.05, 0.1, 0] },
   wave: { arm_r: [-0.3, 0, -2.3], forearm_r: [0, 0, -0.6], arm_l: [0.05, 0, 0.06], head: [-0.05, 0, 0] },

@@ -144,8 +144,8 @@ export async function loadAssets(base: string, families: string[]): Promise<void
             const nm = (o.userData.name as string | undefined) ?? o.name;
             if (o === node || !nm.startsWith(name + '.')) return;
             const cg = new Map();
-            // child geometry is kept relative to its own pivot
-            collect(o, o.matrixWorld.clone().invert(), nm, cg);
+            // child geometry is kept relative to its own pivot; nested children (forearm under arm) are their own entries
+            collect(o, o.matrixWorld.clone().invert(), name, cg);
             const pivot = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld).applyMatrix4(inv);
             const pn = o.parent && o.parent !== node ? (((o.parent.userData.name as string | undefined) ?? o.parent.name).split('.').pop() ?? '') : '';
             children.set(nm.slice(name.length + 1), { pivot, parent: pn, parts: bake(cg) });
