@@ -1,13 +1,14 @@
 import type * as THREE from 'three';
-import type { Col } from '../core/kit';
+import type { Col, Kit } from '../core/kit';
+import type { BuildingDef } from '../buildings/catalog';
 import { Rng } from '../core/rng';
 import { Placer } from './placer';
-import { heightAt, isWater, addLotPad } from '../terrain';
+import { heightAt as groundAt, isWater as waterAt, addLotPad } from '../terrain';
 import { signBoard, F_OS } from '../b2/kit2';
 import { put } from '../b2/hull';
 import { utilityPole, connectPoles } from '../props';
 import { CAR_COLORS } from '../palette';
-import type { VehicleType } from '../vehicles';
+import type { VehicleType, VehicleOpts } from '../vehicles';
 import { boardFence, chainLink } from './dress2';
 
 const PI = Math.PI;
@@ -15,6 +16,74 @@ export const ASPHALT: Col = 0x7c8087;
 export const OLD_ASPHALT: Col = 0x6c7077;
 export const GRAVEL: Col = 0x9a9282;
 export const CONCRETE: Col = 0xb4b0a6;
+
+// ------------------------------------------------------------------ placement frame
+// Every helper in this file takes its coordinates in the current frame. It is the world by default; a block
+// builder can switch to a rotated local frame (x along a street face, z into the block) with inFrame().
+let FX = 0;
+let FZ = 0;
+let FR = 0;
+let FC = 1;
+let FS = 0;
+/** Frame point to world. */
+export const W = (x: number, z: number): [number, number] => [FX + x * FC + z * FS, FZ - x * FS + z * FC];
+/** Yaw of the current frame. */
+export const frameRy = () => FR;
+/** Runs `fn` in a frame whose origin is (x, z) of the current one, turned by ry. */
+export function inFrame<T>(x: number, z: number, ry: number, fn: () => T): T {
+  const save = [FX, FZ, FR, FC, FS];
+  [FX, FZ] = W(x, z);
+  FR += ry;
+  FC = Math.cos(FR);
+  FS = Math.sin(FR);
+  try {
+    return fn();
+  } finally {
+    [FX, FZ, FR, FC, FS] = save;
+  }
+}
+const heightAt = (x: number, z: number) => groundAt(...W(x, z));
+const isWater = (x: number, z: number) => waterAt(...W(x, z));
+const at = (k: Kit, x: number, z: number, ry: number, fn: () => void, y?: number) => {
+  const [wx, wz] = W(x, z);
+  k.at(wx, wz, ry + FR, fn, y ?? groundAt(wx, wz));
+};
+const occB = (pl: Placer, x: number, z: number, r = 0) => pl.c.occ.blocked(...W(x, z), r);
+/** Is the frame point on a street (carriageway, verge or sidewalk)? */
+export const onSt = (pl: Placer, x: number, z: number, pad = 0.3) => pl.onStreet(...W(x, z), pad);
+const drv = (pl: Placer, x: number, z: number, r = 0) => pl.drives.blocked(...W(x, z), r);
+/** Ground height at a frame point. */
+export const fheight = heightAt;
+/** Plants a tree, bush or weed at a frame point. */
+export function ftree(pl: Placer, kind: string, x: number, z: number, s = 1, ry = 0) {
+  const [wx, wz] = W(x, z);
+  pl.trees.push({ kind, x: wx, z: wz, s, ry: ry + FR });
+}
+/** Parks a vehicle at a frame point. */
+export function fcar(pl: Placer, type: VehicleType, x: number, z: number, heading: number, color: number, o: VehicleOpts = {}) {
+  pl.car(type, ...W(x, z), heading + FR, color, o);
+}
+/** Paved entrance from a lot edge out to the first street along the frame direction (fx, fz). */
+export function fentrance(pl: Placer, x: number, z: number, fx: number, fz: number, w = 6, reachMax = 30) {
+  return pl.entrance(...W(x, z), fx * FC + fz * FS, -fx * FS + fz * FC, w, reachMax);
+}
+/** Keeps buildings, yard trees and wild grass off a frame rectangle. */
+export function freserve(pl: Placer, x0: number, z0: number, x1: number, z1: number) {
+  if (FR === 0) return pl.reserve(FX + x0, FZ + z0, FX + x1, FZ + z1);
+  const c = [W(x0, z0), W(x1, z0), W(x0, z1), W(x1, z1)];
+  const [cx, cz] = W((x0 + x1) / 2, (z0 + z1) / 2);
+  pl.pads.add(cx, cz, x1 - x0, z1 - z0, FR, 0, false);
+  const bx = c.map((q) => q[0]);
+  const bz = c.map((q) => q[1]);
+  pl.clearings.push({ x: cx, z: cz, w: Math.max(...bx) - Math.min(...bx), d: Math.max(...bz) - Math.min(...bz) });
+}
+/** Stands a building at a frame point; `ry` is the way its front faces in the frame (PI = toward local -z). */
+export function fbuild(pl: Placer, def: BuildingDef, x: number, z: number, ry: number, seed: number, label?: string, kind = 'business') {
+  const [wx, wz] = W(x, z);
+  pl.force(def, wx, wz, ry + FR, seed);
+  if (label) pl.landmarks.push({ name: label, x: wx, z: wz, kind });
+  return { x: wx, z: wz, ry: ry + FR };
+}
 
 /** Models a small town actually parks: [type for the collision box, vehicles-family model]. */
 export const CARS: [VehicleType, string][] = [
@@ -28,7 +97,7 @@ export const WEEDS = ['weeds_a', 'weeds_b', 'grass_tall_a', 'grass_tall_b', 'dan
 
 /** Paved pad over a world rectangle, tiled so it follows the ground. */
 export function pave(pl: Placer, x0: number, z0: number, x1: number, z1: number, color: Col = ASPHALT, mat = 'asphalt', dy = 0.05) {
-  pl.reserve(x0, z0, x1, z1);
+  freserve(pl, x0, z0, x1, z1);
   const k = pl.k;
   const nx = Math.max(1, Math.ceil((x1 - x0) / 10));
   const nz = Math.max(1, Math.ceil((z1 - z0) / 10));
@@ -39,17 +108,50 @@ export function pave(pl: Placer, x0: number, z0: number, x1: number, z1: number,
       const cx = x0 + (i + 0.5) * w;
       const cz = z0 + (j + 0.5) * d;
       if (isWater(cx, cz)) continue;
-      k.at(cx, cz, 0, () => k.box(0, -0.4, 0, w + 0.02, 0.4 + dy, d + 0.02, color, mat, { cast: false }), heightAt(cx, cz));
+      at(k, cx, cz, 0, () => k.box(0, -0.4, 0, w + 0.02, 0.4 + dy, d + 0.02, color, mat, { cast: false }), heightAt(cx, cz));
     }
 }
 
+/** Left and right limits of a lot at depth z, in frame coordinates (the lines of the streets either side). */
+export type Bounds = { xl: (z: number) => number; xr: (z: number) => number };
+
+/** Paving between slanted side lines: narrow strips across, each as wide as the bounds allow at its depth. */
+export function paveTrap(pl: Placer, z0: number, z1: number, b: Bounds, color: Col = ASPHALT, mat = 'asphalt', dy = 0.05) {
+  const k = pl.k;
+  const n = Math.max(1, Math.ceil((z1 - z0) / 1.5));
+  const d = (z1 - z0) / n;
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (let j = 0; j < n; j++) {
+    const za = z0 + j * d;
+    const xa = Math.max(b.xl(za), b.xl(za + d));
+    const xb = Math.min(b.xr(za), b.xr(za + d));
+    if (xb - xa < 0.5) continue;
+    lo = Math.min(lo, xa);
+    hi = Math.max(hi, xb);
+    const m = Math.max(1, Math.ceil((xb - xa) / 12));
+    const w = (xb - xa) / m;
+    for (let i = 0; i < m; i++) {
+      const cx = xa + (i + 0.5) * w;
+      if (!isWater(cx, za + d / 2)) at(k, cx, za + d / 2, 0, () => k.box(0, -0.4, 0, w + 0.02, 0.4 + dy, d + 0.02, color, mat, { cast: false }));
+    }
+  }
+  if (hi > lo) freserve(pl, lo, z0, hi, z1);
+}
+
+/** Concrete path between two frame points. */
+export function path(pl: Placer, ax: number, az: number, bx: number, bz: number, w = 2.4) {
+  const len = Math.hypot(bx - ax, bz - az);
+  at(pl.k, (ax + bx) / 2, (az + bz) / 2, Math.atan2(bx - ax, bz - az), () => pl.k.box(0, -0.3, 0, w, 0.36, len, CONCRETE, 'concrete', { cast: false }));
+}
+
 /** Is a spot taken by a real obstacle (wall, car, prop)? Unlike the lot occupancy this carries no planning margin. */
-export const hard = (pl: Placer, x: number, z: number, r = 0.3) => !!pl.c.occ.solids?.blocked(x, z, r);
+export const hard = (pl: Placer, x: number, z: number, r = 0.3) => !!pl.c.occ.solids?.blocked(...W(x, z), r);
 
 /** Blender prop standing on the ground at a world position. */
 export function prop(pl: Placer, name: string, x: number, z: number, ry = 0, solid: boolean | number = true, s?: number) {
   if (isWater(x, z)) return;
-  pl.k.at(x, z, ry, () => put(pl.k, name, 0, 0, 0, 0, s ? { solid, s } : { solid }), heightAt(x, z));
+  at(pl.k, x, z, ry, () => put(pl.k, name, 0, 0, 0, 0, s ? { solid, s } : { solid }), heightAt(x, z));
 }
 
 /** Loose props dropped at random over a rectangle (never inside a building). */
@@ -57,7 +159,7 @@ export function scatter(pl: Placer, rng: Rng, names: string[], x0: number, z0: n
   for (let i = 0; i < n; i++) {
     const x = rng.range(x0, x1);
     const z = rng.range(z0, z1);
-    if (pl.c.occ.blocked(x, z, 0.3)) continue;
+    if (occB(pl, x, z, 0.3)) continue;
     prop(pl, rng.pick(names), x, z, rng.range(0, PI * 2), solid);
   }
 }
@@ -68,14 +170,14 @@ export function weedLine(pl: Placer, rng: Rng, ax: number, az: number, bx: numbe
   for (let t = rng.range(0, every); t < len; t += rng.range(every * 0.5, every * 1.6)) {
     const x = ax + ((bx - ax) * t) / len + rng.range(-0.3, 0.3);
     const z = az + ((bz - az) * t) / len + rng.range(-0.3, 0.3);
-    if (!isWater(x, z) && !pl.c.occ.blocked(x, z, 0.1)) pl.trees.push({ kind: rng.pick(WEEDS), x, z, s: rng.range(0.8, 1.4), ry: rng.range(0, 6) });
+    if (!isWater(x, z) && !occB(pl, x, z, 0.1)) ftree(pl, rng.pick(WEEDS), x, z, rng.range(0.8, 1.4), rng.range(0, 6));
   }
 }
 
 /** A parked car from a list of [type, model] pairs. */
 export function parked(pl: Placer, rng: Rng, x: number, z: number, heading: number, list: [VehicleType, string][] = CARS) {
   const [type, model] = rng.pick(list);
-  pl.car(type, x, z, heading, rng.pick(CAR_COLORS), { model });
+  fcar(pl, type, x, z, heading, rng.pick(CAR_COLORS), { model });
 }
 
 /**
@@ -86,14 +188,14 @@ export function stalls(pl: Placer, rng: Rng, x: number, z: number, ry: number, n
   const k = pl.k;
   const sw = 2.75;
   const len = o.len ?? 5.2;
-  k.at(x, z, ry, () => {
+  at(k, x, z, ry, () => {
     for (let i = 0; i <= n; i++) k.box(i * sw, 0.05, len / 2, 0.11, 0.03, len, o.line ?? 0xe9e7df, 'paint', { cast: false });
     if (o.stops) for (let i = 0; i < n; i++) put(k, 'wheel_stop_yellow', (i + 0.5) * sw, 0.05, 0.45, 0, { solid: false });
   }, heightAt(x, z));
   for (let i = 0; i < n; i++) {
     if (!rng.chance(o.fill ?? 0.5)) continue;
     const [cx, cz] = Placer.world(x, z, ry, (i + 0.5) * sw + rng.range(-0.15, 0.15), len / 2 + rng.range(-0.1, 0.35));
-    if (pl.c.occ.blocked(cx, cz, 1.2)) continue;
+    if (occB(pl, cx, cz, 1.2)) continue;
     parked(pl, rng, cx, cz, ry + (rng.chance(0.8) ? PI / 2 : -PI / 2) + rng.range(-0.04, 0.04), o.list);
   }
 }
@@ -105,7 +207,7 @@ export function fence(pl: Placer, kind: 'chain' | 'tall' | 'board', pts: [number
     const [ax, az] = pts[i];
     const [bx, bz] = pts[i + 1];
     const y = heightAt((ax + bx) / 2, (az + bz) / 2);
-    k.at(0, 0, 0, () => (kind === 'board' ? boardFence(k, ax, az, bx, bz, col, 1.8) : chainLink(k, ax, az, bx, bz, kind === 'tall' ? 2.2 : 1.4)), y);
+    at(k, 0, 0, 0, () => (kind === 'board' ? boardFence(k, ax, az, bx, bz, col, 1.8) : chainLink(k, ax, az, bx, bz, kind === 'tall' ? 2.2 : 1.4)), y);
   }
 }
 
@@ -120,7 +222,7 @@ export function poleLine(pl: Placer, pts: [number, number][], o: { h?: number; l
     // cross-arms square to the run
     const ry = o.facing ?? Math.atan2(n[0] - p[0], n[1] - p[1]);
     let att: THREE.Vector3[] = [];
-    k.at(x, z, ry, () => (att = utilityPole(k, 0, 0, 0, { h: o.h ?? 9.5, transformer: i % 3 === 1, lamp: o.lamps && i % 2 === 0 })), heightAt(x, z));
+    at(k, x, z, ry, () => (att = utilityPole(k, 0, 0, 0, { h: o.h ?? 9.5, transformer: i % 3 === 1, lamp: o.lamps && i % 2 === 0 })), heightAt(x, z));
     poles.push(att);
   });
   connectPoles(k, poles);
@@ -134,7 +236,7 @@ export function trashCorner(pl: Placer, rng: Rng, x: number, z: number, ry: numb
   const at = (name: string, lx: number, lz: number, r = 0, solid: boolean | number = true) => {
     const [wx, wz] = Placer.world(x, z, ry, lx, lz);
     if (solid !== false && doors.some((d) => Math.abs(lx - d) < 1.0)) return;
-    if (hard(pl, wx, wz, solid === false ? 0 : 0.3) || pl.onStreet(wx, wz, -0.4)) return;
+    if (hard(pl, wx, wz, solid === false ? 0 : 0.3) || onSt(pl, wx, wz, -0.4)) return;
     prop(pl, name, wx, wz, ry + r, solid);
   };
   const h = w / 2;
@@ -156,17 +258,18 @@ export function trashCorner(pl: Placer, rng: Rng, x: number, z: number, ry: numb
 
 /** Cobra-head lot lights (or old-style lamps) at world points. */
 export function lamps(pl: Placer, pts: [number, number, number?][], name = 'street_lamp_cobra') {
-  for (const [x, z, ry] of pts) if (!pl.c.occ.blocked(x, z, 0.2)) prop(pl, name, x, z, ry ?? 0, 0.3);
+  for (const [x, z, ry] of pts) if (!occB(pl, x, z, 0.2)) prop(pl, name, x, z, ry ?? 0, 0.3);
 }
 
 /**
  * A surface car park over a world rectangle: asphalt, double rows of stalls with drive aisles between (rows run
  * along x when the lot is wider than deep), lights, oil stains, litter and weeds at the edges.
  */
-export function carPark(pl: Placer, rng: Rng, x0: number, z0: number, x1: number, z1: number, o: { fill?: number; color?: Col; list?: [VehicleType, string][]; stops?: boolean; lights?: boolean } = {}) {
-  pave(pl, x0, z0, x1, z1, o.color ?? ASPHALT);
+export function carPark(pl: Placer, rng: Rng, x0: number, z0: number, x1: number, z1: number, o: { fill?: number; color?: Col; list?: [VehicleType, string][]; stops?: boolean; lights?: boolean; b?: Bounds } = {}) {
+  if (o.b) paveTrap(pl, z0, z1, o.b, o.color ?? ASPHALT);
+  else pave(pl, x0, z0, x1, z1, o.color ?? ASPHALT);
   const k = pl.k;
-  const alongX = x1 - x0 >= z1 - z0;
+  const alongX = !!o.b || x1 - x0 >= z1 - z0;
   const L = alongX ? x1 - x0 : z1 - z0; // row length
   const D = alongX ? z1 - z0 : x1 - x0; // across the rows
   const n = Math.floor((L - 1.5) / 2.75);
@@ -185,7 +288,16 @@ export function carPark(pl: Placer, rng: Rng, x0: number, z0: number, x1: number
   }
   for (const [c, dir] of rows) {
     // stall frame: local x along the row, cars nose toward local -z
-    if (alongX) stalls(pl, rng, dir > 0 ? x0 + pad : x1 - pad, z0 + c, dir > 0 ? 0 : PI, n, o);
+    if (o.b) {
+      // each row is fitted to the slanted sides at its own depth
+      const za = z0 + c;
+      const zb = za + dir * 5.3;
+      const xa = Math.max(o.b.xl(za), o.b.xl(zb)) + 0.3;
+      const xb = Math.min(o.b.xr(za), o.b.xr(zb)) - 0.3;
+      const m = Math.floor((xb - xa - 1) / 2.75);
+      const p = (xb - xa - m * 2.75) / 2;
+      if (m > 0) stalls(pl, rng, dir > 0 ? xa + p : xb - p, za, dir > 0 ? 0 : PI, m, o);
+    } else if (alongX) stalls(pl, rng, dir > 0 ? x0 + pad : x1 - pad, z0 + c, dir > 0 ? 0 : PI, n, o);
     else stalls(pl, rng, x0 + c, dir > 0 ? z1 - pad : z0 + pad, dir > 0 ? PI / 2 : -PI / 2, n, o);
   }
   // wear: oil stains and patched squares
@@ -193,7 +305,7 @@ export function carPark(pl: Placer, rng: Rng, x0: number, z0: number, x1: number
     const x = rng.range(x0 + 2, x1 - 2);
     const z = rng.range(z0 + 2, z1 - 2);
     const s = rng.range(0.6, 1.8);
-    k.at(x, z, rng.range(0, 3), () => k.box(0, 0.05, 0, s, 0.014, s * rng.range(0.6, 1.4), rng.pick<Col>([0x55585e, 0x4a4d52, 0x8e9197]), 'paint', { cast: false }), heightAt(x, z));
+    at(k, x, z, rng.range(0, 3), () => k.box(0, 0.05, 0, s, 0.014, s * rng.range(0.6, 1.4), rng.pick<Col>([0x55585e, 0x4a4d52, 0x8e9197]), 'paint', { cast: false }), heightAt(x, z));
   }
   scatter(pl, rng, RUBBISH.slice(6), x0, z0, x1, z1, (L * D) / 220);
 }
@@ -206,7 +318,7 @@ export function wear(pl: Placer, rng: Rng, x0: number, z0: number, x1: number, z
     const x = rng.range(x0, x1);
     const z = rng.range(z0, z1);
     const t = rng.next();
-    k.at(x, z, t < 0.45 ? rng.pick([0, PI / 2]) + rng.range(-0.06, 0.06) : rng.range(0, 3), () => {
+    at(k, x, z, t < 0.45 ? rng.pick([0, PI / 2]) + rng.range(-0.06, 0.06) : rng.range(0, 3), () => {
       if (t < 0.45) k.box(0, 0.062, 0, rng.range(1.2, 3.6), 0.012, rng.range(0.8, 2.2), rng.pick<Col>([0x5d6066, 0x66696f, 0x54575c, 0x8b8e94]), 'asphalt', { cast: false });
       else if (t < 0.75) k.box(0, 0.064, 0, rng.range(0.5, 1.5), 0.012, rng.range(0.4, 1.2), rng.pick<Col>([0x3e4044, 0x494b50, 0x45423e]), 'paint', { cast: false });
       else k.box(0, 0.066, 0, rng.range(2.5, 7), 0.012, 0.07, 0x2e3033, 'paint', { cast: false });
@@ -229,7 +341,7 @@ function put1(pl: Placer, name: string, x: number, z: number, ry: number) {
  */
 export function alleyEdge(pl: Placer, rng: Rng, xa: number, xb: number, z: number, out: 1 | -1) {
   const ry = out > 0 ? PI : 0; // props face the alley
-  const free = (x: number, zz: number, r: number) => !hard(pl, x, zz, r) && !pl.onStreet(x, zz, 0.1) && !pl.drives.blocked(x, zz, 0.2);
+  const free = (x: number, zz: number, r: number) => !hard(pl, x, zz, r) && !onSt(pl, x, zz, 0.1) && !drv(pl, x, zz, 0.2);
   let x = xa + rng.range(2, 5);
   while (x < xb - 3) {
     const t = rng.next();
@@ -256,7 +368,7 @@ export function alleyEdge(pl: Placer, rng: Rng, xa: number, xb: number, z: numbe
   }
   for (let wx = xa + 1; wx < xb - 1; wx += rng.range(1.6, 3.4)) {
     const zz = z + out * rng.range(-0.15, 0.25);
-    if (!hard(pl, wx, zz, 0.15)) pl.trees.push({ kind: rng.pick(WEEDS), x: wx, z: zz, ry: rng.range(0, 6), s: rng.range(0.7, 1.2) });
+    if (!hard(pl, wx, zz, 0.15)) ftree(pl, rng.pick(WEEDS), wx, zz, rng.range(0.7, 1.2), rng.range(0, 6));
   }
 }
 
@@ -268,7 +380,7 @@ export function treeEdge(pl: Placer, rng: Rng, ax: number, az: number, bx: numbe
   for (let t = every * 0.5; t < len; t += every * rng.range(0.8, 1.25)) {
     const x = ax + ((bx - ax) * t) / len;
     const z = az + ((bz - az) * t) / len;
-    if (!isWater(x, z) && !pl.c.occ.blocked(x, z, 0.8) && !pl.drives.blocked(x, z, 2.5)) pl.trees.push({ kind: rng.pick(kinds), x, z, s: rng.range(0.75, 1.0), ry: rng.range(0, 6) });
+    if (!isWater(x, z) && !occB(pl, x, z, 0.8) && !drv(pl, x, z, 2.5)) ftree(pl, rng.pick(kinds), x, z, rng.range(0.75, 1.0), rng.range(0, 6));
   }
   weedLine(pl, rng, ax, az, bx, bz, 3.5);
 }
@@ -325,17 +437,19 @@ export type BackKind = 'park' | 'split' | 'yard' | 'market';
  * street lies to the south). Always paved and used: customer parking, a works yard, market stalls, or houses
  * that front the back street; entrances cut the kerb of the back street and the side avenues.
  */
-export function backLot(pl: Placer, rng: Rng, xa: number, xb: number, zAlley: number, zStreet: number, out: 1 | -1, kind: BackKind, houses: () => void = () => {}) {
+export function backLot(pl: Placer, rng: Rng, xa: number, xb: number, zAlley: number, zStreet: number, out: 1 | -1, kind: BackKind, houses: () => void = () => {}, b?: Bounds) {
   const z0 = Math.min(zAlley, zStreet);
   const z1 = Math.max(zAlley, zStreet);
   const m = 0.8;
   const zs = out > 0 ? z1 - m : z0 + m; // lot edge toward the back street
   const cut = kind === 'park' ? xb : kind === 'split' ? xa + (xb - xa) * 0.52 : xa + (xb - xa) * 0.56;
   const lot: Rect = { x0: xa + m, z0: z0 + (out > 0 ? 0 : m), x1: cut - (cut < xb ? 1.2 : m), z1: z1 - (out > 0 ? m : 0) };
-  carPark(pl, rng, lot.x0, lot.z0, lot.x1, lot.z1, { fill: kind === 'market' ? 0.3 : 0.55, stops: true });
-  pl.entrance((lot.x0 + lot.x1) / 2 + 3.4, zs, 0, out, 6.5);
-  pl.entrance(lot.x0, (z0 + z1) / 2 + out * 6, -1, 0, 6);
-  if (kind === 'park') pl.entrance(lot.x1, (z0 + z1) / 2 + out * 6, 1, 0, 6);
+  // with bounds the car park follows the slanted avenue lines instead of stopping at the block's inner rectangle
+  const bb = b && { xl: (z: number) => b.xl(z) + m, xr: (z: number) => (cut < xb ? lot.x1 : b.xr(z) - m) };
+  carPark(pl, rng, lot.x0, lot.z0, lot.x1, lot.z1, { fill: kind === 'market' ? 0.3 : 0.55, stops: true, b: bb });
+  fentrance(pl, (lot.x0 + lot.x1) / 2 + 3.4, zs, 0, out, 6.5);
+  fentrance(pl, lot.x0, (z0 + z1) / 2 + out * 6, -1, 0, 6);
+  if (kind === 'park') fentrance(pl, lot.x1, (z0 + z1) / 2 + out * 6, 1, 0, 6);
   const rest: Rect = { x0: cut + 1.2, z0: lot.z0, x1: xb - m, z1: lot.z1 };
   if (kind === 'yard') worksYard(pl, rng, { ...rest, z0: rest.z0 + (out > 0 ? 1 : 0), z1: rest.z1 - (out > 0 ? 0 : 1) }, out > 0 ? 'n' : 's');
   else if (kind === 'market') {
@@ -359,11 +473,11 @@ export function paveR(pl: Placer, cx: number, cz: number, ry: number, w: number,
   for (let i = 0; i < n; i++) {
     const lx = -w / 2 + ((i + 0.5) * w) / n;
     const [x, z] = Placer.world(cx, cz, ry, lx, 0);
-    k.at(x, z, ry, () => k.box(0, -0.4, 0, w / n + 0.02, 0.4 + dy, d, color, mat, { cast: false }), heightAt(x, z));
+    at(k, x, z, ry, () => k.box(0, -0.4, 0, w / n + 0.02, 0.4 + dy, d, color, mat, { cast: false }), heightAt(x, z));
   }
   if (!reserve) return;
   const c = [-1, 1].flatMap((a) => [-1, 1].map((b) => Placer.world(cx, cz, ry, (a * w) / 2, (b * d) / 2)));
-  pl.reserve(Math.min(...c.map((p) => p[0])), Math.min(...c.map((p) => p[1])), Math.max(...c.map((p) => p[0])), Math.max(...c.map((p) => p[1])));
+  freserve(pl, Math.min(...c.map((p) => p[0])), Math.min(...c.map((p) => p[1])), Math.max(...c.map((p) => p[0])), Math.max(...c.map((p) => p[1])));
 }
 
 /** A hedge between two world points (2 m sections). */
@@ -375,7 +489,7 @@ export function hedge(pl: Placer, ax: number, az: number, bx: number, bz: number
     const t = (i + 0.5) / n;
     const x = ax + (bx - ax) * t;
     const z = az + (bz - az) * t;
-    if (!isWater(x, z) && !pl.c.occ.blocked(x, z, 0.1) && !pl.onStreet(x, z) && !pl.drives.blocked(x, z, 0.3)) pl.trees.push({ kind, x, z, s: len / n / 2, ry });
+    if (!isWater(x, z) && !occB(pl, x, z, 0.1) && !onSt(pl, x, z) && !drv(pl, x, z, 0.3)) ftree(pl, kind, x, z, len / n / 2, ry);
   }
 }
 
@@ -390,7 +504,7 @@ export function forecourt(pl: Placer, rng: Rng, f: { x: number; z: number; ry: n
   const [cx, cz] = L(0, d / 2 + depth / 2);
   paveR(pl, cx, cz, f.ry, W, depth, o.color ?? ASPHALT);
   const k = pl.k;
-  if (o.walk !== false) k.at(f.x, f.z, f.ry, () => k.box(0, 0.05, d / 2 + 0.8, w, 0.1, 1.6, CONCRETE, 'concrete', { cast: false }), heightAt(f.x, f.z));
+  if (o.walk !== false) at(k, f.x, f.z, f.ry, () => k.box(0, 0.05, d / 2 + 0.8, w, 0.1, 1.6, CONCRETE, 'concrete', { cast: false }), heightAt(f.x, f.z));
   const n = Math.floor((W - 1) / 2.75);
   const h = (n * 2.75) / 2;
   const row = (lz: number, flip: boolean, fill = o.fill ?? 0.5) => {
@@ -411,7 +525,7 @@ export function forecourt(pl: Placer, rng: Rng, f: { x: number; z: number; ry: n
   const dir: [number, number] = [Math.sin(f.ry), Math.cos(f.ry)];
   for (const sx of W > 26 ? [-1, 1] : [1]) {
     const [x, z] = L(sx * (W / 2 - 4.5), d / 2 + depth - 0.2);
-    pl.entrance(x, z, dir[0], dir[1], 6.5);
+    fentrance(pl, x, z, dir[0], dir[1], 6.5);
   }
   const [a, b] = [L(-W / 2, d / 2 + 1), L(W / 2, d / 2 + depth - 1)];
   scatter(pl, rng, RUBBISH.slice(6), Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), 2 + (W * depth) / 200);
@@ -420,7 +534,7 @@ export function forecourt(pl: Placer, rng: Rng, f: { x: number; z: number; ry: n
 /** Roadside pole sign with a printed name panel and a strap line under it, readable from both directions. */
 export function poleSign(pl: Placer, key: string, x: number, z: number, ry: number, name: string, strap: string, bg = '#f1ede2', ink = '#26303a') {
   if (isWater(x, z)) return;
-  pl.k.at(x, z, ry, () => {
+  at(pl.k, x, z, ry, () => {
     put(pl.k, 'pole_sign_rect', 0, 0, 0, 0, { solid: 0.4 });
     for (const [dz, r, tag] of [[0.08, 0, 'a'], [-0.08, PI, 'b']] as const) {
       signBoard(pl.c, `pole.${key}.${tag}`, 0, 5.2, dz, 2.42, 1.17, bg, [{ text: name, font: F_OS, weight: '800', color: ink, y: 0.56, size: 0.5, maxW: 0.9 }], { frame: 0x2a2c30, ry: r, border: ink });
@@ -434,5 +548,5 @@ export function level(r: Rect, fall = 5, m = 1) {
   let h = 0;
   let n = 0;
   for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4; j++) { h += heightAt(r.x0 + ((r.x1 - r.x0) * i) / 4, r.z0 + ((r.z1 - r.z0) * j) / 4); n++; }
-  addLotPad((r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2, r.x1 - r.x0 + m * 2, r.z1 - r.z0 + m * 2, 0, h / n, fall);
+  addLotPad(...W((r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2), r.x1 - r.x0 + m * 2, r.z1 - r.z0 + m * 2, FR, h / n, fall);
 }

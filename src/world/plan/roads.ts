@@ -4,40 +4,96 @@ import { RoadNetwork, type RoadDef, type RoadKind } from '../roads/network';
  * Pine Hollow town plan. Coordinates in metres: x east, z south.
  *
  * Highway 10 winds down the valley, widens into a commercial strip (W Main) and narrows again into four kerbed
- * downtown blocks of Main Street. Around that core the streets step down in rank: Division St, Riverside Dr,
+ * downtown blocks of Main Street, which bends at every avenue so no block is square. Around that core the streets step down in rank: Division St, Riverside Dr,
  * Alder St and Lakeshore Dr collect; the avenues and Maple St are ordinary residential streets that bend, stop
  * short or end in a T; service alleys run behind the shop rows. Outside it: Cedar Ridge (the view lots on the
  * hill above the lake), the Flats by the cannery, the Whispering Pines trailer court off Fairground Rd, the
  * freight and container yards, the lumber yard in the western woods and the farms across the river.
  */
 
-/** The downtown core: avenue centre lines, the alleys behind Main Street's shop rows and the streets behind those. */
-export const CORE = { aves: [-200, -100, 0, 100, 200], alley: 37, north: -92, south: 86 };
+type Pt = [number, number];
+
+/**
+ * Downtown is not a grid. Main Street swings south round the square and back, bending a little at every avenue;
+ * the two inner avenues stand square to it, so they fan out toward the lake, and no two blocks are the same
+ * width or shape. MAIN lists Main Street's junctions with 2nd Ave W, 1st Ave W, Division St, 1st Ave E, 2nd Ave E.
+ */
+export const MAIN: Pt[] = [[-200, 0], [-116, 9.5], [0, 19], [84, 15], [200, 0]];
+/** How far each avenue leans east per metre travelled south. */
+const LEAN = [0, -0.098, 0, 0.088, 0];
+/** Where each avenue meets Riverside Dr (north) and Alder St (south). */
+const NORTH_Z = [-90, -88, -80, -82, -88];
+const SOUTH_Z = [85, 92, 100, 96, 88];
+const aveAt = (i: number, z: number): Pt => [+(MAIN[i][0] + LEAN[i] * (z - MAIN[i][1])).toFixed(2), z];
+export const AVE_N: Pt[] = MAIN.map((_, i) => aveAt(i, NORTH_Z[i]));
+export const AVE_S: Pt[] = MAIN.map((_, i) => aveAt(i, SOUTH_Z[i]));
+/** Service alleys run this far behind Main Street's centre line. */
+export const ALLEY = 37;
+/** The bank's customer lot takes this much of the NE block's Main Street frontage, measured from 1st Ave E. */
+export const BANK_LOT = 34;
+
+/** Main Street: straight along each block face, turning inside the junctions. */
+const mainPts = (): Pt[] => {
+  const out: Pt[] = [];
+  MAIN.forEach((j, i) => {
+    if (i > 0) out.push(toward(j, MAIN[i - 1], 8));
+    out.push(j);
+    if (i < MAIN.length - 1) out.push(toward(j, MAIN[i + 1], 8));
+  });
+  return out;
+};
+function toward(a: Pt, b: Pt, d: number): Pt {
+  const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  return [a[0] + ((b[0] - a[0]) * d) / l, a[1] + ((b[1] - a[1]) * d) / l];
+}
+
+/** One block face of Main Street: block i (between avenues i and i + 1), south (+1) or north (-1) side. */
+export function face(i: number, side: 1 | -1) {
+  const [a, b] = side > 0 ? [MAIN[i], MAIN[i + 1]] : [MAIN[i + 1], MAIN[i]];
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  const ux = (b[0] - a[0]) / len;
+  const uz = (b[1] - a[1]) / len;
+  // local x runs along the face from avenue `left`, local z into the block
+  return { x: a[0], z: a[1], ry: Math.atan2(-uz, ux), len, ux, uz, nx: -uz, nz: ux, left: side > 0 ? i : i + 1, right: side > 0 ? i + 1 : i };
+}
+
+/** The alley behind a block face, from its left avenue to its right one (or only as far as `to` metres along the face). */
+function alley(i: number, side: 1 | -1, to?: number): Pt[] {
+  const f = face(i, side);
+  const hit = (k: number): Pt => {
+    // offset line P = a + u t + n ALLEY meets avenue k: x = MAIN[k].x + LEAN[k] (z - MAIN[k].z)
+    const ox = f.x + f.nx * ALLEY;
+    const oz = f.z + f.nz * ALLEY;
+    const t = (MAIN[k][0] + LEAN[k] * (oz - MAIN[k][1]) - ox) / (f.ux - LEAN[k] * f.uz);
+    return [ox + f.ux * t, oz + f.uz * t];
+  };
+  return [hit(f.left), to === undefined ? hit(f.right) : [f.x + f.ux * to + f.nx * ALLEY, f.z + f.uz * to + f.nz * ALLEY]];
+}
 
 /** Every road in Pine Hollow. */
 export const ROADS: RoadDef[] = [
   // ---------------------------------------------------------------- Highway 10 -> the strip -> Main Street
   { name: 'Old Hwy 10 W', label: 'Highway 10', kind: 'arterial', pts: [[-1845, 40], [-1500, 30], [-1200, 15], [-1050, 9], [-950, 5], [-760, 0], [-640, 3], [-560, 6], [-500, 10], [-420, 12]] },
   { name: 'W Main St', label: 'Main St', kind: 'strip', pts: [[-420, 12], [-330, 7], [-260, 2], [-200, 0]] },
-  { name: 'Main St', kind: 'downtown', pts: [[-200, 0], [200, 0]] },
-  { name: 'E Main St', label: 'Main St', kind: 'collector', pts: [[200, 0], [300, 0], [360, 0], [420, 0]] },
+  { name: 'Main St', kind: 'downtown', pts: mainPts() },
+  { name: 'E Main St', label: 'Main St', kind: 'collector', pts: [[200, 0], [300, -9], [360, -7], [420, 0]] },
   { name: 'Old Hwy 10 E', label: 'Highway 10', kind: 'arterial', pts: [[420, 0], [520, 0], [700, 0], [820, 2], [900, 5], [1000, 10], [1150, 20], [1400, 10], [1650, -10], [1845, -30]] },
 
   // ---------------------------------------------------------------- collectors
-  { name: 'Division St', kind: 'downtown', pts: [[0, -92], [0, 0], [0, 86]] },
-  { name: 'Division St S', label: 'Division St', kind: 'residential', pts: [[0, 86], [0, 188], [0, 270]] },
-  { name: 'Riverside Dr', kind: 'collector', pts: [[-330, 7], [-334, -30], [-312, -64], [-260, -84], [-200, -90], [-100, -94], [0, -92], [100, -92], [200, -88], [280, -78], [336, -52], [360, 0]] },
-  { name: 'Alder St', kind: 'collector', pts: [[-260, 2], [-263, 40], [-242, 71], [-200, 85], [-100, 86], [0, 86], [100, 86], [200, 88], [303, 88]] },
+  { name: 'Division St', kind: 'downtown', pts: [AVE_N[2], MAIN[2], AVE_S[2]] },
+  { name: 'Division St S', label: 'Division St', kind: 'residential', pts: [AVE_S[2], [0, 188], [0, 270]] },
+  { name: 'Riverside Dr', kind: 'collector', pts: [[-330, 7], [-334, -30], [-312, -64], [-260, -84], AVE_N[0], AVE_N[1], AVE_N[2], AVE_N[3], AVE_N[4], [280, -78], [336, -52], [360, -7]] },
+  { name: 'Alder St', kind: 'collector', pts: [[-260, 2], [-263, 40], [-242, 71], AVE_S[0], AVE_S[1], AVE_S[2], AVE_S[3], AVE_S[4], [303, 88]] },
   { name: 'Lakeshore Dr', kind: 'collector', pts: [[-400, 318], [-300, 298], [-200, 282], [-100, 273], [0, 270], [100, 271], [200, 279], [300, 294], [400, 316]] },
 
   // ---------------------------------------------------------------- avenues: wide through the core, ordinary streets south of Alder
-  { name: '1st Ave W', kind: 'collector', pts: [[-100, -94], [-100, 0], [-100, 86]] },
-  { name: '1st Ave W S', label: '1st Ave W', kind: 'residential', pts: [[-100, 86], [-103, 140], [-100, 190]] },
-  { name: '1st Ave E', kind: 'collector', pts: [[100, -92], [100, 0], [100, 86]] },
-  { name: '1st Ave E S', label: '1st Ave E', kind: 'residential', pts: [[100, 86], [98, 135], [100, 180]] },
+  { name: '1st Ave W', kind: 'collector', pts: [AVE_N[1], MAIN[1], AVE_S[1]] },
+  { name: '1st Ave W S', label: '1st Ave W', kind: 'residential', pts: [AVE_S[1], [-112, 142], [-100, 190]] },
+  { name: '1st Ave E', kind: 'collector', pts: [AVE_N[3], MAIN[3], AVE_S[3]] },
+  { name: '1st Ave E S', label: '1st Ave E', kind: 'residential', pts: [AVE_S[3], [96, 138], [100, 180]] },
   { name: '2nd Ave W', kind: 'residential', pts: [[-200, -90], [-200, 0], [-200, 85]] },
   { name: '2nd Ave E', kind: 'residential', pts: [[200, -88], [200, 0], [200, 88], [204, 172], [214, 230], [200, 279]] },
-  { name: '3rd Ave E', kind: 'residential', pts: [[300, 0], [303, 88], [312, 166], [318, 236], [300, 294]] },
+  { name: '3rd Ave E', kind: 'residential', pts: [[300, -9], [303, 88], [312, 166], [318, 236], [300, 294]] },
   // Lake Hill Rd drops from the foot of 2nd Ave W to the lake on a long bend; Maple St leaves it and bows toward the shore
   { name: 'Lake Hill Rd', kind: 'residential', pts: [[-200, 85], [-212, 140], [-246, 200], [-284, 250], [-300, 298]] },
   { name: 'Maple St', kind: 'residential', pts: [[-212, 140], [-170, 172], [-100, 190], [0, 188], [100, 180], [204, 172], [312, 166]] },
@@ -45,9 +101,11 @@ export const ROADS: RoadDef[] = [
   { name: 'Birch Ct', kind: 'residential', pts: [[100, 180], [108, 222], [84, 244]], culdesac: true },
 
   // ---------------------------------------------------------------- service alleys behind the Main Street rows
-  { name: 'Alley S', label: '', kind: 'alley', pts: [[-200, CORE.alley], [200, CORE.alley]] },
-  { name: 'Alley NW', label: '', kind: 'alley', pts: [[-200, -CORE.alley], [0, -CORE.alley]] },
-  { name: 'Alley NE', label: '', kind: 'alley', pts: [[131, -CORE.alley], [200, -CORE.alley]] },
+  ...[0, 1, 2, 3].map((i): RoadDef => ({ name: `Alley S${i}`, label: '', kind: 'alley', pts: alley(i, 1) })),
+  { name: 'Alley N0', label: '', kind: 'alley', pts: alley(0, -1) },
+  { name: 'Alley N1', label: '', kind: 'alley', pts: alley(1, -1) },
+  // behind the bank's own lot the alley starts part-way along the block
+  { name: 'Alley N3', label: '', kind: 'alley', pts: alley(3, -1, face(3, -1).len - BANK_LOT) },
 
   // ---------------------------------------------------------------- lake front, beyond the core
   { name: 'Lakeshore Dr W', label: 'Lakeshore Dr', kind: 'rural', pts: [[-400, 318], [-470, 338], [-540, 356], [-600, 390], [-640, 440]], culdesac: true },
@@ -62,7 +120,7 @@ export const ROADS: RoadDef[] = [
   { name: 'Slough Rd', kind: 'gravel', pts: [[318, 236], [370, 246], [440, 252], [482, 290]], culdesac: true },
 
   // ---------------------------------------------------------------- north over the river: farm country
-  { name: 'County Rd 5', kind: 'rural', pts: [[0, -92], [0, -160], [0, -240], [4, -340], [0, -430], [-6, -520], [0, -610]], culdesac: true },
+  { name: 'County Rd 5', kind: 'rural', pts: [AVE_N[2], [0, -160], [0, -240], [4, -340], [0, -430], [-6, -520], [0, -610]], culdesac: true },
   { name: 'Orchard Rd', kind: 'gravel', pts: [[0, -340], [140, -336], [300, -345], [460, -340], [600, -330]], culdesac: true },
   { name: 'Hansen Rd', kind: 'gravel', pts: [[0, -430], [-150, -436], [-320, -428], [-480, -420], [-620, -400]], culdesac: true },
 
