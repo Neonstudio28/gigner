@@ -234,7 +234,7 @@ class Figure:
             if band:
                 az = self._split(az, band)
                 fz = self._split(fz, band)
-            self.limb('arm_' + sd, cx, ARM, az, cap=0.80, n=AN, lean=-sgn * 0.022, soft_top=True)
+            self.limb('arm_' + sd, cx, ARM, az, cap=0.60, n=AN, lean=-sgn * 0.026, soft_top=True)
             self.limb('forearm_' + sd, cx, FOREARM, fz, bottom='flat', n=AN)
             self.hand('forearm_' + sd, sgn, glove or 'skin')
 
