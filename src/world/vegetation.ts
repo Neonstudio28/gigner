@@ -5,8 +5,11 @@ import { Rng } from './core/rng';
 import { groundHeight, forestDensity, valley, isWater, river, MAP_RADIUS } from './terrain';
 import { addWindSway } from './materials';
 import { P } from './palette';
+import { asset, hasAsset } from './assets';
 
 export type TreeKind = 'fir' | 'pine' | 'oak' | 'bush' | 'young' | 'apple';
+/** A generic kind, or the name of one model from the vegetation family. */
+export type PlantKind = TreeKind | (string & {});
 
 function piece(g: THREE.BufferGeometry, color: Col, m?: THREE.Matrix4): THREE.BufferGeometry {
   const p = prepare(g, color);
@@ -204,24 +207,24 @@ interface Inst {
 
 const FINE = 200;
 const COARSE = 600;
-const HIGH_DIST = 260;
+const HIGH_DIST = 230;
 const GRASS_DIST = 150;
-const BUSH_DIST = 320;
+const BUSH_DIST = 260;
 const CORN_DIST = 720;
+/** Full-detail models stand within this distance; their lighter `_far` versions take over beyond it. */
+const NEAR = 70;
+const CELL = 50;
 
-/** Which far stand-in a detailed kind collapses to. */
-const LOW_OF: Record<string, 'lowC' | 'lowB' | null> = {
-  fir0: 'lowC',
-  fir1: 'lowC',
-  pine0: 'lowC',
-  oak0: 'lowB',
-  oak1: 'lowB',
-  apple0: 'lowB',
-  bush0: null,
-  grass0: null,
-  grass1: null,
-  corn0: null,
-};
+type Cat = 'tree' | 'grass' | 'bush' | 'corn';
+interface KindDef {
+  geo: THREE.BufferGeometry;
+  mat: THREE.Material;
+  cat: Cat;
+  /** Which distant stand-in the kind collapses to. */
+  low: 'lowC' | 'lowB' | null;
+  /** Full-detail version shown close to the camera. */
+  hi?: { geo: THREE.BufferGeometry; mat: THREE.Material };
+}
 
 interface FineChunk {
   minX: number;
@@ -238,6 +241,13 @@ interface CoarseChunk {
   low: THREE.Object3D[];
   fine: FineChunk[];
 }
+interface Cell {
+  minX: number;
+  minZ: number;
+  y: number;
+  kinds: Map<string, Inst[]>;
+  meshes?: THREE.InstancedMesh[];
+}
 
 const rectDist = (x: number, z: number, minX: number, minZ: number, size: number) => {
   const dx = Math.max(minX - x, 0, x - (minX + size));
@@ -245,22 +255,29 @@ const rectDist = (x: number, z: number, minX: number, minZ: number, size: number
   return Math.hypot(dx, dz);
 };
 
-/** Instanced vegetation with two-level chunked LOD (detailed near the camera, cheap stand-ins far away). */
+/** Instanced vegetation with chunked LOD: full models by the camera, light ones in the middle distance, stand-ins far away. */
 export class Vegetation {
   readonly group = new THREE.Group();
   private coarse: CoarseChunk[] = [];
+  private cells = new Map<string, Cell>();
+  private shown = new Set<Cell>();
 
   constructor(
     items: Map<string, Inst[]>,
-    geos: Record<string, THREE.BufferGeometry>,
-    mats: Record<string, THREE.Material>,
+    private defs: Record<string, KindDef>,
   ) {
     this.group.name = 'vegetation';
     const fineMap = new Map<string, FineChunk>();
     const coarseMap = new Map<string, CoarseChunk>();
     const coarseLow = new Map<string, Map<string, Inst[]>>();
     const fineItems = new Map<string, Map<string, Inst[]>>();
-    for (const [kind, arr] of items)
+    const push = <K>(m: Map<K, Inst[]>, k: K, it: Inst) => {
+      let a = m.get(k);
+      if (!a) m.set(k, (a = []));
+      a.push(it);
+    };
+    for (const [kind, arr] of items) {
+      const def = defs[kind];
       for (const it of arr) {
         const x = it.m.elements[12];
         const z = it.m.elements[14];
@@ -268,54 +285,38 @@ export class Vegetation {
         const ck = `${Math.floor(x / COARSE)},${Math.floor(z / COARSE)}`;
         let fm = fineItems.get(fk);
         if (!fm) fineItems.set(fk, (fm = new Map()));
-        let fa = fm.get(kind);
-        if (!fa) fm.set(kind, (fa = []));
-        fa.push(it);
-        const low = LOW_OF[kind];
-        if (low) {
+        push(fm, kind, it);
+        if (def.low) {
           let cm = coarseLow.get(ck);
           if (!cm) coarseLow.set(ck, (cm = new Map()));
-          let ca = cm.get(low);
-          if (!ca) cm.set(low, (ca = []));
-          ca.push(it);
+          push(cm, def.low, it);
+        }
+        if (def.hi) {
+          const cx = Math.floor(x / CELL);
+          const cz = Math.floor(z / CELL);
+          const key = `${cx},${cz}`;
+          let cell = this.cells.get(key);
+          if (!cell) this.cells.set(key, (cell = { minX: cx * CELL, minZ: cz * CELL, y: it.m.elements[13], kinds: new Map() }));
+          push(cell.kinds, kind, it);
         }
       }
-    const inst = (kind: string, arr: Inst[], shadow: boolean) => {
-      const mesh = new THREE.InstancedMesh(geos[kind], mats[kind], arr.length);
-      arr.forEach((it, i) => {
-        mesh.setMatrixAt(i, it.m);
-        mesh.setColorAt(i, it.c);
-      });
-      mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-      mesh.computeBoundingSphere();
-      mesh.castShadow = shadow;
-      mesh.receiveShadow = true;
-      mesh.matrixAutoUpdate = false;
-      mesh.visible = false;
-      mesh.name = kind;
-      this.group.add(mesh);
-      return mesh;
-    };
+    }
     for (const [fk, fm] of fineItems) {
       const [fx, fz] = fk.split(',').map(Number);
       const ck = `${Math.floor((fx * FINE) / COARSE)},${Math.floor((fz * FINE) / COARSE)}`;
       const fc: FineChunk = { minX: fx * FINE, minZ: fz * FINE, high: [], low: [], grass: [], bush: [], corn: [] };
       const lows = new Map<string, Inst[]>();
       for (const [kind, arr] of fm) {
-        const mesh = inst(kind, arr, !kind.startsWith('grass'));
-        if (kind.startsWith('grass')) fc.grass.push(mesh);
-        else if (kind.startsWith('bush')) fc.bush.push(mesh);
-        else if (kind.startsWith('corn')) fc.corn.push(mesh);
-        else fc.high.push(mesh);
-        const low = LOW_OF[kind];
-        if (low) {
-          let la = lows.get(low);
-          if (!la) lows.set(low, (la = []));
+        const def = defs[kind];
+        const mesh = this.inst(def.geo, def.mat, kind, arr, def.cat !== 'grass' && !def.hi);
+        (def.cat === 'tree' ? fc.high : fc[def.cat]).push(mesh);
+        if (def.low) {
+          let la = lows.get(def.low);
+          if (!la) lows.set(def.low, (la = []));
           la.push(...arr);
         }
       }
-      for (const [low, arr] of lows) fc.low.push(inst(low, arr, false));
+      for (const [low, arr] of lows) fc.low.push(this.inst(defs[low].geo, defs[low].mat, low, arr, false));
       fineMap.set(fk, fc);
       let cc = coarseMap.get(ck);
       if (!cc) {
@@ -328,9 +329,27 @@ export class Vegetation {
     for (const [ck, cm] of coarseLow) {
       const cc = coarseMap.get(ck);
       if (!cc) continue;
-      for (const [low, arr] of cm) cc.low.push(inst(low, arr, false));
+      for (const [low, arr] of cm) cc.low.push(this.inst(defs[low].geo, defs[low].mat, low, arr, false));
     }
     this.coarse = [...coarseMap.values()];
+  }
+
+  private inst(geo: THREE.BufferGeometry, mat: THREE.Material, name: string, arr: Inst[], shadow: boolean) {
+    const mesh = new THREE.InstancedMesh(geo, mat, arr.length);
+    arr.forEach((it, i) => {
+      mesh.setMatrixAt(i, it.m);
+      mesh.setColorAt(i, it.c);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    mesh.computeBoundingSphere();
+    mesh.castShadow = shadow;
+    mesh.receiveShadow = true;
+    mesh.matrixAutoUpdate = false;
+    mesh.visible = false;
+    mesh.name = name;
+    this.group.add(mesh);
+    return mesh;
   }
 
   /** Switches chunk detail around the camera; call once per frame. */
@@ -351,14 +370,39 @@ export class Vegetation {
         set(fc.corn, d < CORN_DIST);
       }
     }
+    // full-detail models, built the first time the camera comes near their cell
+    const now = new Set<Cell>();
+    const c0x = Math.floor((cam.x - NEAR) / CELL);
+    const c1x = Math.floor((cam.x + NEAR) / CELL);
+    const c0z = Math.floor((cam.z - NEAR) / CELL);
+    const c1z = Math.floor((cam.z + NEAR) / CELL);
+    for (let cz = c0z; cz <= c1z; cz++)
+      for (let cx = c0x; cx <= c1x; cx++) {
+        const cell = this.cells.get(`${cx},${cz}`);
+        if (!cell) continue;
+        const dy = Math.max(0, Math.abs(cam.y - cell.y) - 45);
+        if (Math.hypot(rectDist(cam.x, cam.z, cell.minX, cell.minZ, CELL), dy) > NEAR) continue;
+        if (!cell.meshes) {
+          cell.meshes = [];
+          for (const [kind, arr] of cell.kinds) {
+            const hi = this.defs[kind].hi!;
+            cell.meshes.push(this.inst(hi.geo, hi.mat, `${kind}|hi`, arr, true));
+          }
+        }
+        now.add(cell);
+      }
+    for (const c of this.shown) if (!now.has(c)) set(c.meshes!, false);
+    for (const c of now) if (!this.shown.has(c)) set(c.meshes!, true);
+    this.shown = now;
   }
 }
 
 export interface PlacedTree {
-  kind: TreeKind;
+  kind: PlantKind;
   x: number;
   z: number;
   s?: number;
+  ry?: number;
 }
 
 export interface VegetationInput {
@@ -370,29 +414,100 @@ export interface VegetationInput {
   clearings?: { x: number; z: number; w: number; d: number }[];
 }
 
-/** Forest, town trees, orchards, bushes, grass clumps and corn — instanced, LOD'd and wind-animated. */
+/** One model of the vegetation family as a single vertex-coloured geometry. */
+function modelGeo(name: string): THREE.BufferGeometry {
+  const a = asset(name)!;
+  const parts = a.parts.map((p) => {
+    const g = p.geo.clone();
+    g.deleteAttribute('uv');
+    if (p.label) {
+      const col = g.attributes.color as THREE.BufferAttribute;
+      for (let i = 0; i < col.count; i++) col.setXYZ(i, col.getX(i) * p.color.r, col.getY(i) * p.color.g, col.getZ(i) * p.color.b);
+    }
+    return g;
+  });
+  return merge(parts);
+}
+
+/** Which models stand in for each generic kind: [model, scale, weight]. */
+const VARIANTS: Record<TreeKind, [string, number, number][]> = {
+  fir: [
+    ['douglas_fir_tall', 0.72, 4],
+    ['douglas_fir_medium', 1.0, 4],
+    ['cedar_broad', 1.0, 1.5],
+    ['spruce_blue', 1.3, 0.5],
+  ],
+  pine: [
+    ['pine_tall', 0.9, 2],
+    ['pine_medium', 1.25, 1],
+  ],
+  oak: [
+    ['oak_large', 0.72, 1],
+    ['oak_medium', 0.95, 2],
+    ['maple_large', 0.8, 1.5],
+    ['maple_medium', 1.1, 2],
+    ['birch_cluster', 1.0, 1],
+  ],
+  young: [['fir_young', 0.9, 1]],
+  apple: [['apple_tree', 1, 1]],
+  bush: [
+    ['bush_round_a', 1.3, 1],
+    ['bush_round_b', 1.3, 1],
+    ['bush_wide', 1.2, 1],
+    ['bush_flowering_a', 1.2, 0.3],
+    ['bush_flowering_b', 1.2, 0.3],
+  ],
+};
+const GROUND_COVER = ['grass_tall_a', 'grass_tall_b', 'grass_tuft_c', 'grass_tuft_d', 'weeds_a', 'weeds_b'];
+const catOf = (n: string): Cat =>
+  /^(grass|weeds|fern|dandelion|flower_clump|mushroom|hay_stubble|wheat|branch|ivy)/.test(n)
+    ? 'grass'
+    : /^corn/.test(n)
+      ? 'corn'
+      : /^(bush|hedge|topiary|flower_bed|reeds|lily|rock|boulder|shore|stump|log|firewood|vine|sapling)/.test(n)
+        ? 'bush'
+        : 'tree';
+const conifer = (n: string) => /fir|pine|cedar|spruce|snag|poplar/.test(n);
+
+/** Forest, town trees, orchards, bushes, ground cover and corn: instanced, LOD'd and wind-animated. */
 export function createVegetation(input: VegetationInput): { veg: Vegetation; trees: TreeIndex } {
   const rng = new Rng(777);
   const clearings = input.clearings ?? [];
   const cleared = (x: number, z: number) => clearings.some((c) => Math.abs(x - c.x) < c.w / 2 && Math.abs(z - c.z) < c.d / 2);
   const items = new Map<string, Inst[]>();
   const trees = new TreeIndex();
+  const models = hasAsset('douglas_fir_tall');
   const add = (kind: string, x: number, y: number, z: number, ry: number, s: number, sy = s) => {
     let a = items.get(kind);
     if (!a) items.set(kind, (a = []));
     const c = new THREE.Color(1, 1, 1);
-    const v = rng.range(0.82, 1.12);
-    c.setRGB(v * rng.range(0.94, 1.04), v, v * rng.range(0.9, 1.02));
+    const v = rng.range(0.86, 1.1);
+    c.setRGB(v * rng.range(0.95, 1.04), v, v * rng.range(0.92, 1.02));
     a.push({ m: M(x, y, z, ry, s, sy, s), c });
   };
+  const weighted = (list: [string, number, number][]) => {
+    let t = rng.next() * list.reduce((n, v) => n + v[2], 0);
+    for (const v of list) if ((t -= v[2]) <= 0) return v;
+    return list[0];
+  };
 
-  const placeTree = (kind: TreeKind, x: number, z: number, s: number) => {
+  const placeTree = (kind: PlantKind, x: number, z: number, s: number, ryIn?: number) => {
     // never in the lake or the river channel
-    if (isWater(x, z)) return;
+    if (isWater(x, z) && !/^(reeds|lily)/.test(kind)) return;
     const rv = river.query(x, z);
     if (rv && rv.dist < rv.hw + 3) return;
     const y = groundHeight(x, z) - 0.15;
-    const ry = rng.range(0, Math.PI * 2);
+    const ry = ryIn ?? rng.range(0, Math.PI * 2);
+    if (models) {
+      const generic = VARIANTS[kind as TreeKind];
+      const [name, k] = generic ? weighted(generic) : [kind, 1];
+      if (!hasAsset(name)) return;
+      const cat = catOf(name);
+      add(name, x, cat === 'tree' ? y : y + 0.13, z, ry, s * k, cat === 'tree' ? s * k * rng.range(0.94, 1.1) : s * k);
+      const tr = (asset(name)!.info.trunk_radius as number | undefined) ?? 0;
+      if (tr > 0) trees.add(x, z, tr * s * k + 0.15);
+      return;
+    }
     switch (kind) {
       case 'fir':
         add(rng.pick(['fir0', 'fir1']), x, y, z, ry, s, s * rng.range(0.95, 1.15));
@@ -419,8 +534,9 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
         break;
     }
   };
+  const cover = () => (models ? rng.pick(GROUND_COVER) : rng.pick(['grass0', 'grass1']));
 
-  for (const t of input.trees) placeTree(t.kind, t.x, t.z, t.s ?? rng.range(0.85, 1.25));
+  for (const t of input.trees) placeTree(t.kind, t.x, t.z, t.s ?? rng.range(0.85, 1.25), t.ry);
 
   // Forest scatter on a jittered grid whose spacing grows with distance.
   const R = MAP_RADIUS + 60;
@@ -440,6 +556,7 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
       const kind: TreeKind = roll < 0.66 ? 'fir' : roll < 0.86 ? 'pine' : roll < 0.95 ? 'oak' : 'young';
       placeTree(kind, x, z, rng.range(0.75, 1.45));
       if (d > 0.5 && rng.chance(0.2)) placeTree('bush', x + rng.range(-3, 3), z + rng.range(-3, 3), rng.range(0.8, 1.6));
+      if (models && r0 < 900 && rng.chance(0.25)) placeTree(rng.pick(['fern', 'fern', 'stump_mossy', 'log_single', 'rock_small_a', 'mushroom_cluster', 'branch_fallen']), x + rng.range(-3, 3), z + rng.range(-3, 3), rng.range(0.8, 1.3));
     }
     gz += stepZ;
   }
@@ -450,12 +567,12 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
       const x = gx + rng.range(0, 13);
       const z = gz + rng.range(0, 13);
       if (valley(x, z).e > -8) continue;
-      const core = x > -310 && x < 310 && z > -95 && z < 100;
-      if (rng.next() > (core ? 0.02 : 0.2)) continue;
+      const core = x > -380 && x < 380 && z > -110 && z < 290;
+      if (rng.next() > (core ? 0.05 : 0.2)) continue;
       if (input.occ.blocked(x, z, 2.5) || cleared(x, z)) continue;
       const roll = rng.next();
       // back-yard Douglas firs tower over the roofs; maples and alders fill in between
-      placeTree(roll < 0.5 ? 'fir' : roll < 0.72 ? 'oak' : roll < 0.87 ? 'pine' : 'bush', x, z, roll < 0.5 ? rng.range(0.8, 1.5) : rng.range(0.6, 1.1));
+      placeTree(roll < 0.4 ? 'fir' : roll < 0.72 ? 'oak' : roll < 0.84 ? 'pine' : 'bush', x, z, roll < 0.4 ? rng.range(0.8, 1.4) : rng.range(0.6, 1.1));
     }
 
   for (const gp of input.grassPatches)
@@ -463,54 +580,82 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
       const x = gp.x + rng.range(-gp.w / 2, gp.w / 2);
       const z = gp.z + rng.range(-gp.d / 2, gp.d / 2);
       if (input.occ.blocked(x, z, 0.3)) continue;
-      add(rng.pick(['grass0', 'grass1']), x, groundHeight(x, z), z, rng.range(0, 6), rng.range(0.6, 1.1));
+      add(cover(), x, groundHeight(x, z), z, rng.range(0, 6), rng.range(0.6, 1.1));
     }
   for (let i = 0; i < 16000; i++) {
     const a = rng.range(0, Math.PI * 2);
     const r = Math.sqrt(rng.next()) * 1300;
     const x = Math.cos(a) * r;
     const z = Math.sin(a) * r;
-    if (input.occ.blocked(x, z, 0.6)) continue;
+    if (input.occ.blocked(x, z, 0.6) || isWater(x, z)) continue;
     if (forestDensity(x, z) > 0.6 && rng.chance(0.6)) continue;
     if (valley(x, z).e < 0 && Math.abs(x) < 1100 && rng.chance(0.7)) continue;
-    add(rng.pick(['grass0', 'grass1']), x, groundHeight(x, z), z, rng.range(0, 6), rng.range(0.7, 1.4));
+    add(cover(), x, groundHeight(x, z), z, rng.range(0, 6), rng.range(0.7, 1.4));
   }
 
   for (const f of input.cornFields) {
     const c = Math.cos(f.ry);
     const s = Math.sin(f.ry);
-    for (let u = -f.w / 2; u < f.w / 2; u += 1.25)
-      for (let v = -f.d / 2; v < f.d / 2; v += 0.9) {
+    const [du, dv] = models ? [0.95, 3.6] : [1.25, 0.9];
+    for (let u = -f.w / 2; u < f.w / 2; u += du)
+      for (let v = -f.d / 2; v < f.d / 2; v += dv) {
         const lx = u + rng.range(-0.1, 0.1);
         const lz = v + rng.range(-0.1, 0.1);
         const x = f.x + lx * c + lz * s;
         const z = f.z - lx * s + lz * c;
-        add('corn0', x, groundHeight(x, z), z, f.ry + Math.PI / 2 + rng.range(-0.2, 0.2), rng.range(0.85, 1.1));
+        add(models ? 'corn_row' : 'corn0', x, groundHeight(x, z), z, f.ry + Math.PI / 2 + (models ? 0 : rng.range(-0.2, 0.2)), rng.range(0.9, 1.1));
       }
   }
 
   const oakGreens = [0x5f8a34, 0x6d983b, 0x557d2f, 0x78a443];
-  const geos: Record<string, THREE.BufferGeometry> = {
-    fir0: firGeo(1),
-    fir1: firGeo(3, 8),
-    pine0: tallPineGeo(4),
-    oak0: broadleafGeo(5, 11, oakGreens, 4.5, 6.6, 2.3),
-    oak1: broadleafGeo(6, 10, oakGreens, 4.0, 6.0, 2.1),
-    apple0: broadleafGeo(12, 7, [0x5e8c36, 0x6b9a3e, 0x4f7a2e], 1.6, 3.0, 1.45, 0xc0392b),
-    bush0: bushGeo(7),
-    grass0: grassGeo(9),
-    grass1: grassGeo(10),
-    corn0: cornGeo(11),
-    lowC: farConiferGeo(),
-    lowB: farBroadleafGeo(),
-  };
   const treeMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9 });
   treeMat.name = 'foliage';
   addWindSway(treeMat, 0.0045, 3);
   const lowMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 });
   lowMat.name = 'grass';
   addWindSway(lowMat, 0.06, 0.05);
-  const mats: Record<string, THREE.Material> = {};
-  for (const k of Object.keys(geos)) mats[k] = k.startsWith('grass') || k.startsWith('corn') || k.startsWith('bush') ? lowMat : treeMat;
-  return { veg: new Vegetation(items, geos, mats), trees };
+  const defs: Record<string, KindDef> = {
+    lowC: { geo: farConiferGeo(), mat: treeMat, cat: 'tree', low: null },
+    lowB: { geo: farBroadleafGeo(), mat: treeMat, cat: 'tree', low: null },
+  };
+  if (models) {
+    const mk = (name: string, strength: number, minY: number, cull: -1 | 0 | 1) => {
+      const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.88 });
+      m.name = name;
+      addWindSway(m, strength, minY, cull, NEAR);
+      return m;
+    };
+    const mats = {
+      tree: [mk('tree-mid', 0.004, 3, -1), mk('tree-near', 0.004, 3, 1), mk('tree', 0.004, 3, 0)],
+      small: [mk('plant-mid', 0.03, 0.15, -1), mk('plant-near', 0.03, 0.15, 1), mk('plant', 0.03, 0.15, 0)],
+      // rocks, logs and stumps do not move in the wind
+      still: [mk('still-mid', 0, 0, -1), mk('still-near', 0, 0, 1), mk('still', 0, 0, 0)],
+    };
+    for (const name of items.keys()) {
+      const cat = catOf(name);
+      const set = /^(rock|boulder|shore|stump|log|firewood|branch|mushroom)/.test(name) ? mats.still : cat === 'tree' ? mats.tree : mats.small;
+      const far = asset(name)!.info.far as string | undefined;
+      const low = cat === 'tree' ? (conifer(name) ? 'lowC' : 'lowB') : null;
+      if (far && hasAsset(far)) defs[name] = { geo: modelGeo(far), mat: set[0], cat, low, hi: { geo: modelGeo(name), mat: set[1] } };
+      else defs[name] = { geo: modelGeo(name), mat: set[2], cat, low };
+    }
+  } else {
+    const old: Record<string, [THREE.BufferGeometry, 'lowC' | 'lowB' | null]> = {
+      fir0: [firGeo(1), 'lowC'],
+      fir1: [firGeo(3, 8), 'lowC'],
+      pine0: [tallPineGeo(4), 'lowC'],
+      oak0: [broadleafGeo(5, 11, oakGreens, 4.5, 6.6, 2.3), 'lowB'],
+      oak1: [broadleafGeo(6, 10, oakGreens, 4.0, 6.0, 2.1), 'lowB'],
+      apple0: [broadleafGeo(12, 7, [0x5e8c36, 0x6b9a3e, 0x4f7a2e], 1.6, 3.0, 1.45, 0xc0392b), 'lowB'],
+      bush0: [bushGeo(7), null],
+      grass0: [grassGeo(9), null],
+      grass1: [grassGeo(10), null],
+      corn0: [cornGeo(11), null],
+    };
+    for (const [k, [geo, low]] of Object.entries(old)) {
+      const cat: Cat = k.startsWith('grass') ? 'grass' : k.startsWith('bush') ? 'bush' : k.startsWith('corn') ? 'corn' : 'tree';
+      defs[k] = { geo, mat: cat === 'tree' ? treeMat : lowMat, cat, low };
+    }
+  }
+  return { veg: new Vegetation(items, defs), trees };
 }

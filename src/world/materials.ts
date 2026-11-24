@@ -173,14 +173,17 @@ export class MaterialLib implements MatResolver {
 }
 
 /** Patches a standard material with gentle wind sway (height-weighted, phase from instance position). */
-export function addWindSway(mat: THREE.MeshStandardMaterial, strength: number, minY = 1.5) {
+export function addWindSway(mat: THREE.MeshStandardMaterial, strength: number, minY = 1.5, cull: -1 | 0 | 1 = 0, range = 70) {
+  // cull 1 keeps only the instances within `range` of the camera, -1 only those beyond it (detail tiers that hand over per tree)
+  const test = cull > 0 ? '>' : '<=';
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uWind = windUniform;
     shader.vertexShader =
       'uniform float uWind;\n' +
-      shader.vertexShader.replace(
-        '#include <begin_vertex>',
-        `#include <begin_vertex>
+      shader.vertexShader
+        .replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
         #ifdef USE_INSTANCING
           vec2 swayP = vec2(instanceMatrix[3][0], instanceMatrix[3][2]);
         #else
@@ -190,7 +193,16 @@ export function addWindSway(mat: THREE.MeshStandardMaterial, strength: number, m
         float swayA = sin(uWind * 1.3 + swayP.x * 0.05 + swayP.y * 0.07) * 0.6 + sin(uWind * 2.3 + swayP.x * 0.13) * 0.3;
         transformed.x += swayA * swayH * ${strength.toFixed(4)};
         transformed.z += cos(uWind * 1.1 + swayP.y * 0.06) * swayH * ${(strength * 0.6).toFixed(4)};`,
-      );
+        )
+        .replace(
+          '#include <project_vertex>',
+          cull === 0
+            ? '#include <project_vertex>'
+            : `#include <project_vertex>
+        #ifdef USE_INSTANCING
+          if (distance(instanceMatrix[3].xyz, cameraPosition) ${test} ${range.toFixed(1)}) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+        #endif`,
+        );
   };
-  mat.customProgramCacheKey = () => `sway${strength}${minY}`;
+  mat.customProgramCacheKey = () => `sway${strength}${minY}${cull}${range}`;
 }
