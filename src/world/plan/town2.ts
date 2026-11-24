@@ -11,6 +11,7 @@ import { HOUSES } from '../b2/houses';
 import { CIVIC_B2 } from '../b2/civic';
 import { LANDMARKS } from '../b2/landmarks';
 import { put } from '../b2/hull';
+import { yards, alleys } from './dress2';
 
 const PI = Math.PI;
 const N = 1 as const; // frontage side of an eastbound street: 1 = north, -1 = south
@@ -119,7 +120,7 @@ function mainStreet(pl: Placer) {
 
 function homes(pl: Placer) {
   const pick = (rng: Rng) => rng.pick(HOUSES);
-  const o = { setback: 6, gap: 9, jitter: 1.5, driveway: true, mailbox: true, car: 0.6, maxSlope: 8 };
+  const o = { setback: 6, gap: 5, jitter: 1.2, driveway: true, mailbox: true, car: 0.6, maxSlope: 8 };
   const R = (n: string) => pl.net.byName(n);
   // houses face the east-west streets; the avenues only carry the corner lots' side yards
   for (const n of ['Maple St', 'Alder St', 'Lakeshore Dr']) for (const side of [N, S]) pl.along(R(n), side, 10, R(n).length - 10, pick, o);
@@ -131,4 +132,6 @@ export function town(pl: Placer) {
   civic(pl);
   mainStreet(pl);
   homes(pl);
+  yards(pl);
+  alleys(pl);
 }

@@ -60,6 +60,8 @@ export class Placer {
   /** Graded building lots (their flat floors): a new lot's slope must not run into an older one. */
   private lots = new Occupancy(32);
   private pendingDrives: DriveSpec[] = [];
+  /** Every building that stands, in placement order (yards and lots are dressed from this). */
+  readonly sites: { def: BuildingDef; x: number; z: number; ry: number }[] = [];
   placed = 0;
   skipped: string[] = [];
   static failed = new Set<string>();
@@ -202,6 +204,7 @@ export class Placer {
       return;
     }
     this.placed++;
+    this.sites.push({ def, x, z, ry });
     if (o.road && def.drive !== undefined && o.driveway !== false) this.driveway(def, x, z, ry, o);
   }
 
