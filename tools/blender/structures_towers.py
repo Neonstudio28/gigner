@@ -177,8 +177,9 @@ def staved_tank(k, r, z0, h, n=20, mats=('wood2', 'wood3'), hoops=4, hoop='dstee
         k.box(mats[i % len(mats)] if (i * 7) % 5 else mats[0], (r - 0.03) * c, (r - 0.03) * s, z0, 0.06, w, h + (0.02 if i % 3 == 0 else 0), rz=a)
     for i in range(hoops):
         z = z0 + 0.18 + (h - 0.36) * i / (hoops - 1)
-        k.lathe(hoop, [(r + 0.002, z - 0.025), (r + 0.018, z - 0.025), (r + 0.018, z + 0.025), (r + 0.002, z + 0.025)], n, closed=True)
-        k.box(hoop, (r + 0.03) * math.cos(0.5 + i), (r + 0.03) * math.sin(0.5 + i), z - 0.04, 0.05, 0.12, 0.08, rz=math.degrees(0.5 + i))
+        ro = (r + 0.022) / math.cos(math.pi / n)      # hoop flats sit just proud of the stave faces
+        k.lathe(hoop, [(r - 0.01, z - 0.025), (ro, z - 0.025), (ro, z + 0.025), (r - 0.01, z + 0.025)], n, a0=180.0 / n, closed=True)
+        k.box(hoop, (r + 0.045) * math.cos(0.5 + i), (r + 0.045) * math.sin(0.5 + i), z - 0.04, 0.05, 0.12, 0.08, rz=math.degrees(0.5 + i))
 
 
 def water_tank_roof():
@@ -393,7 +394,8 @@ def silo_pair_elevator():
 
 SHEETS = [
     ('towers_billboards', ['roof_billboard', 'highway_billboard'], 'shot', dict(gap=2.0, elev=12)),
-    ('towers_water', ['water_tower_town', 'water_tank_roof', 'farm_water_tank', 'windmill_farm'], 'shot', dict(gap=2.5, elev=10)),
+    ('towers_water', ['water_tower_town'], 'shot', dict(elev=10)),
+    ('towers_farm', ['water_tank_roof', 'farm_water_tank', 'windmill_farm'], 'shot', dict(gap=1.5, elev=10)),
     ('towers_silos', ['grain_silo', 'grain_bin', 'silo_pair_elevator'], 'shot', dict(gap=2.5, elev=12)),
 ]
 

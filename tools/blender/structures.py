@@ -18,8 +18,8 @@ argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 opt = dict(a.split('=', 1) if '=' in a else (a, '1') for a in argv)
 
 lib.reset()
-import structures_landmarks, structures_towers, structures_civic, structures_roof, structures_arch, structures_yard
-MODS = {'landmarks': structures_landmarks, 'towers': structures_towers, 'civic': structures_civic, 'roof': structures_roof, 'arch': structures_arch, 'yard': structures_yard}
+import structures_landmarks, structures_towers, structures_civic, structures_roof, structures_arch, structures_yard, structures_lake
+MODS = {'landmarks': structures_landmarks, 'towers': structures_towers, 'civic': structures_civic, 'roof': structures_roof, 'arch': structures_arch, 'yard': structures_yard, 'lake': structures_lake}
 only = opt['only'].split(',') if 'only' in opt else list(MODS)
 for name in only:
     MODS[name].build()
@@ -51,6 +51,14 @@ if 'noprev' not in opt:
                 lib.preview(FAMILY, objs, tag=tag, res=res, samples=samples, **kw)
             else:
                 K.shot(FAMILY, tag, objs, res=res, samples=samples, **kw)
+    for group, objs in K.GROUPS.items():     # one lib.preview() overview grid per group
+        tag = 'all_' + group
+        if want and tag not in want:
+            continue
+        for a in K.ASSETS:
+            for o in (a, *a.children_recursive):
+                o.hide_render = a not in objs
+        lib.preview(FAMILY, objs, tag=tag, res=res, samples=samples, gap=1.0)
     for a in K.ASSETS:
         for o in (a, *a.children_recursive):
             o.hide_render = False

@@ -124,6 +124,80 @@
   ],
   "tris": 5628
  },
+ "basketball_hoop": {
+  "min": [
+   -0.9,
+   -1.462,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "rim_y": -1.225,
+  "rim_z": 3.05,
+  "size": [
+   1.8,
+   1.671,
+   3.945
+  ],
+  "tris": 632
+ },
+ "boat_trailer": {
+  "bunk_z": 0.6799999999999999,
+  "hitch": [
+   0,
+   -3.35,
+   0.42
+  ],
+  "length": 5.2,
+  "min": [
+   -1.12,
+   -3.4,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.24,
+   5.325,
+   1.23
+  ],
+  "tris": 1144
+ },
+ "buoy": {
+  "min": [
+   -0.66,
+   -0.628,
+   -1.1
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.32,
+   1.255,
+   2.85
+  ],
+  "tris": 500,
+  "water_z": 0.0
+ },
+ "carport": {
+  "footprint": [
+   3.2,
+   5.6
+  ],
+  "min": [
+   -1.822,
+   -3.084,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.644,
+   6.145,
+   2.796
+  ],
+  "tris": 1000
+ },
  "cellar_bulkhead": {
   "min": [
    -0.77,
@@ -138,6 +212,40 @@
    0.88
   ],
   "tris": 652
+ },
+ "cement_mixer": {
+  "min": [
+   -0.555,
+   -0.533,
+   -0.017
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.119,
+   1.401,
+   1.417
+  ],
+  "tris": 1032
+ },
+ "chicken_coop": {
+  "footprint": [
+   3.2,
+   1.0
+  ],
+  "min": [
+   -2.55,
+   -1.456,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.62,
+   2.076,
+   1.768
+  ],
+  "tris": 1632
  },
  "chimney_brick_a": {
   "min": [
@@ -225,7 +333,7 @@
   },
   "size": [
    1.6,
-   0.158,
+   0.15,
    1.6
   ],
   "tris": 580
@@ -261,6 +369,23 @@
    6.0
   ],
   "tris": 732
+ },
+ "construction_fence_panel": {
+  "height": 2.12,
+  "length": 3.5,
+  "min": [
+   -1.85,
+   -0.35,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.7,
+   0.7,
+   2.137
+  ],
+  "tris": 564
  },
  "cornice_corbel": {
   "anchor": "bottom",
@@ -312,11 +437,30 @@
   ],
   "tris": 1314
  },
+ "dirt_pile": {
+  "footprint": [
+   4.6,
+   3.6
+  ],
+  "min": [
+   -2.349,
+   -1.731,
+   -0.074
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   4.876,
+   3.828,
+   1.613
+  ],
+  "tris": 472
+ },
  "door_barn_x": {
   "anchor": "bottom",
   "min": [
    -2.5,
-   -0.121,
+   -0.191,
    0.03
   ],
   "mount": "wall",
@@ -333,7 +477,7 @@
   },
   "size": [
    5.0,
-   0.144,
+   0.191,
    2.89
   ],
   "slide": "x",
@@ -449,7 +593,7 @@
   "min": [
    -1.32,
    -0.08,
-   -2.096
+   0.0
   ],
   "mount": "wall",
   "opening": [
@@ -466,7 +610,7 @@
   "size": [
    2.64,
    0.1,
-   4.316
+   2.22
   ],
   "tris": 1140
  },
@@ -475,7 +619,7 @@
   "min": [
    -1.65,
    -0.315,
-   -3.0
+   0.0
   ],
   "mount": "wall",
   "opening": [
@@ -492,7 +636,7 @@
   "size": [
    3.3,
    0.345,
-   6.36
+   3.36
   ],
   "tris": 664
  },
@@ -572,7 +716,7 @@
    ]
   },
   "size": [
-   1.48,
+   1.07,
    0.154,
    2.61
   ],
@@ -712,6 +856,22 @@
   ],
   "tris": 3622
  },
+ "feed_trough": {
+  "length": 2.4,
+  "min": [
+   -1.24,
+   -0.431,
+   -0.032
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.48,
+   0.863,
+   0.912
+  ],
+  "tris": 240
+ },
  "fire_escape": {
   "anchor": "platform",
   "min": [
@@ -749,7 +909,7 @@
   "min": [
    -0.55,
    -0.55,
-   -1.86
+   0.0
   ],
   "mount": "ground",
   "parts": {
@@ -760,9 +920,9 @@
    ]
   },
   "size": [
-   3.45,
+   3.51,
    1.1,
-   13.89
+   12.03
   ],
   "tris": 1120
  },
@@ -780,6 +940,41 @@
    3.7
   ],
   "tris": 2288
+ },
+ "fuel_tank_stand": {
+  "height": 2.5,
+  "min": [
+   -0.95,
+   -0.608,
+   -0.004
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.9,
+   1.158,
+   2.74
+  ],
+  "tris": 832
+ },
+ "garden_shed": {
+  "footprint": [
+   2.4,
+   1.8
+  ],
+  "min": [
+   -1.4,
+   -1.5,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.8,
+   2.58,
+   2.74
+  ],
+  "tris": 1092
  },
  "gas_canopy": {
   "face": [
@@ -974,6 +1169,44 @@
   ],
   "tris": 4476
  },
+ "gravel_pile": {
+  "footprint": [
+   5.4,
+   4.4
+  ],
+  "min": [
+   -2.07,
+   -2.662,
+   -0.071
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   5.362,
+   4.904,
+   1.696
+  ],
+  "tris": 500
+ },
+ "greenhouse_small": {
+  "footprint": [
+   2.4,
+   3.0
+  ],
+  "min": [
+   -1.22,
+   -1.555,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.44,
+   3.075,
+   2.59
+  ],
+  "tris": 1752
+ },
  "gutter": {
   "anchor": "top",
   "length": 3.0,
@@ -990,6 +1223,53 @@
    0.21
   ],
   "tris": 240
+ },
+ "hay_bale_round": {
+  "diameter": 1.5,
+  "min": [
+   -0.6,
+   -1.072,
+   -0.135
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.2,
+   1.81,
+   1.611
+  ],
+  "tris": 530,
+  "width": 1.2
+ },
+ "hay_bale_square": {
+  "min": [
+   -0.504,
+   -0.23,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.008,
+   0.46,
+   0.364
+  ],
+  "tris": 68
+ },
+ "hay_stack": {
+  "min": [
+   -1.632,
+   -1.439,
+   -0.18
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.295,
+   2.161,
+   1.274
+  ],
+  "tris": 894
  },
  "highway_billboard": {
   "face": [
@@ -1031,6 +1311,22 @@
   ],
   "tris": 2564
  },
+ "lifeguard_chair": {
+  "min": [
+   -0.806,
+   -0.756,
+   -0.008
+  ],
+  "mount": "ground",
+  "parts": {},
+  "seat_z": 2.37,
+  "size": [
+   2.321,
+   2.301,
+   3.968
+  ],
+  "tris": 1310
+ },
  "loading_dock": {
   "height": 1.2,
   "length": 3.0,
@@ -1047,6 +1343,108 @@
    2.119
   ],
   "tris": 832
+ },
+ "log_deck": {
+  "length": 5.0,
+  "min": [
+   -2.1,
+   -2.72,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   4.2,
+   5.486,
+   2.483
+  ],
+  "tris": 1800,
+  "width": 3.9
+ },
+ "lumber_shed": {
+  "clear_height": 3.5,
+  "face": [
+   0.0,
+   -2.985,
+   4.72,
+   3.6,
+   0.6
+  ],
+  "faces": [
+   [
+    0.0,
+    -2.985,
+    4.72,
+    3.6,
+    0.6,
+    0.0
+   ]
+  ],
+  "footprint": [
+   12.0,
+   6.0
+  ],
+  "min": [
+   -6.36,
+   -3.589,
+   -0.088
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   12.72,
+   7.094,
+   5.366
+  ],
+  "tris": 4128
+ },
+ "lumber_stack_a": {
+  "length": 3.6,
+  "min": [
+   -1.839,
+   -0.58,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.679,
+   1.16,
+   0.525
+  ],
+  "tris": 852
+ },
+ "lumber_stack_b": {
+  "length": 4.8,
+  "min": [
+   -2.458,
+   -0.63,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   4.917,
+   1.26,
+   0.836
+  ],
+  "tris": 1416
+ },
+ "lumber_stack_c": {
+  "length": 3.0,
+  "min": [
+   -1.566,
+   -0.929,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.167,
+   1.409,
+   0.75
+  ],
+  "tris": 752
  },
  "motel_arrow_sign": {
   "face": [
@@ -1104,6 +1502,110 @@
   ],
   "tris": 3204
  },
+ "motorboat_small": {
+  "length": 4.6,
+  "min": [
+   -0.895,
+   -2.307,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {
+   "motor": [
+    0.0,
+    2.22,
+    0.78
+   ]
+  },
+  "size": [
+   1.79,
+   4.98,
+   1.272
+  ],
+  "tris": 1232,
+  "waterline": 0.2
+ },
+ "oil_tank": {
+  "min": [
+   -0.76,
+   -0.349,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.69,
+   0.697,
+   2.047
+  ],
+  "tris": 736
+ },
+ "pennant_string": {
+  "anchor": "ends",
+  "ends": [
+   [
+    -5.0,
+    0,
+    0
+   ],
+   [
+    5.0,
+    0,
+    0
+   ]
+  ],
+  "length": 10.0,
+  "min": [
+   -5.001,
+   -0.008,
+   -0.883
+  ],
+  "mount": "wall",
+  "parts": {},
+  "sag": 0.5,
+  "size": [
+   10.003,
+   0.016,
+   0.891
+  ],
+  "tris": 372
+ },
+ "pier_end_ladder": {
+  "deck_z": 0.9,
+  "min": [
+   -0.31,
+   -0.145,
+   -1.3
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.62,
+   0.588,
+   3.176
+  ],
+  "tris": 508,
+  "water_z": 0.0
+ },
+ "pier_section": {
+  "deck_z": 0.9,
+  "length": 4.0,
+  "min": [
+   -1.296,
+   -2.0,
+   -2.2
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.567,
+   4.0,
+   3.6
+  ],
+  "tris": 1556,
+  "water_z": 0.0,
+  "width": 2.0
+ },
  "pilaster": {
   "anchor": "bottom",
   "height": 4.5,
@@ -1120,6 +1622,65 @@
    4.5
   ],
   "tris": 380
+ },
+ "playground_slide": {
+  "height": 1.8,
+  "min": [
+   -0.34,
+   -3.05,
+   -0.018
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.68,
+   4.491,
+   2.662
+  ],
+  "tris": 688
+ },
+ "playground_swing": {
+  "min": [
+   -1.981,
+   -1.088,
+   -0.014
+  ],
+  "mount": "ground",
+  "parts": {
+   "seat_a": [
+    -0.75,
+    0.0,
+    2.36
+   ],
+   "seat_b": [
+    0.75,
+    0.0,
+    2.36
+   ]
+  },
+  "parts_pivot": "top bar, swing about X",
+  "size": [
+   3.971,
+   2.175,
+   2.474
+  ],
+  "tris": 660
+ },
+ "plywood_stack": {
+  "length": 2.44,
+  "min": [
+   -1.37,
+   -0.694,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.755,
+   1.508,
+   0.635
+  ],
+  "tris": 552
  },
  "pole_sign_rect": {
   "face": [
@@ -1221,6 +1782,48 @@
   ],
   "tris": 688
  },
+ "pool_diving_board": {
+  "board_z": 0.77,
+  "min": [
+   -0.379,
+   -2.42,
+   -0.027
+  ],
+  "mount": "ground",
+  "parts": {},
+  "reach": 2.42,
+  "size": [
+   0.758,
+   4.182,
+   1.619
+  ],
+  "tris": 552
+ },
+ "pool_inground": {
+  "basin": [
+   8.0,
+   4.0
+  ],
+  "coping": 0.4,
+  "depth": [
+   1.0,
+   2.2
+  ],
+  "min": [
+   -4.4,
+   -2.4,
+   -2.32
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   8.8,
+   4.8,
+   3.268
+  ],
+  "tris": 1616,
+  "water_z": -0.15
+ },
  "porch_bracket": {
   "anchor": "corner",
   "min": [
@@ -1321,6 +1924,38 @@
   "tris": 248,
   "width": 1.5
  },
+ "portable_toilet": {
+  "height": 2.25,
+  "min": [
+   -0.59,
+   -0.66,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.18,
+   1.3,
+   2.55
+  ],
+  "tris": 1196
+ },
+ "propane_tank_large": {
+  "length": 3.0,
+  "min": [
+   -1.5,
+   -0.615,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.0,
+   1.108,
+   1.53
+  ],
+  "tris": 872
+ },
  "roof_billboard": {
   "face": [
    0.0,
@@ -1356,8 +1991,8 @@
  "roof_hatch": {
   "min": [
    -0.6,
-   -0.885,
-   -0.01
+   -0.525,
+   0.0
   ],
   "mount": "roof",
   "parts": {
@@ -1369,8 +2004,8 @@
   },
   "size": [
    1.2,
-   1.41,
-   0.372
+   1.05,
+   0.461
   ],
   "tris": 300
  },
@@ -1421,6 +2056,23 @@
   ],
   "tris": 734
  },
+ "rowboat": {
+  "length": 3.6,
+  "min": [
+   -0.68,
+   -1.818,
+   -0.025
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.36,
+   3.624,
+   0.672
+  ],
+  "tris": 792,
+  "waterline": 0.14
+ },
  "satellite_dish": {
   "min": [
    -0.925,
@@ -1435,6 +2087,128 @@
    2.064
   ],
   "tris": 772
+ },
+ "scaffold_tower": {
+  "deck": 4.065,
+  "height": 5.05,
+  "min": [
+   -1.17,
+   -0.73,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.34,
+   1.46,
+   5.05
+  ],
+  "tris": 1376
+ },
+ "scarecrow": {
+  "height": 2.0,
+  "min": [
+   -0.849,
+   -0.295,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.698,
+   0.59,
+   2.005
+  ],
+  "tris": 816
+ },
+ "seesaw": {
+  "min": [
+   -1.759,
+   -0.25,
+   -0.009
+  ],
+  "mount": "ground",
+  "parts": {
+   "beam": [
+    0.0,
+    0.0,
+    0.55
+   ]
+  },
+  "pivot_axis": "y",
+  "size": [
+   3.539,
+   0.5,
+   1.127
+  ],
+  "tilt": 11.0,
+  "tris": 460
+ },
+ "shipping_container": {
+  "doors": {
+   "door_l": 0,
+   "door_r": 0
+  },
+  "height": 2.59,
+  "length": 6.06,
+  "min": [
+   -3.04,
+   -1.23,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {
+   "door_l": [
+    3.0,
+    -1.075,
+    0.18
+   ],
+   "door_r": [
+    3.0,
+    1.075,
+    0.18
+   ]
+  },
+  "size": [
+   6.118,
+   2.46,
+   2.59
+  ],
+  "tris": 2064,
+  "width": 2.44
+ },
+ "shipping_container_open": {
+  "doors": {
+   "door_l": -112,
+   "door_r": 258
+  },
+  "height": 2.59,
+  "length": 6.06,
+  "min": [
+   -3.04,
+   -1.503,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {
+   "door_l": [
+    3.0,
+    -1.075,
+    0.18
+   ],
+   "door_r": [
+    3.0,
+    1.075,
+    0.18
+   ]
+  },
+  "size": [
+   7.039,
+   2.823,
+   2.59
+  ],
+  "tris": 2264,
+  "width": 2.44
  },
  "silo_pair_elevator": {
   "face": [
@@ -1475,6 +2249,23 @@
    24.7
   ],
   "tris": 5664
+ },
+ "skate_ramp_quarter": {
+  "height": 1.2,
+  "min": [
+   -1.22,
+   -1.927,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.44,
+   2.627,
+   2.22
+  ],
+  "tris": 348,
+  "width": 2.4
  },
  "skylight": {
   "min": [
@@ -1521,7 +2312,7 @@
    2.4,
    4.292
   ],
-  "tris": 1040
+  "tris": 1160
  },
  "steps_wide": {
   "min": [
@@ -1540,6 +2331,55 @@
   ],
   "tris": 688,
   "width": 8.0
+ },
+ "string_lights": {
+  "anchor": "ends",
+  "ends": [
+   [
+    -3.0,
+    0,
+    0
+   ],
+   [
+    3.0,
+    0,
+    0
+   ]
+  ],
+  "length": 6.0,
+  "min": [
+   -3.002,
+   -0.039,
+   -0.485
+  ],
+  "mount": "wall",
+  "parts": {},
+  "sag": 0.35,
+  "size": [
+   6.003,
+   0.078,
+   0.493
+  ],
+  "tris": 788
+ },
+ "tent_market": {
+  "footprint": [
+   3.0,
+   3.0
+  ],
+  "min": [
+   -1.6,
+   -1.6,
+   -0.009
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.2,
+   3.2,
+   3.009
+  ],
+  "tris": 1326
  },
  "wall_vent": {
   "anchor": "center",
@@ -1623,7 +2463,7 @@
   "min": [
    -0.45,
    -0.419,
-   -0.1
+   0.0
   ],
   "mount": "roof",
   "parts": {
@@ -1636,15 +2476,30 @@
   "size": [
    0.93,
    0.839,
-   1.02
+   1.32
   ],
   "tris": 388
+ },
+ "well_pump": {
+  "min": [
+   -0.65,
+   -0.65,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.3,
+   1.513,
+   1.27
+  ],
+  "tris": 768
  },
  "windmill_farm": {
   "min": [
    -1.764,
    -1.56,
-   -1.75
+   0.0
   ],
   "mount": "ground",
   "parts": {
@@ -1657,7 +2512,7 @@
   "size": [
    3.527,
    5.31,
-   14.5
+   13.45
   ],
   "tris": 2724
  },

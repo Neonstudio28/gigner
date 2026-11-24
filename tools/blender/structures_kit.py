@@ -134,6 +134,13 @@ def _box_mesh(sx, sy, sz, b):
     return v, f
 
 
+def bounds(ob):
+    """World-space box of an asset and its child parts."""
+    bpy.context.view_layer.update()
+    pts = [o.matrix_world @ Vector(c) for o in [ob, *ob.children_recursive] if o.type == 'MESH' for c in o.bound_box]
+    return [min(p[i] for p in pts) for i in range(3)], [max(p[i] for p in pts) for i in range(3)]
+
+
 class Kit:
     def __init__(self, name, pivot=None):
         self.name, self.pivot = name, pivot
@@ -208,6 +215,10 @@ class Kit:
         if self.faces:
             ex['face'] = self.faces[0][:5]
             ex['faces'] = self.faces
+        if self.parts:      # lib.bounds() ignores the offset of child parts: record the true box
+            lo, hi = bounds(ob)
+            ex.setdefault('size', [round(hi[i] - lo[i], 3) for i in range(3)])
+            ex.setdefault('min', [round(v, 3) for v in lo])
         ASSETS.append(ob)
         EXTRAS[ob.name] = ex
         GROUPS.setdefault(group, []).append(ob)
@@ -480,7 +491,7 @@ def shot(family, tag, assets, elev=16.0, azim=-32.0, res=(1920, 1080), samples=2
     os.makedirs(lib.PREVIEWS, exist_ok=True)
     saved = [(a, a.location.copy()) for a in assets]
     cols = cols or len(assets)
-    bb = [lib.bounds(a) for a in assets]
+    bb = [bounds(a) for a in assets]
     rows = math.ceil(len(assets) / cols)
     rowd = [max(bb[i][1][1] - bb[i][0][1] for i in range(r * cols, min(len(assets), (r + 1) * cols))) + gap for r in range(rows)]
     y = 0.0
@@ -495,7 +506,7 @@ def shot(family, tag, assets, elev=16.0, azim=-32.0, res=(1920, 1080), samples=2
     bpy.context.view_layer.update()
     pts = []
     for a in assets:
-        lo, hi = lib.bounds(a)
+        lo, hi = bounds(a)
         pts += [Vector((px, py, pz)) for px in (lo[0], hi[0]) for py in (lo[1], hi[1]) for pz in (lo[2], hi[2])]
     lo = Vector([min(p[i] for p in pts) for i in range(3)])
     hi = Vector([max(p[i] for p in pts) for i in range(3)])
