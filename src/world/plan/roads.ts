@@ -99,6 +99,11 @@ export const ROADS: RoadDef[] = [
   { name: 'Maple St', kind: 'residential', pts: [[-212, 140], [-170, 172], [-100, 190], [0, 188], [100, 180], [204, 172], [312, 166]] },
   { name: 'Heron Ct', kind: 'residential', pts: [[-100, 190], [-112, 226], [-150, 240]], culdesac: true },
   { name: 'Birch Ct', kind: 'residential', pts: [[100, 180], [108, 222], [84, 244]], culdesac: true },
+  // Meadowbrook: the new subdivision going up west of Lake Hill Rd, three courts off one loop-less drive
+  { name: 'Meadowbrook Dr', kind: 'suburban', pts: [[-246, 200], [-300, 186], [-330, 179], [-360, 172], [-390, 166], [-420, 160], [-452, 140]], culdesac: true },
+  { name: 'Fawn Ct', kind: 'suburban', pts: [[-330, 179], [-338, 140], [-330, 104]], culdesac: true },
+  { name: 'Quail Ct', kind: 'suburban', pts: [[-390, 166], [-398, 206], [-388, 244]], culdesac: true },
+  { name: 'Sparrow Ct', kind: 'gravel', pts: [[-420, 160], [-428, 120], [-438, 88]], culdesac: true },
 
   // ---------------------------------------------------------------- service alleys behind the Main Street rows
   ...[0, 1, 2, 3].map((i): RoadDef => ({ name: `Alley S${i}`, label: '', kind: 'alley', pts: alley(i, 1) })),

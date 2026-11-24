@@ -17,6 +17,7 @@ import { townsfolk } from './folk';
 import { DISTRICT } from '../b2/district';
 import { farms, lumberYard, freight, lakefront } from './districts2';
 import { core } from './core';
+import { meadowbrook } from './meadow';
 import { strip, homes, riverPark, ridge, flats, trailerCourt, industry } from './quarters';
 
 const PI = Math.PI;
@@ -46,6 +47,7 @@ export function town(pl: Placer) {
   ridge(pl);
   flats(pl);
   trailerCourt(pl);
+  meadowbrook(pl);
   yards(pl);
   streets(pl);
   townsfolk(pl);
