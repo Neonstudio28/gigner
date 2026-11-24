@@ -46,8 +46,18 @@ function bench(pl: Placer, rng: Rng, x: number, z: number, ry: number) {
 function door(pl: Placer, rng: Rng, id: string, list: [number, number, number, (r: Rng) => PersonOpts][]) {
   for (const s of pl.sites) {
     if (s.def.id !== id) continue;
+    const at = (lx: number, lz: number) => Placer.world(s.x, s.z, s.ry, lx, s.def.d / 2 + lz);
+    // a flight of steps is a ramp to the walker but not to the eye: the whole group moves out to the flat below it
+    const onSteps = (lx: number, lz: number) => {
+      const a = zoneAt(...at(lx, lz))?.floor;
+      const b = zoneAt(...at(lx, lz + 0.25))?.floor;
+      return a !== undefined && (b === undefined ? a > heightAt(...at(lx, lz)) + 0.25 : Math.abs(a - b) > 0.02);
+    };
+    let out = 0;
+    while (out < 8 && list.some(([lx, lz]) => onSteps(lx, lz + out))) out += 0.3;
+    if (out) out += 0.5;
     for (const [lx, lz, ry, mk] of list) {
-      const [x, z] = Placer.world(s.x, s.z, s.ry, lx, s.def.d / 2 + lz);
+      const [x, z] = at(lx, lz + out);
       stand(pl, x, z, s.ry + ry, mk(rng));
     }
   }
@@ -81,9 +91,9 @@ export function townsfolk(pl: Placer) {
   }
   // people at their work
   door(pl, rng, 'sheriff', [[-2.2, 2.2, 0.3, deputy], [-1.1, 2.8, PI - 0.4, deputy], [3.5, 1.6, 0, as('agent_m', 'cross')]]);
-  door(pl, rng, 'church', [[0.9, 2.4, 0.2, as('priest', 'talk')], [-0.4, 3.6, PI, as('old_woman')], [0.6, 4.0, PI + 0.5, as('old_man', 'hips')]]);
-  door(pl, rng, 'courthouse', [[-1.5, 3.2, 0.4, as('businessman', 'stand', 'briefcase')], [-0.4, 3.9, PI - 0.3, as('businesswoman', 'talk')], [3.2, 2.6, 0, as('agent_f', 'cross')], [-5, 4.5, 0.8, any('stride')]]);
-  door(pl, rng, 'townhall', [[2, 3, -0.3, as('businesswoman', 'stand', 'briefcase')], [3, 3.6, PI + 0.3, as('casual_m_2', 'talk')]]);
+  door(pl, rng, 'church', [[4.2, 2.4, 0.2, as('priest', 'talk')], [2.9, 3.6, PI, as('old_woman')], [3.9, 4.0, PI + 0.5, as('old_man', 'hips')]]);
+  door(pl, rng, 'courthouse', [[-4.3, 3.2, 0.4, as('businessman', 'stand', 'briefcase')], [-3.2, 3.9, PI - 0.3, as('businesswoman', 'talk')], [3.2, 2.6, 0, as('agent_f', 'cross')], [-7, 4.5, 0.8, any('stride')]]);
+  door(pl, rng, 'townhall', [[3.2, 3, -0.3, as('businesswoman', 'stand', 'briefcase')], [4.2, 3.6, PI + 0.3, as('casual_m_2', 'talk')]]);
   door(pl, rng, 'bank', [[1.6, 1.4, 0.2, as('businessman', 'stride', 'briefcase')], [-2.5, 1.8, 0.9, as('old_man')]]);
   door(pl, rng, 'diner', [[-3, 1.5, 0.4, as('waitress', 'cross')], [-1.8, 2.1, PI + 0.6, as('trucker', 'talk')], [5, 2, 0, as('cook', 'lean')]]);
   door(pl, rng, 'donut', [[1.5, 1.6, 0.2, as('teen_m', 'carry', 'coffee_cup')], [2.5, 2.2, PI, as('teen_f', 'hips')]]);
