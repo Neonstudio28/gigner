@@ -7,8 +7,8 @@ import { HOUSES, ESTATES, SHACKS, TRAILERS } from '../b2/houses';
 import { CIVIC_B2 } from '../b2/civic';
 import { LANDMARKS } from '../b2/landmarks';
 import { DISTRICT } from '../b2/district';
-import { ALLEY, BANK_LOT, MAIN, AVE_S, face } from './roads';
-import { alleyEdge, wear, pave, paveTrap, path, prop, scatter, trashCorner, poleLine, backLot, carPark, treeEdge, fence, BEATERS, hedge, parked, stalls, weedLine, inFrame, W, fbuild, fcar, fentrance, ftree, freserve, OLD_ASPHALT, CONCRETE, RUBBISH, type BackKind, type Bounds } from './blocks';
+import { ALLEY, BANK_LOT, MAIN, AVE_N, AVE_S, face } from './roads';
+import { alleyEdge, lamps, wear, pave, paveTrap, path, prop, scatter, trashCorner, poleLine, backLot, carPark, treeEdge, fence, BEATERS, hedge, parked, stalls, weedLine, inFrame, W, fbuild, fcar, fentrance, ftree, freserve, OLD_ASPHALT, CONCRETE, RUBBISH, type BackKind, type Bounds } from './blocks';
 
 const PI = Math.PI;
 export const N = 1 as const; // frontage side of an eastbound street: 1 = north, -1 = south
@@ -143,7 +143,8 @@ interface Face {
   side: 1 | -1;
   ids: string[];
   back: BackKind;
-  homes?: string[];
+  /** Second row of businesses at the back of the block, facing the back street. */
+  row?: string[];
   passAt?: number;
 }
 
@@ -196,31 +197,70 @@ function blockFace(pl: Placer, rng: Rng, f: Face) {
     const [ia, ib] = inner(b, z0, Math.min(b.zb(mid), z0 + 36));
     const zS = Math.min(nearest(b.zb, ia + 1, ib - 1) - 0.2, z0 + 36);
     const [la, lb] = inner(b, z0, zS);
-    backLot(pl, rng, la, lb, z0, zS, 1, f.back, () => {
-      (f.homes ?? []).forEach((id, n) => {
-        const def = D(id);
-        const [wx] = W(la + (lb - la) * (0.66 + n * 0.21), zS);
-        const fr = pl.net.frontage(back, sAt(back, wx, 'x'), f.side > 0 ? N : S, back.full + 5.5 + def.d / 2);
-        pl.put(def, fr.x, fr.z, fr.ry, 400 + f.i * 10 + n + (f.side > 0 ? 0 : 5), { road: back, driveway: true, mailbox: true, car: 0.8 });
-      });
-    }, b);
+    backLot(pl, rng, la, lb, z0, zS, 1, f.back, undefined, b);
+    const zE = nearest(b.zb, ia + 1, ib - 1) - 0.4;
+    if (f.row && zE - zS > 12) backRow(pl, rng, b, zS + 0.6, zE, f.row, f.i * 10 + (f.side > 0 ? 0 : 5));
     const ax = bank ? g.len - BANK_LOT - 2 : xb;
     alleyEdge(pl, rng, xa, ax, z0, 1);
     wear(pl, rng, xa, full + 14, ax, ALLEY + 2.8);
   });
 }
 
+/**
+ * The back of a deep block, from the rear car park (z0) to the back street (z1): a second row of shops facing
+ * that street, with small customer lots between pairs and a paved service strip behind.
+ */
+function backRow(pl: Placer, rng: Rng, b: Bounds, z0: number, z1: number, ids: string[], seed: number) {
+  const [xa, xb] = inner(b, z0, z1);
+  const deep = z1 - z0;
+  let x = xa + 1.5;
+  let n = 0;
+  const lot = (x0: number, x1: number) => {
+    if (x1 - x0 < 9) return pave(pl, x0, z0, x1, z1 - 0.4, OLD_ASPHALT), hedgeRow(x0, x1);
+    carPark(pl, rng, x0, z0, x1, z1 - 0.4, { fill: 0.5, stops: true, lights: false });
+    fentrance(pl, (x0 + x1) / 2, z1 - 0.4, 0, 1, 6);
+  };
+  const hedgeRow = (x0: number, x1: number) => {
+    for (let t = x0 + 1.5; t < x1 - 1; t += 2.4) ftree(pl, 'hedge_straight', t, z1 - 1.2);
+  };
+  while (x < xb - 8) {
+    const def = D(ids[n % ids.length]);
+    if (x + def.w > xb - 1.5 || def.d + 4 > deep) break;
+    const zc = z1 - 3 - def.d / 2;
+    fbuild(pl, def, x + def.w / 2, zc, 0, 600 + seed + n, def.name);
+    // apron to the sidewalk, service strip behind
+    pave(pl, x - 0.4, zc + def.d / 2, x + def.w + 0.4, z1 - 0.4, 0xa9a59c, 'concrete', 0.06);
+    if (zc - def.d / 2 - z0 > 1.5) {
+      pave(pl, x - 0.4, z0, x + def.w + 0.4, zc - def.d / 2, OLD_ASPHALT);
+      trashCorner(pl, rng, x + def.w * 0.7, zc - def.d / 2 - 1.2, 0, 3, false);
+    }
+    x += def.w;
+    n++;
+    const gap = n % 2 ? 1.2 : 16;
+    if (x + gap > xb - 1.5) break;
+    if (gap > 2) lot(x + 0.4, x + gap - 0.4);
+    else pave(pl, x, z0, x + gap, z1 - 0.4, OLD_ASPHALT);
+    x += gap;
+  }
+  if (xb - x > 4) lot(x + 0.4, xb - 0.4);
+  if (x - xa < 4) return;
+  lamps(pl, [[xa + 3, z1 - 1, 0], [xb - 3, z1 - 1, 0]]);
+}
+
 /** Downtown: four blocks of Main Street, no two the same shape; shop rows corner to corner, service alleys, worked back lots. */
 export function core(pl: Placer) {
   const rng = new Rng(9090);
+  // zoning: downtown between Riverside Dr and Alder St, and the civic blocks south of Alder, hold no homes
+  pl.noHomes.push([...AVE_N, ...[...AVE_S].reverse()]);
+  pl.noHomes.push([AVE_S[1], AVE_S[2], AVE_S[3], [100, 180], [0, 188], [-100, 190]]);
   const faces: Face[] = [
-    { i: 0, side: SOUTH, ids: ['laundry', 'liquor', 'thrift', 'video', 'pawn', 'barber', 'records', 'bakery'], back: 'yard', passAt: 4 },
-    { i: 1, side: SOUTH, ids: ['hardware', 'barber', 'pharmacy', 'records', 'gazette', 'bakery', 'insurance', 'video', 'antiques', 'liquor'], back: 'park', passAt: 5 },
-    { i: 2, side: SOUTH, ids: ['tavern', 'pawn', 'antiques', 'insurance', 'thrift', 'video', 'liquor', 'laundry'], back: 'split', homes: ['house_white', 'house_green'], passAt: 2 },
-    { i: 3, side: SOUTH, ids: ['bakery', 'hardware', 'laundry', 'pharmacy', 'liquor', 'gazette', 'records', 'barber', 'tavern', 'thrift'], back: 'split', homes: ['house_cream', 'house_pink'], passAt: 4 },
-    { i: 0, side: NORTH, ids: ['antiques', 'gazette', 'tavern', 'insurance', 'thrift', 'pawn', 'barber', 'video'], back: 'split', homes: ['house_blue', 'house_tan'] },
-    { i: 1, side: NORTH, ids: ['pharmacy', 'records', 'antiques', 'laundry', 'bakery', 'tavern', 'liquor', 'barber', 'hardware', 'insurance'], back: 'market', passAt: 5 },
-    { i: 3, side: NORTH, ids: ['records', 'thrift', 'hardware', 'insurance', 'gazette', 'bakery', 'video', 'pawn'], back: 'park', passAt: 9 },
+    { i: 0, side: SOUTH, ids: ['laundry', 'liquor', 'thrift', 'video', 'pawn', 'barber', 'records', 'bakery'], back: 'yard', row: ['hardware', 'pawn', 'video'], passAt: 4 },
+    { i: 1, side: SOUTH, ids: ['hardware', 'barber', 'pharmacy', 'records', 'gazette', 'bakery', 'insurance', 'video', 'antiques', 'liquor'], back: 'park', row: ['tavern', 'insurance', 'laundry'], passAt: 5 },
+    { i: 2, side: SOUTH, ids: ['tavern', 'pawn', 'antiques', 'insurance', 'thrift', 'video', 'liquor', 'laundry'], back: 'park', row: ['insurance', 'gazette', 'video', 'records'], passAt: 2 },
+    { i: 3, side: SOUTH, ids: ['bakery', 'hardware', 'laundry', 'pharmacy', 'liquor', 'gazette', 'records', 'barber', 'tavern', 'thrift'], back: 'yard', row: ['hardware', 'thrift', 'laundry'], passAt: 4 },
+    { i: 0, side: NORTH, ids: ['antiques', 'gazette', 'tavern', 'insurance', 'thrift', 'pawn', 'barber', 'video'], back: 'park', row: ['antiques', 'bakery', 'records', 'insurance'] },
+    { i: 1, side: NORTH, ids: ['pharmacy', 'records', 'antiques', 'laundry', 'bakery', 'tavern', 'liquor', 'barber', 'hardware', 'insurance'], back: 'market', row: ['thrift', 'barber', 'liquor', 'pawn'], passAt: 5 },
+    { i: 3, side: NORTH, ids: ['records', 'thrift', 'hardware', 'insurance', 'gazette', 'bakery', 'video', 'pawn'], back: 'park', row: ['gazette', 'pharmacy', 'video'], passAt: 9 },
   ];
   for (const f of faces) blockFace(pl, rng, f);
   townHallSquare(pl);

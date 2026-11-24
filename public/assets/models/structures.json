@@ -856,6 +856,22 @@
   ],
   "tris": 3622
  },
+ "feed_bin": {
+  "height": 7.4,
+  "min": [
+   -1.317,
+   -1.363,
+   -0.1
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.634,
+   5.378,
+   7.43
+  ],
+  "tris": 1532
+ },
  "feed_trough": {
   "length": 2.4,
   "min": [
@@ -1139,6 +1155,38 @@
   ],
   "tris": 3444
  },
+ "goat": {
+  "height": 1.26,
+  "min": [
+   -0.21,
+   -0.77,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.42,
+   1.291,
+   1.273
+  ],
+  "tris": 664
+ },
+ "goat_brown": {
+  "height": 1.26,
+  "min": [
+   -0.21,
+   -0.77,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.42,
+   1.291,
+   1.273
+  ],
+  "tris": 664
+ },
  "grain_bin": {
   "min": [
    -3.339,
@@ -1311,6 +1359,180 @@
   ],
   "tris": 2564
  },
+ "hog_barn": {
+  "height": 5.199999999999999,
+  "min": [
+   -16.3,
+   -5.804,
+   -0.2
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   32.67,
+   11.609,
+   5.36
+  ],
+  "tris": 1960
+ },
+ "horse_bay": {
+  "height": 2.45,
+  "min": [
+   -0.31,
+   -1.939,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.62,
+   3.11,
+   2.175
+  ],
+  "tris": 800
+ },
+ "horse_chestnut": {
+  "height": 2.45,
+  "min": [
+   -0.31,
+   -1.939,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.62,
+   3.11,
+   2.175
+  ],
+  "tris": 800
+ },
+ "horse_grey": {
+  "height": 2.45,
+  "min": [
+   -0.31,
+   -1.939,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.62,
+   3.11,
+   2.175
+  ],
+  "tris": 788
+ },
+ "house_frame_a": {
+  "floor": 0.3,
+  "height": 3.05,
+  "min": [
+   -5.66,
+   -5.941,
+   -0.3
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   11.32,
+   10.401,
+   3.35
+  ],
+  "tris": 2588
+ },
+ "house_frame_b": {
+  "floor": 0.3,
+  "height": 6.129999999999999,
+  "min": [
+   -5.8,
+   -4.85,
+   -0.3
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   11.6,
+   9.7,
+   6.06
+  ],
+  "tris": 4696
+ },
+ "house_frame_c": {
+  "floor": 0.3,
+  "height": 6.129999999999999,
+  "min": [
+   -5.8,
+   -4.85,
+   -0.3
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   12.5,
+   9.7,
+   6.06
+  ],
+  "tris": 5040
+ },
+ "house_slab": {
+  "floor": 0.3,
+  "height": 1.0,
+  "min": [
+   -5.66,
+   -4.46,
+   -0.3
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   11.32,
+   8.92,
+   1.1
+  ],
+  "tris": 700
+ },
+ "hv_pylon": {
+  "hang": [
+   [
+    -7.178,
+    19.1
+   ],
+   [
+    7.178,
+    19.1
+   ],
+   [
+    -6.208,
+    23.9
+   ],
+   [
+    6.208,
+    23.9
+   ],
+   [
+    -5.238,
+    28.5
+   ],
+   [
+    5.238,
+    28.5
+   ]
+  ],
+  "height": 35.5,
+  "min": [
+   -7.428,
+   -4.4,
+   -0.2
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   14.856,
+   8.8,
+   35.737
+  ],
+  "tris": 6448
+ },
  "lifeguard_chair": {
   "min": [
    -0.806,
@@ -1343,6 +1565,22 @@
    2.119
   ],
   "tris": 832
+ },
+ "loafing_shed": {
+  "height": 3.3,
+  "min": [
+   -6.3,
+   -3.0,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   12.6,
+   5.949,
+   3.1
+  ],
+  "tris": 568
  },
  "log_deck": {
   "length": 5.0,
@@ -1605,6 +1843,38 @@
   "tris": 1556,
   "water_z": 0.0,
   "width": 2.0
+ },
+ "pig": {
+  "height": 0.85,
+  "min": [
+   -0.31,
+   -0.94,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.62,
+   1.644,
+   0.887
+  ],
+  "tris": 648
+ },
+ "pig_spotted": {
+  "height": 0.85,
+  "min": [
+   -0.31,
+   -0.94,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.627,
+   1.644,
+   0.887
+  ],
+  "tris": 672
  },
  "pilaster": {
   "anchor": "bottom",
@@ -2144,6 +2414,38 @@
   "tilt": 11.0,
   "tris": 460
  },
+ "sheep": {
+  "height": 0.95,
+  "min": [
+   -0.31,
+   -0.818,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.62,
+   1.378,
+   0.9
+  ],
+  "tris": 684
+ },
+ "sheep_white": {
+  "height": 0.95,
+  "min": [
+   -0.31,
+   -0.818,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.62,
+   1.378,
+   0.9
+  ],
+  "tris": 684
+ },
  "shipping_container": {
   "doors": {
    "door_l": 0,
@@ -2282,6 +2584,22 @@
   ],
   "tris": 356
  },
+ "stable_barn": {
+  "height": 7.824999999999999,
+  "min": [
+   -12.4,
+   -7.208,
+   -0.2
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   24.8,
+   12.114,
+   8.025
+  ],
+  "tris": 2672
+ },
  "statue_plinth": {
   "face": [
    0.0,
@@ -2380,6 +2698,22 @@
    3.009
   ],
   "tris": 1326
+ },
+ "truss_stack": {
+  "height": 0.7,
+  "min": [
+   -4.729,
+   -0.5,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   9.457,
+   3.053,
+   0.61
+  ],
+  "tris": 588
  },
  "wall_vent": {
   "anchor": "center",
