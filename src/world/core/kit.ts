@@ -110,6 +110,16 @@ interface Bucket {
   geos: THREE.BufferGeometry[];
 }
 
+const INDOOR_CHUNK = 40;
+const INDOOR: THREE.Mesh[] = [];
+/** Hides furnished interiors that are too far from the camera to be seen through a window. */
+export function cullIndoor(cam: THREE.Vector3, range = 110) {
+  for (const m of INDOOR) {
+    const bs = m.geometry.boundingSphere!;
+    m.visible = bs.center.distanceTo(cam) < range + bs.radius;
+  }
+}
+
 /** Collects static geometry and merges it per bucket and spatial chunk (keeps frustum culling useful). */
 export class Batcher {
   private buckets = new Map<string, Bucket>();
@@ -118,13 +128,15 @@ export class Batcher {
     public chunked = true,
   ) {}
 
-  add(geo: THREE.BufferGeometry, mat: string, cast = true) {
+  add(geo: THREE.BufferGeometry, mat: string, cast = true, indoor = false) {
     geo.computeBoundingSphere();
     const bs = geo.boundingSphere!;
     let key = `${mat}|${cast ? 1 : 0}`;
     if (this.chunked) {
-      const big = bs.radius > this.chunkSize * 0.75;
-      key += big ? '|g' : `|${Math.floor(bs.center.x / this.chunkSize)}|${Math.floor(bs.center.z / this.chunkSize)}`;
+      // room contents go in their own small chunks so they can be dropped at a distance (see cullIndoor)
+      const size = indoor ? INDOOR_CHUNK : this.chunkSize;
+      const big = bs.radius > size * 0.75;
+      key += big ? '|g' : `|${Math.floor(bs.center.x / size)}|${Math.floor(bs.center.z / size)}${indoor ? '|in' : ''}`;
     }
     let b = this.buckets.get(key);
     if (!b) {
@@ -147,6 +159,7 @@ export class Batcher {
       mesh.receiveShadow = true;
       mesh.matrixAutoUpdate = false;
       mesh.name = key;
+      if (key.endsWith('|in')) INDOOR.push(mesh);
       parent.add(mesh);
       out.push(mesh);
     }
@@ -242,7 +255,7 @@ export class Kit {
       const size = Math.max(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z);
       if (size >= 0.25) this.onLight(b.getCenter(new THREE.Vector3()), new THREE.Color(color), clamp(size / 0.7, 0.4, 3), this.indoor);
     }
-    this.batch.add(g, spec.bucket, cast);
+    this.batch.add(g, spec.bucket, cast, this.indoor);
   }
   /** A light source with no glowing part of its own (e.g. frosted globes), in local coordinates. */
   lamp(x: number, y: number, z: number, color: Col, power = 1) {
@@ -377,10 +390,10 @@ export class Kit {
       for (const p of parts) {
         const recolor = p.label ? o.tint?.[p.label] : undefined;
         if (p.key === 'atlas') {
-          this.batch.add(stamp(p, m, 0.7, 0), this.lib.spec(`atlas:${a.family}`).bucket, o.cast ?? true);
+          this.batch.add(stamp(p, m, 0.7, 0), this.lib.spec(`atlas:${a.family}`).bucket, o.cast ?? true, this.indoor);
         } else if (p.key === 'paint' || p.key === 'gloss' || p.key === 'metal' || p.key === 'chrome' || p.key === 'rubber') {
           const spec = this.lib.spec(`${p.key}~`);
-          this.batch.add(stamp(p, m, spec.rough + (this.indoor ? 2 : 0), spec.metal, this.tint, recolor), spec.bucket, o.cast ?? true);
+          this.batch.add(stamp(p, m, spec.rough + (this.indoor ? 2 : 0), spec.metal, this.tint, recolor), spec.bucket, o.cast ?? true, this.indoor);
         } else {
           // glass, see-through glazing and lit parts join the ordinary buckets
           const g = p.geo.clone();

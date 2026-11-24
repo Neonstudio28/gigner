@@ -16,6 +16,7 @@ import { Rain, Stars } from './rain';
 import { VolumetricFogPass } from './volumetric';
 import { isWater } from '../world/terrain';
 import { surfaceUniforms } from '../world/materials';
+import { cullIndoor } from '../world/core/kit';
 
 export interface AppHandle {
   ready: boolean;
@@ -301,6 +302,7 @@ export async function startApp(container: HTMLElement) {
     if (weather.enabled) applyLook(weather.update(dt));
     const raining = weather.enabled ? weather.rain : (STATIC_RAIN[preset.name] ?? 0);
     const cover = THREE.MathUtils.smoothstep(sky.clouds.coverage, 0.3, 0.85);
+    cullIndoor(camera.position);
     rain.update(dt, camera, foot.active && foot.indoors ? 0 : raining, weather.wind, sky.sun.intensity * 0.25 + sky.hemi.intensity * 1.6);
     stars.update(camera, (weather.enabled ? weather.night : preset.name === 'Night' ? 1 : 0) * (1 - cover) * 0.9);
     lightning.intensity = weather.enabled ? weather.flash * 6 : 0;
@@ -351,6 +353,7 @@ export async function startApp(container: HTMLElement) {
         fog.tick(dt);
         director.focus(focus);
         world.update(dt, elapsed, camera.position, null);
+        cullIndoor(camera.position);
         water.update(dt, elapsed, focus, surfaceUniforms.uWet.value, isWater, null);
         sky.updateShadows(focus, 160);
         physical?.render(camera, dt);
