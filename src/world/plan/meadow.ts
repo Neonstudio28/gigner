@@ -4,6 +4,7 @@ import type { BuildingDef } from '../buildings/catalog';
 import { SUBURBAN, TRAILERS } from '../b2/houses';
 import { CONSTRUCTION } from '../b2/construction';
 import { prop } from './blocks';
+import { heightAt } from '../terrain';
 
 const N = 1 as const;
 const S = -1 as const;
@@ -69,6 +70,20 @@ export function meadowbrook(pl: Placer) {
   ] as [string, number, number, number, boolean | number][]) {
     const [x, z] = L(lx, lz);
     if (!pl.c.occ.blocked(x, z, 0.5) && !pl.onStreet(x, z, 1)) prop(pl, name, x, z, f.ry + r, solid);
+  }
+  // the next phase: the open ground between the courts is already graded, scraped and heaped with spoil
+  const k = pl.k;
+  for (let x = -470; x <= -250; x += 13) {
+    for (let z = 90; z <= 262; z += 12) {
+      const px = x;
+      const pz = z;
+      if (pl.c.occ.blocked(px, pz, 7) || pl.onStreet(px, pz, 10) || pl.drives.blocked(px, pz, 6)) continue;
+      if (pl.sites.some((st) => Math.hypot(st.x - px, st.z - pz) < 20)) continue;
+      const ry = 0;
+      k.at(px, pz, ry, () => k.box(0, -0.05, 0, 13.4, 0.1, 12.4, rng.pick([0x8a7458, 0x7d6a50, 0x947f62]), 'gravel', { cast: false }), heightAt(px, pz));
+      if (rng.chance(0.3)) prop(pl, 'dirt_pile', px + rng.range(-3, 3), pz + rng.range(-3, 3), rng.range(0, 6), 0.4);
+      else if (rng.chance(0.15)) prop(pl, 'traffic_cone', px, pz, 0, false);
+    }
   }
   pl.landmarks.push({ name: 'Meadowbrook (new homes)', x: -360, z: 168, kind: 'district' });
 }
