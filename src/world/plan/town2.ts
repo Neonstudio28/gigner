@@ -12,6 +12,8 @@ import { CIVIC_B2 } from '../b2/civic';
 import { LANDMARKS } from '../b2/landmarks';
 import { put } from '../b2/hull';
 import { yards, alleys } from './dress2';
+import { DISTRICT } from '../b2/district';
+import { farms, lumberYard, freight, lakefront } from './districts2';
 
 const PI = Math.PI;
 const N = 1 as const; // frontage side of an eastbound street: 1 = north, -1 = south
@@ -33,7 +35,7 @@ function legacy(id: string, w: number, d: number, fn: (c: Ctx, x: number, z: num
   };
 }
 
-const B = new Map<string, BuildingDef>([...SHOPS, ...HOUSES, ...CIVIC_B2, ...LANDMARKS].map((d) => [d.id, d]));
+const B = new Map<string, BuildingDef>([...SHOPS, ...HOUSES, ...CIVIC_B2, ...LANDMARKS, ...DISTRICT].map((d) => [d.id, d]));
 const D = (id: string) => {
   const d = B.get(id);
   if (!d) throw new Error(`no building ${id}`);
@@ -116,6 +118,7 @@ function mainStreet(pl: Placer) {
   front(pl, main, 100, N, D('bank'), 3, 10, 'First Cascade Bank');
   const alder = pl.net.byName('Alder St');
   front(pl, alder, -45, S, D('church'), 8, 7, 'Pine Hollow Community Church', 'civic');
+  front(pl, alder, 45, S, D('courthouse'), 9, 12, 'Hollow County Courthouse', 'civic');
 }
 
 function homes(pl: Placer) {
@@ -131,7 +134,11 @@ function homes(pl: Placer) {
 export function town(pl: Placer) {
   civic(pl);
   mainStreet(pl);
+  lakefront(pl);
   homes(pl);
+  farms(pl);
+  lumberYard(pl);
+  freight(pl);
   yards(pl);
   alleys(pl);
 }

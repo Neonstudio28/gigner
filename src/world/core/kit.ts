@@ -380,7 +380,7 @@ export class Kit {
    * Places a Blender-built model (origin on the ground, front towards +Z; vehicles face +X). `tint` recolours
    * its labelled parts. Returns the asset, or undefined when the model is not available.
    */
-  asset(name: string, x: number, y: number, z: number, ry = 0, o: { tint?: Tints; s?: number; cast?: boolean; solid?: boolean | number; only?: string[]; skip?: string[] } = {}): Asset | undefined {
+  asset(name: string, x: number, y: number, z: number, ry = 0, o: { tint?: Tints; s?: number; cast?: boolean; solid?: boolean | number; only?: string[]; skip?: string[]; body?: boolean; joints?: Record<string, readonly [number, number, number]> } = {}): Asset | undefined {
     const a = findAsset(name);
     if (!a) return undefined;
     const s = o.s ?? 1;
@@ -414,10 +414,19 @@ export class Kit {
         }
       }
     };
-    put(a.parts, world);
+    if (o.body ?? true) put(a.parts, world);
+    // a child's frame: its parent's frame, moved to the pivot, then turned by its joint angles (posed figures)
+    const frame = (cn: string): THREE.Matrix4 => {
+      const c = a.children.get(cn)!;
+      const par = c.parent && a.children.has(c.parent) ? a.children.get(c.parent)! : null;
+      const m = par ? frame(c.parent).multiply(new THREE.Matrix4().makeTranslation(c.pivot.x - par.pivot.x, c.pivot.y - par.pivot.y, c.pivot.z - par.pivot.z)) : world.clone().multiply(new THREE.Matrix4().makeTranslation(c.pivot.x, c.pivot.y, c.pivot.z));
+      const j = o.joints?.[cn];
+      if (j) m.multiply(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(j[0], j[1], j[2], 'YXZ')));
+      return m;
+    };
     for (const [cn, c] of a.children) {
       if (o.skip?.includes(cn) || (o.only && !o.only.includes(cn))) continue;
-      put(c.parts, new THREE.Matrix4().multiplyMatrices(world, new THREE.Matrix4().makeTranslation(c.pivot.x, c.pivot.y, c.pivot.z)));
+      put(c.parts, frame(cn));
     }
     if (o.solid) {
       const ox = (a.min.x + a.w / 2) * s;

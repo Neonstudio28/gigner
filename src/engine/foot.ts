@@ -44,7 +44,7 @@ export class FootMode {
     private camera: THREE.PerspectiveCamera,
     dom: HTMLElement,
   ) {
-    this.fig = new Figure(world.materials, { skin: 0xe0b08a, shirt: 0xa5352f, pants: 0x34425a, hair: 0x3a2a1c, hat: 'cap' });
+    this.fig = new Figure(world.materials, { skin: 0xe0b08a, shirt: 0xa5352f, pants: 0x34425a, hair: 0x3a2a1c, hat: 'cap', model: 'casual_m_3', tint: { jacket: 0x7a3b33, pants: 0x34425a } });
     this.fig.group.name = 'player';
     this.fig.group.visible = false;
     scene.add(this.fig.group);

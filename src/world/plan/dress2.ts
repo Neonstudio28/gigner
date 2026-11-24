@@ -1,7 +1,7 @@
 import { Rng } from '../core/rng';
 import type { Col } from '../core/kit';
 import { Placer } from './placer';
-import { heightAt } from '../terrain';
+import { heightAt, isWater, LAKE } from '../terrain';
 import { put } from '../b2/hull';
 import { gable } from '../b2/parts';
 import { utilityPole, connectPoles, picketFence } from '../props';
@@ -13,9 +13,15 @@ const PI = Math.PI;
 const WOODS: Col[] = [0x8a6a48, 0x7a5a3c, 0x9a7a55, 0x6f6a62, 0xb9a98a];
 
 /** Board fence between two points of the current frame: posts, two rails and a run of boards. */
+/** True when a run would stand in the lake or river (shore lots lose that side of the fence). */
+function wet(ax: number, az: number, bx: number, bz: number) {
+  for (let t = 0; t <= 1; t += 0.25) if (isWater(ax + (bx - ax) * t, az + (bz - az) * t) || heightAt(ax + (bx - ax) * t, az + (bz - az) * t) < LAKE.level + 0.35) return true;
+  return false;
+}
+
 function boardFence(k: Kit, ax: number, az: number, bx: number, bz: number, col: Col, h = 1.7) {
   const len = Math.hypot(bx - ax, bz - az);
-  if (len < 0.6) return;
+  if (len < 0.6 || wet(ax, az, bx, bz)) return;
   const ry = Math.atan2(-(bz - az), bx - ax);
   k.at((ax + bx) / 2, (az + bz) / 2, ry, () => {
     k.box(0, 0.08, 0, len, h - 0.08, 0.04, col, 'boards');
@@ -29,7 +35,7 @@ function boardFence(k: Kit, ax: number, az: number, bx: number, bz: number, col:
 /** Chain-link run: steel posts, top rail and a see-through mesh panel. */
 function chainLink(k: Kit, ax: number, az: number, bx: number, bz: number, h = 1.3) {
   const len = Math.hypot(bx - ax, bz - az);
-  if (len < 0.6) return;
+  if (len < 0.6 || wet(ax, az, bx, bz)) return;
   const ry = Math.atan2(-(bz - az), bx - ax);
   k.at((ax + bx) / 2, (az + bz) / 2, ry, () => {
     const n = Math.max(1, Math.round(len / 2.6));

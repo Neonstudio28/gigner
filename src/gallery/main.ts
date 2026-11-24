@@ -21,6 +21,31 @@ const SETS: Record<string, () => Promise<BuildingDef[]>> = {
   civic: async () => (await import('../world/buildings/civic2')).CIVIC,
   town: async () => (await import('../world/buildings/town')).TOWN,
   b2: async () => (await import('../world/b2')).B2,
+  people: async () => {
+    const { person, cast, randomPerson, POSES } = await import('../world/people');
+    const { assetNames } = await import('../world/assets');
+    const { Rng } = await import('../world/core/rng');
+    const rng = new Rng(5);
+    const poses = Object.keys(POSES) as (keyof typeof POSES)[];
+    return [
+      {
+        id: 'cast', name: 'cast', w: 30, d: 8, tags: [],
+        build: (c, x, z) => {
+          const names = assetNames('people').filter((n) => !/briefcase|coffee|guitar|newspaper|shopping|umbrella/.test(n));
+          names.forEach((n, i) => person(c.kit, x - 12 + (i % 15) * 1.7, z + 2 - Math.floor(i / 15) * 3, 0.3, cast(rng, n)));
+        },
+      },
+      {
+        id: 'poses', name: 'poses', w: 30, d: 8, tags: [],
+        build: (c, x, z) => {
+          poses.forEach((p, i) => {
+            if (p === 'sit') c.kit.box(x - 9 + i * 2, 0, z - 0.25, 0.6, 0.45, 0.5, 0x8a6a4a);
+            person(c.kit, x - 9 + i * 2, z, 0.5, { ...cast(rng, ['casual_m_1', 'casual_f_2', 'farmer'][i % 3], p) });
+          });
+        },
+      },
+    ];
+  },
   cars: async () => {
     const { vehicle } = await import('../world/vehicles');
     const names = ['sedan_80s', 'sedan_luxury', 'hatch_compact', 'wagon_woody', 'coupe_80s', 'muscle_70s', 'pony_80s', 'sports_70s', 'roadster', 'pickup_80s', 'pickup_50s', 'pickup_4x4', 'van_cargo', 'suv_boxy', 'police_sedan', 'police_suv', 'tow_truck', 'offroad_open', 'step_van'];

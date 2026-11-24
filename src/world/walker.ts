@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Batcher, Kit } from './core/kit';
 import type { MaterialLib } from './materials';
 import type { PersonOpts } from './people';
+import { asset, hasAsset } from './assets';
 
 /**
  * A jointed version of the town's blocky figures: the same proportions as `person()`, but with legs and arms
@@ -14,8 +15,16 @@ export class Figure {
   private arms: THREE.Group[] = [];
   private phase = Math.random() * 6;
   private swing = 0;
+  private shins: THREE.Group[] = [];
+  private fore: THREE.Group[] = [];
+  private head: THREE.Group | null = null;
+  private modelled = false;
 
   constructor(mats: MaterialLib, o: PersonOpts) {
+    if (o.model && hasAsset(o.model)) {
+      this.rig(mats, o);
+      return;
+    }
     const part = (x: number, y: number, z: number, build: (k: Kit) => void) => {
       const b = new Batcher(1, false);
       build(new Kit(b, mats));
@@ -67,6 +76,55 @@ export class Figure {
     this.group.scale.setScalar(o.scale ?? 1);
   }
 
+  /** Builds the figure from a people-family model: one group per joint, hung from its pivot. */
+  private rig(mats: MaterialLib, o: PersonOpts) {
+    const a = asset(o.model!)!;
+    this.modelled = true;
+    const mesh = (build: (k: Kit) => void) => {
+      const b = new Batcher(1, false);
+      build(new Kit(b, mats));
+      const g = new THREE.Group();
+      b.build((key) => mats.get(key), g);
+      g.traverse((m) => ((m as THREE.Mesh).castShadow = true));
+      return g;
+    };
+    this.body.add(mesh((k) => k.asset(o.model!, 0, 0, 0, 0, { tint: o.tint, skip: [...a.children.keys()] })));
+    const joint = (name: string, parent?: string) => {
+      const c = a.children.get(name);
+      const g = new THREE.Group();
+      if (!c) return g;
+      const pp = parent ? a.children.get(parent)?.pivot : undefined;
+      g.position.copy(c.pivot);
+      if (pp) g.position.sub(pp);
+      g.add(mesh((k) => k.asset(o.model!, -c.pivot.x, -c.pivot.y, -c.pivot.z, 0, { tint: o.tint, body: false, only: [name] })));
+      return g;
+    };
+    for (const s of ['l', 'r']) {
+      const leg = joint(`leg_${s}`);
+      const shin = joint(`shin_${s}`, `leg_${s}`);
+      leg.add(shin);
+      const arm = joint(`arm_${s}`);
+      const fore = joint(`forearm_${s}`, `arm_${s}`);
+      arm.add(fore);
+      if (s === 'r' && o.carry && hasAsset(o.carry)) {
+        const grip = (a.info as { grip?: [number, number, number] }).grip;
+        if (grip) {
+          const held = mesh((k) => k.asset(o.carry!, 0, 0, 0, 0));
+          held.position.set(-grip[0], grip[2], -grip[1]);
+          fore.add(held);
+        }
+      }
+      this.body.add(leg, arm);
+      this.legs.push(leg);
+      this.shins.push(shin);
+      this.arms.push(arm);
+      this.fore.push(fore);
+    }
+    this.head = joint('head');
+    this.body.add(this.head);
+    this.group.add(this.body);
+  }
+
   /** Advances the walk cycle for a ground speed in m/s (0 stands still, above ~3 it becomes a run). */
   animate(dt: number, speed: number) {
     const v = Math.abs(speed);
@@ -74,6 +132,28 @@ export class Figure {
     this.swing += (target - this.swing) * Math.min(1, dt * 10);
     this.phase += dt * (v < 0.08 ? 1.2 : 2.6 + v * 2.6) * (speed < 0 ? -1 : 1);
     const a = Math.sin(this.phase) * this.swing;
+    if (this.modelled) {
+      const c = Math.cos(this.phase);
+      const run = Math.min(1, Math.max(0, v - 2.2) / 3);
+      const th = 0.5 + run * 0.35;
+      this.legs[0].rotation.x = a * th;
+      this.legs[1].rotation.x = -a * th;
+      // the knee folds while its leg swings forward
+      this.shins[0].rotation.x = Math.max(0, -c) * this.swing * (0.75 + run * 0.6) + 0.04 * this.swing;
+      this.shins[1].rotation.x = Math.max(0, c) * this.swing * (0.75 + run * 0.6) + 0.04 * this.swing;
+      this.arms[0].rotation.x = -a * (0.5 + run * 0.4);
+      this.arms[1].rotation.x = a * (0.5 + run * 0.4);
+      this.arms[0].rotation.z = 0.05;
+      this.arms[1].rotation.z = -0.05;
+      const bend = -0.12 - this.swing * (0.22 + run * 0.9);
+      this.fore[0].rotation.x = bend + Math.min(0, a) * 0.3;
+      this.fore[1].rotation.x = bend + Math.min(0, -a) * 0.3;
+      if (this.head) this.head.rotation.y = v < 0.08 ? Math.sin(this.phase * 0.35) * 0.25 : 0;
+      this.body.position.y = Math.abs(c) * 0.03 * this.swing - 0.012 * this.swing;
+      this.body.rotation.x = 0.03 * this.swing + run * 0.12;
+      this.body.rotation.y = a * 0.06;
+      return;
+    }
     this.legs[0].rotation.x = a;
     this.legs[1].rotation.x = -a;
     this.arms[0].rotation.x = -a * 0.85;

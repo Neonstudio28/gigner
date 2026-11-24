@@ -118,7 +118,7 @@ function machineShed(c: Ctx, x: number, z: number, ry: number) {
   c.occ.add(x, z, W, D, ry, 0.5, false);
   k.at(x, z, ry, () => {
     k.box(0, 0, 0, W, 0.06, D, 0x8a7a5e, 'gravel', { cast: false });
-    const col = 0x7d868c;
+    const col = 0xdde3e8;
     k.box(0, 0, -D / 2 + 0.06, W, 3.3, 0.12, col, 'corrugated');
     for (const s of [-1, 1]) k.box(s * (W / 2 - 0.06), 0, 0, 0.12, 3.6, D, col, 'corrugated');
     k.solid(0, -D / 2, W, 0.3);
@@ -175,7 +175,7 @@ function warehouse(c: Ctx, x: number, z: number, ry: number) {
   const { kit: k, rng } = c;
   const W = 30;
   const D = 16;
-  const col = rng.pick<Col>([0x8fa0a8, 0xb9b2a0, 0x7f9a8a, 0xa8998a]);
+  const col = rng.pick<Col>([0xdfe8ee, 0xefe6d2, 0xd3e6da, 0xeedccb]);
   c.occ.add(x, z, W + 2, D + 8, ry, 0.5, false);
   k.at(x, z, ry, () => {
     lot(k, W + 6, 10, 0x6f6f72, 'asphalt', D / 2 + 5);
