@@ -1,4 +1,44 @@
 {
+ "arcade_cabinet_1": {
+  "min": [
+   -0.332,
+   -0.42,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   0.664,
+   0.8,
+   1.78
+  ],
+  "stand": [
+   0,
+   -0.75,
+   0
+  ],
+  "tris": 430
+ },
+ "arcade_cabinet_2": {
+  "min": [
+   -0.372,
+   -0.42,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   0.744,
+   0.8,
+   1.78
+  ],
+  "stand": [
+   0,
+   -0.75,
+   0
+  ],
+  "tris": 522
+ },
  "armchair": {
   "min": [
    -0.54,
@@ -21,6 +61,129 @@
   ],
   "tris": 1192
  },
+ "atm_indoor": {
+  "min": [
+   -0.31,
+   -0.5,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   0.62,
+   0.8,
+   1.7
+  ],
+  "tris": 382
+ },
+ "back_bar": {
+  "length": 3.0,
+  "min": [
+   -1.54,
+   -0.301,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   3.08,
+   0.571,
+   2.43
+  ],
+  "surface": 0.95,
+  "tris": 4227
+ },
+ "bank_teller_counter": {
+  "length": 2.4,
+  "min": [
+   -1.23,
+   -0.41,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   2.46,
+   0.78,
+   2.03
+  ],
+  "stand": [
+   [
+    -0.6,
+    0.7,
+    0
+   ],
+   [
+    0.6,
+    0.7,
+    0
+   ]
+  ],
+  "surface": 1.05,
+  "tris": 1024
+ },
+ "bank_vault_door": {
+  "height": 2.5,
+  "hinge": [
+   -0.95,
+   -0.2,
+   0
+  ],
+  "length": 2.4,
+  "min": [
+   -1.21,
+   -0.41,
+   -0.93
+  ],
+  "mount": "floor",
+  "parts": {
+   "door": [
+    -0.95,
+    -0.2,
+    1.2
+   ]
+  },
+  "size": [
+   3.09,
+   0.58,
+   3.45
+  ],
+  "tris": 1498
+ },
+ "bar_counter": {
+  "length": 3.0,
+  "min": [
+   -1.54,
+   -0.465,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "seat_line": [
+   [
+    -1.2,
+    -0.75,
+    0
+   ],
+   [
+    1.2,
+    -0.75,
+    0
+   ]
+  ],
+  "size": [
+   3.08,
+   0.88,
+   1.24
+  ],
+  "stand": [
+   0,
+   0.7,
+   0
+  ],
+  "surface": 1.1,
+  "tris": 1312
+ },
  "bar_stool": {
   "min": [
    -0.195,
@@ -42,6 +205,28 @@
    0.787
   ],
   "tris": 362
+ },
+ "barber_chair": {
+  "min": [
+   -0.33,
+   -0.56,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "seat": [
+   [
+    0,
+    0,
+    0.62
+   ]
+  ],
+  "size": [
+   0.776,
+   1.011,
+   1.339
+  ],
+  "tris": 1258
  },
  "bath_mirror_cabinet": {
   "min": [
@@ -131,6 +316,53 @@
   ],
   "tris": 1434
  },
+ "beer_tap_set": {
+  "min": [
+   -0.3,
+   -0.1,
+   0.0
+  ],
+  "mount": "top",
+  "parts": {},
+  "size": [
+   0.6,
+   0.217,
+   0.57
+  ],
+  "tris": 694
+ },
+ "bench_plain": {
+  "min": [
+   -0.8,
+   -0.2,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "seat": [
+   [
+    -0.5,
+    0,
+    0.48
+   ],
+   [
+    0,
+    0,
+    0.48
+   ],
+   [
+    0.5,
+    0,
+    0.48
+   ]
+  ],
+  "size": [
+   1.6,
+   0.4,
+   0.455
+  ],
+  "tris": 228
+ },
  "bookshelf_full": {
   "min": [
    -0.48,
@@ -196,6 +428,21 @@
   ],
   "tris": 2244
  },
+ "cash_register": {
+  "min": [
+   -0.21,
+   -0.225,
+   0.0
+  ],
+  "mount": "top",
+  "parts": {},
+  "size": [
+   0.42,
+   0.435,
+   0.367
+  ],
+  "tris": 274
+ },
  "ceiling_fan": {
   "min": [
    -0.74,
@@ -249,6 +496,57 @@
   ],
   "tris": 1894
  },
+ "checkout_counter": {
+  "min": [
+   -0.922,
+   -0.402,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.844,
+   0.764,
+   1.287
+  ],
+  "stand": [
+   0,
+   0.75,
+   0
+  ],
+  "surface": 0.92,
+  "tris": 958
+ },
+ "clothes_rack_round": {
+  "min": [
+   -0.558,
+   -0.556,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.115,
+   1.11,
+   1.71
+  ],
+  "tris": 1308
+ },
+ "clothes_rack_wall": {
+  "min": [
+   -0.8,
+   -0.411,
+   0.614
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   1.6,
+   0.421,
+   1.296
+  ],
+  "tris": 2250
+ },
  "coat_rack": {
   "min": [
    -0.247,
@@ -263,6 +561,23 @@
    1.8
   ],
   "tris": 778
+ },
+ "coffee_station": {
+  "length": 1.2,
+  "min": [
+   -0.62,
+   -0.351,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.24,
+   0.651,
+   1.39
+  ],
+  "surface": 0.92,
+  "tris": 1628
  },
  "coffee_table": {
   "min": [
@@ -295,6 +610,22 @@
   ],
   "tris": 1034
  },
+ "copier": {
+  "min": [
+   -0.697,
+   -0.336,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.352,
+   0.656,
+   0.94
+  ],
+  "surface": 1.0,
+  "tris": 430
+ },
  "crib": {
   "min": [
    -0.385,
@@ -325,6 +656,179 @@
   ],
   "tris": 622,
   "window": 1.2
+ },
+ "dartboard": {
+  "min": [
+   -0.31,
+   -0.202,
+   1.48
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   0.62,
+   0.202,
+   0.66
+  ],
+  "tris": 506
+ },
+ "desk_office": {
+  "min": [
+   -0.75,
+   -0.386,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.5,
+   0.761,
+   0.76
+  ],
+  "surface": 0.76,
+  "tris": 640
+ },
+ "desk_setup": {
+  "min": [
+   -0.52,
+   -0.32,
+   -0.001
+  ],
+  "mount": "top",
+  "parts": {},
+  "size": [
+   1.25,
+   0.705,
+   0.411
+  ],
+  "tris": 960
+ },
+ "diner_booth": {
+  "min": [
+   -0.605,
+   -1.015,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "seat": [
+   [
+    -0.28,
+    -0.64,
+    0.48
+   ],
+   [
+    0.28,
+    -0.64,
+    0.48
+   ],
+   [
+    -0.28,
+    0.64,
+    0.48
+   ],
+   [
+    0.28,
+    0.64,
+    0.48
+   ]
+  ],
+  "seat_facing": "table",
+  "size": [
+   1.21,
+   2.03,
+   1.18
+  ],
+  "surface": 0.75,
+  "tris": 1946
+ },
+ "diner_counter": {
+  "length": 3.0,
+  "min": [
+   -1.52,
+   -0.35,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   3.04,
+   0.7,
+   1.512
+  ],
+  "stand": [
+   0,
+   0.7,
+   0
+  ],
+  "stools": [
+   [
+    -1.2,
+    -0.62,
+    0
+   ],
+   [
+    -0.6,
+    -0.62,
+    0
+   ],
+   [
+    0,
+    -0.62,
+    0
+   ],
+   [
+    0.6,
+    -0.62,
+    0
+   ],
+   [
+    1.2,
+    -0.62,
+    0
+   ]
+  ],
+  "surface": 1.05,
+  "tris": 1840
+ },
+ "diner_stool": {
+  "min": [
+   -0.2,
+   -0.2,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "seat": [
+   [
+    0,
+    0,
+    0.7
+   ]
+  ],
+  "size": [
+   0.4,
+   0.4,
+   0.685
+  ],
+  "spin": true,
+  "tris": 408
+ },
+ "diner_table_2": {
+  "min": [
+   -0.35,
+   -0.35,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   0.7,
+   0.7,
+   0.752
+  ],
+  "surface": 0.75,
+  "tris": 166
  },
  "dining_chair": {
   "min": [
@@ -425,6 +929,23 @@
   ],
   "tris": 840
  },
+ "donut_display_case": {
+  "length": 1.2,
+  "min": [
+   -0.61,
+   -0.36,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.22,
+   0.72,
+   1.275
+  ],
+  "surface": 1.25,
+  "tris": 2580
+ },
  "dresser": {
   "min": [
    -0.675,
@@ -457,6 +978,67 @@
   "surface": 0.92,
   "tris": 772
  },
+ "evidence_shelf": {
+  "min": [
+   -0.6,
+   -0.225,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.2,
+   0.45,
+   2.0
+  ],
+  "tris": 1624
+ },
+ "exit_sign": {
+  "min": [
+   -0.18,
+   -0.065,
+   2.105
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   0.36,
+   0.07,
+   0.225
+  ],
+  "tris": 116
+ },
+ "filing_cabinet_2": {
+  "min": [
+   -0.235,
+   -0.339,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   0.47,
+   0.649,
+   1.125
+  ],
+  "surface": 0.71,
+  "tris": 660
+ },
+ "filing_cabinet_4": {
+  "min": [
+   -0.235,
+   -0.339,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   0.47,
+   0.649,
+   1.6
+  ],
+  "tris": 588
+ },
  "fireplace_brick": {
   "min": [
    -0.95,
@@ -473,6 +1055,21 @@
   "surface": 1.22,
   "tris": 910
  },
+ "flag_stand": {
+  "min": [
+   -0.17,
+   -0.162,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   0.657,
+   0.323,
+   2.4
+  ],
+  "tris": 302
+ },
  "floor_lamp": {
   "min": [
    -0.243,
@@ -488,6 +1085,35 @@
   ],
   "tris": 384
  },
+ "fluorescent_troffer": {
+  "min": [
+   -0.3,
+   -0.6,
+   -0.07
+  ],
+  "mount": "ceiling",
+  "parts": {},
+  "size": [
+   0.6,
+   1.2
+  ],
+  "tris": 68
+ },
+ "freezer_chest": {
+  "min": [
+   -0.752,
+   -0.364,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.504,
+   0.726,
+   0.836
+  ],
+  "tris": 940
+ },
  "fridge_80s": {
   "min": [
    -0.4,
@@ -502,6 +1128,142 @@
    2.04
   ],
   "tris": 566
+ },
+ "fridge_display_2door": {
+  "min": [
+   -0.65,
+   -0.385,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.325,
+   0.735,
+   2.0
+  ],
+  "tris": 2948
+ },
+ "glass_display_case": {
+  "length": 1.2,
+  "min": [
+   -0.6,
+   -0.308,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.2,
+   0.608,
+   0.962
+  ],
+  "surface": 0.95,
+  "tris": 1580
+ },
+ "gondola_grocery": {
+  "length": 1.2,
+  "min": [
+   -0.6,
+   -0.442,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.2,
+   0.883,
+   1.535
+  ],
+  "tris": 2864
+ },
+ "gondola_hardware": {
+  "length": 1.2,
+  "min": [
+   -0.6,
+   -0.442,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.2,
+   0.883,
+   1.535
+  ],
+  "tris": 2540
+ },
+ "gondola_liquor": {
+  "length": 1.2,
+  "min": [
+   -0.6,
+   -0.442,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.2,
+   0.883,
+   1.535
+  ],
+  "tris": 3025
+ },
+ "gun_display_case": {
+  "length": 1.5,
+  "min": [
+   -0.75,
+   -0.308,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.5,
+   0.608,
+   0.962
+  ],
+  "surface": 0.95,
+  "tris": 1420
+ },
+ "gun_rack_wall": {
+  "min": [
+   -0.53,
+   -0.16,
+   1.05
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   1.06,
+   0.165,
+   1.14
+  ],
+  "tris": 1090
+ },
+ "hanging_sign_blank": {
+  "face": [
+   1.1,
+   0.26
+  ],
+  "face_centre": [
+   0,
+   -0.031,
+   -0.5
+  ],
+  "min": [
+   -0.62,
+   -0.03,
+   -0.66
+  ],
+  "mount": "ceiling",
+  "parts": {},
+  "size": [
+   1.24,
+   0.06,
+   0.66
+  ],
+  "tris": 224
  },
  "high_chair": {
   "min": [
@@ -524,6 +1286,117 @@
    1.002
   ],
   "tris": 830
+ },
+ "jail_bars_panel": {
+  "height": 2.4,
+  "length": 1.5,
+  "min": [
+   -0.75,
+   -0.03,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.5,
+   0.06,
+   2.4
+  ],
+  "tris": 304
+ },
+ "jail_bunk": {
+  "min": [
+   -0.415,
+   -0.99,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "seat": [
+   [
+    -0.2,
+    0,
+    0.5
+   ]
+  ],
+  "size": [
+   0.83,
+   1.98,
+   0.605
+  ],
+  "sleep": [
+   [
+    0,
+    0.1,
+    0.52
+   ]
+  ],
+  "tris": 666
+ },
+ "jail_door": {
+  "height": 2.4,
+  "hinge": [
+   -0.5,
+   0,
+   0
+  ],
+  "length": 1.0,
+  "min": [
+   -0.5,
+   -0.04,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {
+   "leaf": [
+    -0.45,
+    0.0,
+    0.0
+   ]
+  },
+  "size": [
+   1.392,
+   0.08,
+   2.4
+  ],
+  "tris": 598
+ },
+ "jail_toilet": {
+  "min": [
+   -0.21,
+   -0.342,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "seat": [
+   [
+    0,
+    -0.1,
+    0.42
+   ]
+  ],
+  "size": [
+   0.58,
+   0.632,
+   0.95
+  ],
+  "tris": 408
+ },
+ "jukebox": {
+  "min": [
+   -0.45,
+   -0.345,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   0.9,
+   0.665,
+   1.52
+  ],
+  "tris": 1022
  },
  "kettle": {
   "min": [
@@ -590,6 +1463,23 @@
   ],
   "surface": 0.9,
   "tris": 482
+ },
+ "kitchen_grill_line": {
+  "length": 2.4,
+  "min": [
+   -1.25,
+   -0.5,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   2.5,
+   0.9,
+   2.45
+  ],
+  "surface": 0.92,
+  "tris": 1798
  },
  "kitchen_island": {
   "min": [
@@ -671,6 +1561,37 @@
   ],
   "tris": 766
  },
+ "magazine_rack": {
+  "min": [
+   -0.475,
+   -0.2,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   0.95,
+   0.42,
+   1.53
+  ],
+  "tris": 516
+ },
+ "menu_board_wall": {
+  "length": 1.8,
+  "min": [
+   -0.93,
+   -0.08,
+   2.0
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   1.86,
+   0.084,
+   0.807
+  ],
+  "tris": 164
+ },
  "microwave": {
   "min": [
    -0.26,
@@ -685,6 +1606,36 @@
    0.3
   ],
   "tris": 338
+ },
+ "napkin_set": {
+  "min": [
+   -0.121,
+   -0.06,
+   0.0
+  ],
+  "mount": "top",
+  "parts": {},
+  "size": [
+   0.249,
+   0.175,
+   0.17
+  ],
+  "tris": 250
+ },
+ "neon_open_sign": {
+  "min": [
+   -0.36,
+   -0.061,
+   0.999
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   0.724,
+   0.062,
+   1.061
+  ],
+  "tris": 330
  },
  "nightstand": {
   "min": [
@@ -701,6 +1652,91 @@
   ],
   "surface": 0.58,
   "tris": 462
+ },
+ "notice_board": {
+  "min": [
+   -0.64,
+   -0.032,
+   1.06
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   1.28,
+   0.032,
+   0.88
+  ],
+  "tris": 228
+ },
+ "office_chair": {
+  "min": [
+   -0.295,
+   -0.308,
+   -0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "seat": [
+   [
+    0,
+    0,
+    0.52
+   ]
+  ],
+  "size": [
+   0.615,
+   0.679,
+   1.057
+  ],
+  "tris": 1008
+ },
+ "pass_window_shelf": {
+  "length": 1.6,
+  "min": [
+   -0.8,
+   -0.2,
+   0.86
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   1.6,
+   0.4,
+   0.78
+  ],
+  "surface": 1.1,
+  "tris": 704
+ },
+ "pawn_shelf": {
+  "length": 1.5,
+  "min": [
+   -0.775,
+   -0.255,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.55,
+   0.49,
+   2.507
+  ],
+  "tris": 2124
+ },
+ "payphone_wall": {
+  "min": [
+   -0.26,
+   -0.31,
+   0.95
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   0.52,
+   0.31,
+   0.92
+  ],
+  "tris": 614
  },
  "pendant_lamp": {
   "min": [
@@ -754,6 +1790,22 @@
   ],
   "tris": 650
  },
+ "pool_table": {
+  "min": [
+   -1.26,
+   -0.71,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   2.52,
+   1.42,
+   0.845
+  ],
+  "surface": 0.8,
+  "tris": 1414
+ },
  "potted_plant_1": {
   "min": [
    -0.145,
@@ -799,6 +1851,21 @@
   ],
   "tris": 412
  },
+ "produce_stand": {
+  "min": [
+   -0.75,
+   -0.459,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.5,
+   0.921,
+   1.101
+  ],
+  "tris": 2892
+ },
  "radiator": {
   "min": [
    -0.502,
@@ -813,6 +1880,23 @@
    0.65
   ],
   "tris": 1344
+ },
+ "reception_counter": {
+  "length": 2.4,
+  "min": [
+   -1.23,
+   -0.38,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   2.46,
+   0.75,
+   1.279
+  ],
+  "surface": 1.1,
+  "tris": 528
  },
  "recliner": {
   "min": [
@@ -852,6 +1936,22 @@
   "surface": 0.62,
   "tris": 980
  },
+ "rope_stanchion": {
+  "length": 1.5,
+  "min": [
+   -0.91,
+   -0.152,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.82,
+   0.304,
+   1.02
+  ],
+  "tris": 540
+ },
  "rug_rect": {
   "min": [
    -1.265,
@@ -881,6 +1981,68 @@
    0.025
   ],
   "tris": 816
+ },
+ "safe": {
+  "min": [
+   -0.31,
+   -0.374,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   0.62,
+   0.674,
+   0.9
+  ],
+  "surface": 0.9,
+  "tris": 464
+ },
+ "salon_mirror_station": {
+  "min": [
+   -0.515,
+   -0.301,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.03,
+   0.551,
+   1.9
+  ],
+  "surface": 0.8,
+  "tris": 1544
+ },
+ "shoe_display": {
+  "min": [
+   -0.612,
+   -0.256,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.224,
+   0.517,
+   1.3
+  ],
+  "tris": 1912
+ },
+ "shopping_basket_stack": {
+  "min": [
+   -0.25,
+   -0.197,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   0.5,
+   0.394,
+   0.761
+  ],
+  "tris": 716
  },
  "shower_stall": {
   "min": [
@@ -950,6 +2112,23 @@
   ],
   "surface": 0.84,
   "tris": 1056
+ },
+ "soda_fountain": {
+  "length": 1.0,
+  "min": [
+   -0.52,
+   -0.377,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.04,
+   0.702,
+   1.62
+  ],
+  "surface": 0.92,
+  "tris": 1306
  },
  "sofa_2": {
   "min": [
@@ -1189,6 +2368,21 @@
   "surface": 0.5,
   "tris": 450
  },
+ "typewriter": {
+  "min": [
+   -0.29,
+   -0.18,
+   0.0
+  ],
+  "mount": "top",
+  "parts": {},
+  "size": [
+   0.545,
+   0.389,
+   0.336
+  ],
+  "tris": 242
+ },
  "vanity_desk": {
   "min": [
    -0.525,
@@ -1226,6 +2420,38 @@
    0.48
   ],
   "tris": 264
+ },
+ "waiting_chair_row_3": {
+  "min": [
+   -0.862,
+   -0.251,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "seat": [
+   [
+    -0.56,
+    -0.02,
+    0.47
+   ],
+   [
+    0.0,
+    -0.02,
+    0.47
+   ],
+   [
+    0.56,
+    -0.02,
+    0.47
+   ]
+  ],
+  "size": [
+   1.725,
+   0.562,
+   0.865
+  ],
+  "tris": 684
  },
  "wall_clock": {
   "min": [
@@ -1317,6 +2543,37 @@
   ],
   "tris": 76
  },
+ "wall_shelf_stocked": {
+  "length": 1.2,
+  "min": [
+   -0.62,
+   -0.23,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   1.24,
+   0.44,
+   1.94
+  ],
+  "tris": 2504
+ },
+ "wanted_board": {
+  "min": [
+   -0.54,
+   -0.036,
+   1.1
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   1.08,
+   0.036,
+   0.89
+  ],
+  "tris": 220
+ },
  "wardrobe": {
   "min": [
    -0.615,
@@ -1347,6 +2604,21 @@
   ],
   "surface": 0.92,
   "tris": 330
+ },
+ "water_cooler": {
+  "min": [
+   -0.16,
+   -0.205,
+   0.0
+  ],
+  "mount": "floor",
+  "parts": {},
+  "size": [
+   0.405,
+   0.365,
+   1.4
+  ],
+  "tris": 454
  },
  "water_heater": {
   "min": [
