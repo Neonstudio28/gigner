@@ -6,6 +6,12 @@ import { person, randomPerson, cast, deputy, crowd, type PersonOpts, type Pose }
 
 const PI = Math.PI;
 
+/** True where a person cannot stand: water, the wet edge of the beach, or something solid. */
+function taken(pl: Placer, x: number, z: number, pad: number) {
+  if (isWater(x, z) || heightAt(x, z) < LAKE.level + 0.3) return true;
+  return !!pl.c.occ.solids?.blocked(x, z, pad);
+}
+
 /** Standing ground at a point: the sidewalk or road surface where there is one, the terrain otherwise. */
 function ground(pl: Placer, x: number, z: number) {
   const r = pl.net.surfaceY(x, z);
@@ -13,20 +19,20 @@ function ground(pl: Placer, x: number, z: number) {
 }
 
 function stand(pl: Placer, x: number, z: number, ry: number, o: PersonOpts) {
-  if (isWater(x, z) || pl.c.occ.blocked(x, z, 0.3)) return false;
+  if (taken(pl, x, z, 0.3)) return false;
   person(pl.k, x, z, ry, o, ground(pl, x, z));
   return true;
 }
 
 /** A few people talking in a ring. */
 function group(pl: Placer, rng: Rng, x: number, z: number, n: number, mk: (r: Rng) => PersonOpts = randomPerson) {
-  if (isWater(x, z) || pl.c.occ.blocked(x, z, 1.2)) return;
+  if (taken(pl, x, z, 0.7)) return;
   pl.k.at(x, z, 0, () => crowd(pl.k, rng, 0, 0, n, 0.55 + n * 0.14, mk), ground(pl, x, z));
 }
 
 /** A bench with one or two people sitting on it. */
 function bench(pl: Placer, rng: Rng, x: number, z: number, ry: number) {
-  if (isWater(x, z) || pl.c.occ.blocked(x, z, 0.8)) return;
+  if (taken(pl, x, z, 0.8)) return;
   pl.k.at(x, z, ry, () => {
     put(pl.k, 'bench_wood', 0, 0, 0, 0, { solid: 0.9 });
     const n = rng.pick([1, 2, 2]);
@@ -56,17 +62,19 @@ export function townsfolk(pl: Placer) {
     const r = pl.net.byName(name);
     if (!r) continue;
     const busy = name === 'Main St';
-    for (let s = 20; s < r.length - 20; s += busy ? rng.range(16, 30) : rng.range(45, 80)) {
+    for (let s = 20; s < r.length - 20; s += busy ? rng.range(7, 15) : rng.range(26, 50)) {
       const p = r.at(s);
       if (Math.abs(p.x) > 330) continue;
-      const side = rng.chance(0.5) ? 1 : -1;
-      const f = pl.net.frontage(r, s, side, r.full - r.spec.walk * rng.range(0.35, 0.65));
-      const pick = rng.next();
-      if (pick < 0.45) group(pl, rng, f.x, f.z, rng.pick([2, 2, 3, 3, 4]));
-      else if (pick < 0.7 && busy) {
-        const b = pl.net.frontage(r, s, side, r.full - 0.55);
-        bench(pl, rng, b.x, b.z, b.ry);
-      } else stand(pl, f.x, f.z, rng.range(0, 6.28), randomPerson(rng, rng.pick(['stand', 'stride', 'stride', 'carry', 'hips'] as const)));
+      for (const side of [1, -1] as const) {
+        if (!rng.chance(busy ? 0.7 : 0.5)) continue;
+        const f = pl.net.frontage(r, s + rng.range(-3, 3), side, r.full - r.spec.walk * rng.range(0.35, 0.65));
+        const pick = rng.next();
+        if (pick < 0.45) group(pl, rng, f.x, f.z, rng.pick([2, 2, 3, 3, 4]));
+        else if (pick < 0.7 && busy) {
+          const b = pl.net.frontage(r, s, side, r.full - 0.55);
+          bench(pl, rng, b.x, b.z, b.ry);
+        } else stand(pl, f.x, f.z, rng.range(0, 6.28), randomPerson(rng, rng.pick(['stand', 'stride', 'stride', 'carry', 'hips'] as const)));
+      }
     }
   }
   // people at their work
@@ -89,7 +97,7 @@ export function townsfolk(pl: Placer) {
   door(pl, rng, 'factory', [[-3, 2.5, 0.3, as('worker', 'talk')], [-1.8, 3.2, PI, as('worker', 'hips')], [10, 3, 0.4, as('mechanic', 'lean')]]);
   // the beach, the pier and the playground
   const shore = (x: number) => {
-    for (let z = 275; z < 420; z += 0.5) if (isWater(x, z)) return z;
+    for (let z = 275; z < 420; z += 0.5) if (isWater(x, z) || heightAt(x, z) < LAKE.level + 0.3) return z;
     return 420;
   };
   for (let x = -70; x <= 100; x += rng.range(12, 22)) {

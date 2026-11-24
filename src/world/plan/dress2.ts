@@ -21,7 +21,7 @@ function wet(ax: number, az: number, bx: number, bz: number) {
 
 function boardFence(k: Kit, ax: number, az: number, bx: number, bz: number, col: Col, h = 1.7) {
   const len = Math.hypot(bx - ax, bz - az);
-  if (len < 0.6 || wet(ax, az, bx, bz)) return;
+  if (len < 0.6) return;
   const ry = Math.atan2(-(bz - az), bx - ax);
   k.at((ax + bx) / 2, (az + bz) / 2, ry, () => {
     k.box(0, 0.08, 0, len, h - 0.08, 0.04, col, 'boards');
@@ -35,7 +35,7 @@ function boardFence(k: Kit, ax: number, az: number, bx: number, bz: number, col:
 /** Chain-link run: steel posts, top rail and a see-through mesh panel. */
 function chainLink(k: Kit, ax: number, az: number, bx: number, bz: number, h = 1.3) {
   const len = Math.hypot(bx - ax, bz - az);
-  if (len < 0.6 || wet(ax, az, bx, bz)) return;
+  if (len < 0.6) return;
   const ry = Math.atan2(-(bz - az), bx - ax);
   k.at((ax + bx) / 2, (az + bz) / 2, ry, () => {
     const n = Math.max(1, Math.round(len / 2.6));
@@ -80,6 +80,7 @@ function clothesline(k: Kit, x: number, z: number, ry: number, rng: Rng) {
 
 /** True where nothing is built and no street runs. */
 function clear(pl: Placer, x: number, z: number, pad = 0.5) {
+  if (isWater(x, z) || heightAt(x, z) < LAKE.level + 0.35) return false;
   if (pl.c.occ.blocked(x, z, pad)) return false;
   return !pl.net.near(x, z).some((h) => Math.abs(h.lat) < h.road.full + 1);
 }
@@ -117,7 +118,11 @@ export function yards(pl: Placer) {
       if (open && style < 0.8) {
         const col = rng.pick(WOODS);
         const gate = rng.pick([-1, 1]);
-        const run = style < 0.55 ? (a: number, b: number, c: number, d: number) => boardFence(k, a, b, c, d, col, style < 0.2 ? 1.2 : 1.7) : style < 0.68 ? (a: number, b: number, c: number, d: number) => chainLink(k, a, b, c, d) : (a: number, b: number, c: number, d: number) => picketFence(k, a, b, c, d);
+        const raw = style < 0.55 ? (a: number, b: number, c: number, d: number) => boardFence(k, a, b, c, d, col, style < 0.2 ? 1.2 : 1.7) : style < 0.68 ? (a: number, b: number, c: number, d: number) => chainLink(k, a, b, c, d) : (a: number, b: number, c: number, d: number) => picketFence(k, a, b, c, d);
+        const run = (a: number, b: number, c: number, d: number) => {
+          const [p, q] = [W(a, b), W(c, d)];
+          if (!wet(p[0], p[1], q[0], q[1])) raw(a, b, c, d);
+        };
         run(-hw, zf, -hw, zb - yd);
         run(hw, zb - yd, hw, zf);
         run(-hw, zb - yd, hw, zb - yd);

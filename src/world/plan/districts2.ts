@@ -8,7 +8,8 @@ import { put } from '../b2/hull';
 import { HOUSES } from '../b2/houses';
 import { DISTRICT } from '../b2/district';
 import { railFence, securityFence, cow } from '../props';
-import { vehicle } from '../vehicles';
+import { vehicle, VEHICLE_LENGTH } from '../vehicles';
+import { asset } from '../assets';
 import { addZone } from '../buildings/interiors';
 import { CAR_COLORS } from '../palette';
 
@@ -63,9 +64,17 @@ function tree(pl: Placer, f: Frame, kind: string, lx: number, lz: number, s = 1)
   if (!isWater(x, z) && !pl.c.occ.blocked(x, z, 0.3)) pl.trees.push({ kind, x, z, s, ry: (lx * 7.3 + lz * 3.1) % 6.28 });
 }
 
-function car(pl: Placer, f: Frame, type: Parameters<typeof vehicle>[2], lx: number, lz: number, ry: number, col: Col, model?: string) {
+function car(pl: Placer, f: Frame, type: Parameters<typeof vehicle>[2], lx: number, lz: number, ry: number, col: Col, model?: string, trailer = false) {
   const [x, z] = Placer.world(f.x, f.z, f.ry, lx, lz);
-  pl.k.at(x, z, f.ry + ry, () => vehicle(pl.k, pl.c.signs, type, 0, 0, 0, col, model ? { model } : {}), heightAt(x, z));
+  const a = f.ry + ry;
+  const info = model ? asset(model)?.info : undefined;
+  const L = (info?.length as number | undefined) ?? VEHICLE_LENGTH[type];
+  const W = Math.min(2.6, (info?.width as number | undefined) ?? 2.1);
+  pl.k.at(0, 0, 0, () => {
+    pl.k.solid(x, z, L - 0.2, W, a);
+    if (trailer) pl.k.solid(x - Math.cos(a) * 9.4, z + Math.sin(a) * 9.4, 13, 2.6, a);
+    vehicle(pl.k, pl.c.signs, type, x, z, a, col, { model, trailer });
+  }, heightAt(x, z));
 }
 
 function fence(pl: Placer, f: Frame, pts: [number, number][], col: Col = 0x7a6248) {
@@ -181,7 +190,11 @@ export function lumberYard(pl: Placer) {
   for (let i = 0; i < 5; i++) at(pl, f, rng.pick(['tyre_stack', 'traffic_cone', 'oil_tank', 'trash_can_metal']), rng.range(-10, 30), rng.range(2, 8), rng.range(0, 6), false);
   car(pl, f, 'pickup', 28, 26, PI / 2, 0x5d7a52, 'pickup_4x4');
   car(pl, f, 'pickup', 33, 26, PI / 2, 0xe9e6dc, 'pickup_80s');
-  car(pl, f, 'semi', 6, 24, PI / 2 + 0.1, 0xb3261e);
+  car(pl, f, 'semi', 6, 24, PI / 2 + 0.1, 0xb3261e, 'semi_conventional');
+  car(pl, f, 'tractor', -30, -22, 0.4, 0xd9a21c, 'log_loader');
+  car(pl, f, 'semi', -12, 20, PI, 0xe9e6dc, 'trailer_logs');
+  car(pl, f, 'semi', 40, -24, PI / 2, 0x2f5d8a, 'flatbed_truck');
+  car(pl, f, 'semi', 38, 8, -PI / 2 + 0.2, 0xd9a21c, 'dump_truck');
   wire(pl, f, [[10, 31], [-55, 31], [-55, -41], [55, -41], [55, 31], [22, 31]]);
   for (let i = 0; i < 12; i++) tree(pl, f, rng.pick(['douglas_fir_tall', 'douglas_fir_medium', 'cedar_broad']), rng.range(-70, 70), -48 - rng.range(0, 14), rng.range(0.8, 1.1));
   pl.landmarks.push({ name: 'Hollow Creek Lumber Co.', x: f.x, z: f.z, kind: 'industrial' });
@@ -210,7 +223,10 @@ export function freight(pl: Placer) {
     }, heightAt(x, z));
   }
   wire(pl, yd, [[-8, 27], [-49, 27], [-49, -27], [49, -27], [49, 27], [8, 27]]);
-  car(pl, yd, 'semi', -30, 16, PI / 2, 0x2f5d8a);
+  car(pl, yd, 'semi', -30, 18, 0, 0x2f5d8a, 'semi_cabover', true);
+  car(pl, yd, 'semi', 14, 18, PI, 0xe9e6dc, 'trailer_box');
+  car(pl, yd, 'semi', 30, 18, PI, 0xb3261e, 'trailer_tanker');
+  car(pl, yd, 'semi', 43, 12, PI / 2, 0xd9a21c, 'flatbed_truck');
   for (let i = 0; i < 6; i++) at(pl, yd, rng.pick(['traffic_barrel', 'jersey_barrier', 'tyre_stack', 'traffic_cone']), rng.range(-40, 40), 22 + rng.range(-1, 1), rng.range(0, 6), 1);
   const can = pl.net.byName('Cannery Rd');
   const cf = beside(pl, can, 590, 200, can.full + 22);

@@ -670,7 +670,11 @@ const FAMILY: Partial<Record<VehicleType, string[]>> = {
   tow: ['tow_truck'],
   jeep: ['offroad_open'],
   delivery: ['step_van'],
+  semi: ['semi_conventional', 'semi_cabover'],
+  tractor: ['tractor_farm'],
 };
+/** Trailers a semi can pull; the paint colour picks one. */
+const TRAILERS = ['trailer_box', 'trailer_box', 'trailer_tanker', 'trailer_logs'];
 /** Types that keep the livery they were modelled with. */
 const LIVERY = new Set<VehicleType>(['sheriff', 'police', 'sheriffSuv', 'tow', 'delivery']);
 
@@ -683,22 +687,32 @@ export function familyModel(type: VehicleType, color: Col, o: VehicleOpts = {}):
   return list[((hex >> 16) + ((hex >> 8) & 255) * 3 + (hex & 255) * 7) % list.length];
 }
 
-function familyVehicle(k: Kit, name: string, type: VehicleType, color: Col): void {
-  const a = asset(name)!;
-  k.asset(name, 0, 0, 0, 0, { solid: false, tint: LIVERY.has(type) ? undefined : { body: color } });
-  for (const [x, y, , r, wn] of (a.info.wheels as [number, number, number, number, string][]) ?? []) {
-    const side = y > 0 ? -1 : 1;
-    const dual = wn === 'wheel_truck_dual';
-    if (wheelSink) wheelSink(x, -y, r, 0.23 * (r / WHEEL_R), side, dual, wn);
-    else k.asset(wn, x, r, -y, side > 0 ? Math.PI : 0, { s: r / WHEEL_R, solid: false });
-  }
+function familyVehicle(k: Kit, name: string, type: VehicleType, color: Col, o: VehicleOpts = {}): void {
+  const unit = (n: string, ox: number, tint?: Col) => {
+    const a = asset(n)!;
+    k.asset(n, ox, 0, 0, 0, { solid: false, tint: tint === undefined ? undefined : { body: tint } });
+    for (const [x, y, , r, wn] of (a.info.wheels as [number, number, number, number, string][]) ?? []) {
+      const side = y > 0 ? -1 : 1;
+      const dual = wn === 'wheel_truck_dual';
+      if (wheelSink) wheelSink(ox + x, -y, r, 0.23 * (r / WHEEL_R), side, dual, wn);
+      else k.asset(wn, ox + x, r, -y, side > 0 ? Math.PI : 0, { s: r / WHEEL_R, solid: false });
+    }
+    return a;
+  };
+  const a = unit(name, 0, LIVERY.has(type) ? undefined : color);
+  const hitch = a.info.hitch as number[] | undefined;
+  if (!hitch) return;
+  const hex = new THREE.Color(color).getHex();
+  const tn = o.trailer && type === 'semi' ? TRAILERS[(hex >> 3) % TRAILERS.length] : undefined;
+  const t = tn && hasAsset(tn) ? asset(tn) : undefined;
+  if (t) unit(tn!, hitch[0] - (t.info.hitch as number[])[0], 0xe9e7e0);
 }
 
 /** Places a vehicle; local +X is the front. */
 export function vehicle(k: Kit, signs: SignBook, type: VehicleType, x: number, z: number, ry: number, color: Col, o: VehicleOpts = {}) {
   k.at(x, z, ry, () => {
     const fam = familyModel(type, color, o);
-    if (fam) return familyVehicle(k, fam, type, color);
+    if (fam) return familyVehicle(k, fam, type, color, o);
     switch (type) {
       case 'sedan':
         sedanLike(k, color, false, o.accent);
