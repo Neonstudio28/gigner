@@ -124,6 +124,21 @@
   ],
   "tris": 5628
  },
+ "cellar_bulkhead": {
+  "min": [
+   -0.77,
+   -1.739,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.54,
+   1.756,
+   0.88
+  ],
+  "tris": 652
+ },
  "chimney_brick_a": {
   "min": [
    -0.45,
@@ -215,6 +230,72 @@
   ],
   "tris": 580
  },
+ "column_doric_45": {
+  "height": 4.5,
+  "min": [
+   -0.435,
+   -0.435,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.87,
+   0.87,
+   4.5
+  ],
+  "tris": 732
+ },
+ "column_doric_60": {
+  "height": 6.0,
+  "min": [
+   -0.551,
+   -0.551,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.102,
+   1.102,
+   6.0
+  ],
+  "tris": 732
+ },
+ "cornice_corbel": {
+  "anchor": "bottom",
+  "length": 1.0,
+  "min": [
+   -0.5,
+   -0.38,
+   0.0
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   1.0,
+   0.38,
+   0.56
+  ],
+  "tris": 336
+ },
+ "cornice_scallop": {
+  "anchor": "bottom",
+  "length": 1.0,
+  "min": [
+   -0.5,
+   -0.12,
+   0.02
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   1.0,
+   0.122,
+   0.48
+  ],
+  "tris": 252
+ },
  "cupola_barn": {
   "min": [
    -0.9,
@@ -230,6 +311,272 @@
    3.47
   ],
   "tris": 1314
+ },
+ "door_barn_x": {
+  "anchor": "bottom",
+  "min": [
+   -2.5,
+   -0.121,
+   0.03
+  ],
+  "mount": "wall",
+  "opening": [
+   2.4,
+   2.7
+  ],
+  "parts": {
+   "leaf": [
+    0.0,
+    -0.07,
+    0.0
+   ]
+  },
+  "size": [
+   5.0,
+   0.144,
+   2.89
+  ],
+  "slide": "x",
+  "tris": 488
+ },
+ "door_double_shop": {
+  "anchor": "bottom",
+  "hinge": {
+   "leaf_l": "left",
+   "leaf_r": "right"
+  },
+  "min": [
+   -0.96,
+   -0.072,
+   0.0
+  ],
+  "mount": "wall",
+  "opening": [
+   1.8,
+   2.15
+  ],
+  "parts": {
+   "leaf_l": [
+    -0.9,
+    0.0,
+    0.0
+   ],
+   "leaf_r": [
+    0.9,
+    0.0,
+    0.0
+   ]
+  },
+  "size": [
+   1.92,
+   0.154,
+   2.61
+  ],
+  "tris": 600
+ },
+ "door_double_wood": {
+  "anchor": "bottom",
+  "hinge": {
+   "leaf_l": "left",
+   "leaf_r": "right"
+  },
+  "min": [
+   -1.2,
+   -0.21,
+   0.0
+  ],
+  "mount": "wall",
+  "opening": [
+   1.8,
+   2.7
+  ],
+  "parts": {
+   "leaf_l": [
+    -0.9,
+    0.0,
+    0.0
+   ],
+   "leaf_r": [
+    0.9,
+    0.0,
+    0.0
+   ]
+  },
+  "size": [
+   2.4,
+   0.3,
+   3.04
+  ],
+  "tris": 1052
+ },
+ "door_double_wood_arched": {
+  "anchor": "bottom",
+  "hinge": {
+   "leaf_l": "left",
+   "leaf_r": "right"
+  },
+  "min": [
+   -1.15,
+   -0.21,
+   0.0
+  ],
+  "mount": "wall",
+  "opening": [
+   1.8,
+   2.7
+  ],
+  "parts": {
+   "leaf_l": [
+    -0.9,
+    0.0,
+    0.0
+   ],
+   "leaf_r": [
+    0.9,
+    0.0,
+    0.0
+   ]
+  },
+  "size": [
+   2.3,
+   0.3,
+   3.0
+  ],
+  "tris": 1140
+ },
+ "door_garage_panel": {
+  "anchor": "bottom",
+  "min": [
+   -1.32,
+   -0.08,
+   -2.096
+  ],
+  "mount": "wall",
+  "opening": [
+   2.4,
+   2.1
+  ],
+  "parts": {
+   "door": [
+    0.0,
+    -0.01,
+    2.1
+   ]
+  },
+  "size": [
+   2.64,
+   0.1,
+   4.316
+  ],
+  "tris": 1140
+ },
+ "door_garage_roller": {
+  "anchor": "bottom",
+  "min": [
+   -1.65,
+   -0.315,
+   -3.0
+  ],
+  "mount": "wall",
+  "opening": [
+   3.0,
+   3.0
+  ],
+  "parts": {
+   "curtain": [
+    0.0,
+    -0.04,
+    3.0
+   ]
+  },
+  "size": [
+   3.3,
+   0.345,
+   6.36
+  ],
+  "tris": 664
+ },
+ "door_panel": {
+  "anchor": "hinge",
+  "height": 2.05,
+  "min": [
+   -0.012,
+   -0.102,
+   0.0
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   0.912,
+   0.205,
+   2.05
+  ],
+  "tris": 908,
+  "width": 0.9
+ },
+ "door_screen": {
+  "anchor": "hinge",
+  "height": 2.05,
+  "min": [
+   -0.012,
+   -0.058,
+   0.0
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   0.912,
+   0.089,
+   2.05
+  ],
+  "tris": 328,
+  "width": 0.9
+ },
+ "door_shop_glass": {
+  "anchor": "bottom",
+  "face": [
+   0.0,
+   -0.067,
+   2.37,
+   0.6,
+   0.2
+  ],
+  "faces": [
+   [
+    0.0,
+    -0.067,
+    2.37,
+    0.6,
+    0.2,
+    0.0
+   ]
+  ],
+  "hinge": {
+   "leaf": "left"
+  },
+  "min": [
+   -0.535,
+   -0.072,
+   0.0
+  ],
+  "mount": "wall",
+  "opening": [
+   0.95,
+   2.15
+  ],
+  "parts": {
+   "leaf": [
+    -0.475,
+    0.0,
+    0.0
+   ]
+  },
+  "size": [
+   1.48,
+   0.154,
+   2.61
+  ],
+  "tris": 396
  },
  "downpipe": {
   "anchor": "bottom",
@@ -684,6 +1031,23 @@
   ],
   "tris": 2564
  },
+ "loading_dock": {
+  "height": 1.2,
+  "length": 3.0,
+  "min": [
+   -1.504,
+   -2.599,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.904,
+   2.599,
+   2.119
+  ],
+  "tris": 832
+ },
  "motel_arrow_sign": {
   "face": [
    0.0,
@@ -739,6 +1103,23 @@
    7.25
   ],
   "tris": 3204
+ },
+ "pilaster": {
+  "anchor": "bottom",
+  "height": 4.5,
+  "min": [
+   -0.41,
+   -0.26,
+   0.0
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   0.82,
+   0.26,
+   4.5
+  ],
+  "tris": 380
  },
  "pole_sign_rect": {
   "face": [
@@ -839,6 +1220,106 @@
    6.3
   ],
   "tris": 688
+ },
+ "porch_bracket": {
+  "anchor": "corner",
+  "min": [
+   0.0,
+   -0.035,
+   -0.6
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   0.6,
+   0.07,
+   0.6
+  ],
+  "tris": 152
+ },
+ "porch_lattice": {
+  "height": 0.6,
+  "length": 1.5,
+  "min": [
+   -0.75,
+   -0.025,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.5,
+   0.051,
+   0.6
+  ],
+  "tris": 464
+ },
+ "porch_post_square": {
+  "height": 2.6,
+  "min": [
+   -0.14,
+   -0.14,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.28,
+   0.28,
+   2.6
+  ],
+  "tris": 264
+ },
+ "porch_post_turned": {
+  "height": 2.6,
+  "min": [
+   -0.1,
+   -0.1,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.2,
+   0.2,
+   2.6
+  ],
+  "tris": 452
+ },
+ "porch_railing": {
+  "height": 0.91,
+  "length": 1.5,
+  "min": [
+   -0.75,
+   -0.045,
+   0.1
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.5,
+   0.09,
+   0.81
+  ],
+  "tris": 232
+ },
+ "porch_steps": {
+  "min": [
+   -0.79,
+   -1.19,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "rise": 0.72,
+  "run": 1.19,
+  "size": [
+   1.58,
+   1.19,
+   0.72
+  ],
+  "tris": 248,
+  "width": 1.5
  },
  "roof_billboard": {
   "face": [
@@ -1042,6 +1523,24 @@
   ],
   "tris": 1040
  },
+ "steps_wide": {
+  "min": [
+   -4.05,
+   -2.19,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "rise": 0.96,
+  "run": 2.04,
+  "size": [
+   8.1,
+   2.24,
+   1.76
+  ],
+  "tris": 688,
+  "width": 8.0
+ },
  "wall_vent": {
   "anchor": "center",
   "min": [
@@ -1161,5 +1660,39 @@
    14.5
   ],
   "tris": 2724
+ },
+ "window_box_flowers": {
+  "anchor": "top",
+  "length": 1.0,
+  "min": [
+   -0.515,
+   -0.252,
+   -0.33
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   1.03,
+   0.265,
+   0.495
+  ],
+  "tris": 760
+ },
+ "window_shutter": {
+  "anchor": "center",
+  "height": 1.4,
+  "min": [
+   -0.225,
+   -0.044,
+   -0.7
+  ],
+  "mount": "wall",
+  "parts": {},
+  "size": [
+   0.435,
+   0.044,
+   1.4
+  ],
+  "tris": 416
  }
 }
