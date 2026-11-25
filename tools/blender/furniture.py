@@ -6,7 +6,7 @@ import bpy, lib
 from mathutils import Vector
 import furniture_kit as kit
 
-GROUPS = ('living', 'kitchen', 'bedbath', 'office', 'shops', 'diner', 'civic', 'garage')
+GROUPS = ('living', 'kitchen', 'bedbath', 'office', 'shops', 'diner', 'civic', 'garage', 'school')
 for g in GROUPS:
     importlib.import_module('furniture_' + g)
 

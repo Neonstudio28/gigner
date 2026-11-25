@@ -131,7 +131,8 @@ export const ROADS: RoadDef[] = [
 
   // ---------------------------------------------------------------- west: trailer court, lumber yard, dairy
   { name: 'Mill Rd', kind: 'rural', pts: [[-760, 0], [-770, 90], [-800, 180], [-850, 260], [-900, 330]], culdesac: true },
-  { name: 'Fairground Rd', kind: 'gravel', pts: [[-560, 6], [-560, -50], [-560, -110], [-565, -140]], culdesac: true },
+  { name: 'Fairground Rd', kind: 'gravel', pts: [[-560, 6], [-560, -50], [-560, -80], [-560, -110], [-565, -140]], culdesac: true },
+  { name: 'Pine Ct', kind: 'gravel', pts: [[-560, -80], [-524, -81], [-494, -84]], culdesac: true },
   { name: 'Pine Loop', label: 'Whispering Pines', kind: 'gravel', pts: [[-560, -50], [-512, -46], [-474, -58], [-462, -88], [-480, -114], [-520, -118], [-560, -110]] },
   { name: 'Miller Dairy Rd', kind: 'gravel', pts: [[-1450, 27.5], [-1450, 70], [-1450, 130]], culdesac: true },
   { name: 'Ridgeview Ln', kind: 'gravel', pts: [[-1200, 15], [-1200, -60], [-1198, -140]], culdesac: true },
@@ -144,6 +145,7 @@ export const ROADS: RoadDef[] = [
   { name: 'Eastside Rd', kind: 'gravel', pts: [[1150, 20], [1152, -100], [1150, -220], [1140, -330]], culdesac: true },
   // Sunset Acres: a mobile-home park out on the highway past the last farm, ten minutes from town
   { name: 'Sunset Loop', label: 'Sunset Acres', kind: 'gravel', pts: [[1600, -6], [1596, 50], [1612, 96], [1652, 120], [1700, 108], [1720, 60], [1704, 10], [1690, -17]] },
+  { name: 'Sunset Ct', kind: 'gravel', pts: [[1596, 50], [1640, 54], [1688, 58]], culdesac: true },
   { name: 'Homestead Rd', kind: 'gravel', pts: [[1400, 10], [1402, 110], [1400, 230]], culdesac: true },
 ];
 

@@ -18,6 +18,7 @@ import { DISTRICT } from '../b2/district';
 import { farms, lumberYard, freight, lakefront, pylons } from './districts2';
 import { core } from './core';
 import { meadowbrook } from './meadow';
+import { schools } from './schools';
 import { strip, homes, riverPark, ridge, flats, trailerCourt, industry } from './quarters';
 
 const PI = Math.PI;
@@ -26,6 +27,8 @@ void PI;
 /** Flattens the building sites; must run before anything samples the terrain. */
 export function registerTownPads() {
   addFlatPad(0, -45, 170, 62, 30);
+  addFlatPad(-76, -250, 134, 132, 30);
+  addFlatPad(116, -252, 212, 140, 30);
 }
 
 /** Prop from the Blender families standing on the ground. */
@@ -48,7 +51,8 @@ export function town(pl: Placer) {
   ridge(pl);
   flats(pl);
   trailerCourt(pl);
-  trailerCourt(pl, 'Sunset Loop', 'Sunset Acres', [1655, 60], 6161, [[1, 10, -10], [-1, 14, -14]]);
+  trailerCourt(pl, 'Sunset Loop', 'Sunset Acres', [1655, 60], 6161, [[1, 10, -10], [-1, 14, -14]], 'Sunset Ct');
+  schools(pl);
   meadowbrook(pl);
   yards(pl);
   streets(pl);

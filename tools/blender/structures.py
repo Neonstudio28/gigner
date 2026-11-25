@@ -18,9 +18,9 @@ argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 opt = dict(a.split('=', 1) if '=' in a else (a, '1') for a in argv)
 
 lib.reset()
-import structures_landmarks, structures_towers, structures_civic, structures_roof, structures_arch, structures_yard, structures_lake, structures_farm, structures_trailer
+import structures_landmarks, structures_towers, structures_civic, structures_roof, structures_arch, structures_yard, structures_lake, structures_farm, structures_trailer, structures_school
 MODS = {'landmarks': structures_landmarks, 'towers': structures_towers, 'civic': structures_civic, 'roof': structures_roof, 'arch': structures_arch, 'yard': structures_yard, 'lake': structures_lake, 'farm': structures_farm,
-    'trailer': structures_trailer}
+    'trailer': structures_trailer, 'school': structures_school}
 only = opt['only'].split(',') if 'only' in opt else list(MODS)
 for name in only:
     MODS[name].build()
