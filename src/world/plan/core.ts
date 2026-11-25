@@ -5,6 +5,7 @@ import { Placer } from './placer';
 import { SHOPS } from '../b2/shops';
 import { HOUSES, ESTATES, SHACKS, TRAILERS, SUBURBAN, CABINS } from '../b2/houses';
 import { CIVIC_B2 } from '../b2/civic';
+import { FASTFOOD } from '../b2/fastfood';
 import { SCHOOLS } from '../b2/school';
 import { LANDMARKS } from '../b2/landmarks';
 import { DISTRICT } from '../b2/district';
@@ -15,7 +16,7 @@ const PI = Math.PI;
 export const N = 1 as const; // frontage side of an eastbound street: 1 = north, -1 = south
 export const S = -1 as const;
 
-const B = new Map<string, BuildingDef>([...SHOPS, ...HOUSES, ...SUBURBAN, ...CABINS, ...ESTATES, ...SHACKS, ...TRAILERS, ...CIVIC_B2, ...SCHOOLS, ...LANDMARKS, ...DISTRICT].map((d) => [d.id, d]));
+const B = new Map<string, BuildingDef>([...SHOPS, ...HOUSES, ...SUBURBAN, ...CABINS, ...ESTATES, ...SHACKS, ...TRAILERS, ...CIVIC_B2, ...SCHOOLS, ...LANDMARKS, ...DISTRICT, ...FASTFOOD].map((d) => [d.id, d]));
 export const D = (id: string) => {
   const d = B.get(id);
   if (!d) throw new Error(`no building ${id}`);

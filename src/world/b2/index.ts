@@ -5,6 +5,7 @@ import { SCHOOLS } from './school';
 import { HOUSES, SUBURBAN, CABINS } from './houses';
 import { LANDMARKS } from './landmarks';
 import { DISTRICT } from './district';
+import { FASTFOOD } from './fastfood';
 
 /** Every building of the remade town (gallery set `b2`). */
-export const B2: BuildingDef[] = [...LANDMARKS, ...DISTRICT, ...SHOPS, ...CIVIC_B2, ...SCHOOLS, ...HOUSES, ...SUBURBAN, ...CABINS];
+export const B2: BuildingDef[] = [...LANDMARKS, ...DISTRICT, ...FASTFOOD, ...SHOPS, ...CIVIC_B2, ...SCHOOLS, ...HOUSES, ...SUBURBAN, ...CABINS];

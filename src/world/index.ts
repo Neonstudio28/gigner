@@ -282,7 +282,7 @@ export async function createTownWorld(opts: TownWorldOptions = {}): Promise<Town
     pl.trees.push(...out);
     (globalThis as { __shrubsDropped?: number }).__shrubsDropped = dropped;
   }
-  const { veg: vegetation, trees } = createVegetation({ occ, trees: pl.trees, cornFields: pl.cornFields, grassPatches: pl.grassPatches, clearings: pl.clearings });
+  const { veg: vegetation, trees } = createVegetation({ occ, trees: pl.trees, cornFields: pl.cornFields, cropTiles: pl.cropTiles, grassPatches: pl.grassPatches, clearings: pl.clearings });
   await progress(0.88, 'Starting traffic');
   const traffic = new Traffic(materials, signs, net);
   traffic.enabled = opts.traffic ?? true;

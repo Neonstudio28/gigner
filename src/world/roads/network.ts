@@ -514,12 +514,8 @@ export class RoadNetwork {
       }
     }
     this.index();
-    this.bulbs = this.roads
-      .filter((r) => r.def.culdesac)
-      .map((r) => {
-        const e = r.pts[r.pts.length - 1];
-        return { r, x: e.x + e.tx * 6, z: e.z + e.tz * 6, y: e.y, R: r.spec.hw + 8.6, gap: Math.asin(Math.min(1, (r.spec.hw + 0.4) / (r.spec.hw + 8.6))) };
-      });
+    // dead ends simply stop: no turnaround circles anywhere
+    this.bulbs = [];
     this.findCorners();
     this.bulbFlares();
     setRoadHook((x, z, h) => this.grade(x, z, h));
@@ -899,7 +895,7 @@ export class RoadNetwork {
       kind: r.spec.drive,
       rank: r.spec.rank,
       label: r.def.label ?? r.def.name,
-      culdesac: r.def.culdesac ? { x: r.pts[r.pts.length - 1].x + r.pts[r.pts.length - 1].tx * 6, z: r.pts[r.pts.length - 1].z + r.pts[r.pts.length - 1].tz * 6, R: r.spec.hw + 8.6 } : null,
+      culdesac: null as { x: number; z: number; R: number } | null,
     }));
   }
 
@@ -1193,6 +1189,14 @@ function buildRoad(net: RoadNetwork, r: Road, g: MeshAccumulator, solids: Occupa
     if (sp.surface === 'gravel' && r.kind === 'dirt') {
       // grassy crown between the wheel ruts
       band(-0.45, 0.45, 0.05, 'paint', 0x6f8a45, 'mark');
+      // worn wheel ruts either side of it, and standing puddles in the low spots
+      for (const sd of [-1, 1]) band(sd * 1.15 - 0.38, sd * 1.15 + 0.38, 0.045, 'paint', 0x6e5a42, 'mark');
+      const hsh = Math.sin(Math.floor(a.s / 3) * 12.9898) * 43758.5453;
+      const fr = hsh - Math.floor(hsh);
+      if (fr < 0.2) {
+        const sd = fr < 0.1 ? -1 : 1;
+        band(sd * 1.15 - 0.3 - fr, sd * 1.15 + 0.3 + fr, 0.055, 'gloss', 0x4a4638, 'mark');
+      }
     }
     // markings
     const Y = P.lineYellow;

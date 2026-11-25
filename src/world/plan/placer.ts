@@ -60,6 +60,7 @@ export class Placer {
     this.clearings.push({ x: (x0 + x1) / 2, z: (z0 + z1) / 2, w: x1 - x0, d: z1 - z0 });
   }
   readonly cornFields: VegetationInput['cornFields'] = [];
+  readonly cropTiles: NonNullable<VegetationInput['cropTiles']> = [];
   readonly grassPatches: VegetationInput['grassPatches'] = [];
   readonly clearings: { x: number; z: number; w: number; d: number }[] = [];
   readonly animated: { obj: THREE.Object3D; update: (dt: number, t: number) => void }[] = [];
@@ -470,12 +471,12 @@ export class Placer {
     return n;
   }
 
-  /** Houses around a cul-de-sac bulb. */
+  /** Houses fanned round the dead end of a street (there is no turnaround circle). */
   bulb(r: Road, pick: (rng: Rng) => BuildingDef | null, count = 5, o: PlaceOpts = {}) {
     const e = r.pts[r.pts.length - 1];
-    const cx = e.x + e.tx * 6;
-    const cz = e.z + e.tz * 6;
-    const R = r.spec.hw + 8.6 + r.spec.park + r.spec.walk + 7;
+    const cx = e.x - e.tx * 2;
+    const cz = e.z - e.tz * 2;
+    const R = r.full + 7;
     const back = Math.atan2(-e.tz, -e.tx);
     for (let i = 0; i < count; i++) {
       const def = pick(this.rng);

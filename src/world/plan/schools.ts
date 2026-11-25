@@ -151,6 +151,8 @@ function highCampus(pl: Placer, rng: Rng) {
 
 export function schools(pl: Placer) {
   const rng = new Rng(7100);
-  inFrame(-9, -250, Math.PI / 2, () => elementaryCampus(pl, rng));
-  inFrame(9, -252, -Math.PI / 2, () => highCampus(pl, rng));
+  // the two schools stand at opposite ends of town: the elementary on the highway west of Cedar Ridge,
+  // the county high school out past the river bridge on Eastside Rd
+  inFrame(-660, 21, Math.PI, () => elementaryCampus(pl, rng));
+  inFrame(1139, -110, Math.PI / 2, () => highCampus(pl, rng));
 }

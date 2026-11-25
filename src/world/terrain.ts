@@ -573,6 +573,31 @@ const COL = {
   riverbed: C(0x6f6a58),
 };
 
+interface Tint { x: number; z: number; h: number; c: number; s: number; col: THREE.Color }
+const TINT_CELL = 32;
+const tints = new Map<string, Tint[]>();
+/** Colours the ground under a square of crop (side `size`, turned by ry) so fields read as fields from any distance. */
+export function addFieldTint(x: number, z: number, size: number, ry: number, color: number) {
+  const t: Tint = { x, z, h: size / 2 + 0.6, c: Math.cos(ry), s: Math.sin(ry), col: new THREE.Color(color) };
+  for (let i = Math.floor((x - size) / TINT_CELL); i <= Math.floor((x + size) / TINT_CELL); i++)
+    for (let j = Math.floor((z - size) / TINT_CELL); j <= Math.floor((z + size) / TINT_CELL); j++) {
+      const k = `${i},${j}`;
+      let arr = tints.get(k);
+      if (!arr) tints.set(k, (arr = []));
+      arr.push(t);
+    }
+}
+function fieldTint(x: number, z: number): THREE.Color | null {
+  const arr = tints.get(`${Math.floor(x / TINT_CELL)},${Math.floor(z / TINT_CELL)}`);
+  if (!arr) return null;
+  for (const t of arr) {
+    const dx = x - t.x;
+    const dz = z - t.z;
+    if (Math.abs(dx * t.c - dz * t.s) <= t.h && Math.abs(dx * t.s + dz * t.c) <= t.h) return t.col;
+  }
+  return null;
+}
+
 /** Representative ground colour at a point (also used by the minimap). */
 export function groundColor(cx: number, cy: number, cz: number, ny: number, out: THREE.Color) {
   const n = nC(cx * 0.01, cz * 0.01);
@@ -582,6 +607,8 @@ export function groundColor(cx: number, cy: number, cz: number, ny: number, out:
   const r = river.query(cx, cz);
   if (r && r.dist < r.hw + 3) return out.copy(COL.riverbed);
   if (r && r.dist < r.hw + 7) return out.copy(COL.shore);
+  const ft = fieldTint(cx, cz);
+  if (ft) return out.copy(ft).multiplyScalar(0.94 + n * 0.08);
   const v = valley(cx, cz);
   if (v.e > 20 || Math.hypot(cx, cz) > 2100) {
     const snowLine = 660 + nC(cx * 0.003, cz * 0.003) * 90 - (1 - ny) * 90;
