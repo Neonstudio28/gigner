@@ -373,8 +373,8 @@ export function freight(pl: Placer) {
   build(pl, cf, D('factory'), 0, 0, 0, 735);
   gravel(pl, cf, -22, 22, 14, 24, 0x77777a, 'asphalt');
   for (let i = 0; i < 6; i++) car(pl, cf, rng.pick(['sedan', 'pickup', 'wagon', 'coupe'] as const), -16 + i * 3.1, 19, PI + rng.range(-0.05, 0.05), rng.pick(CAR_COLORS));
-  // Blender-modelled warehouses further out along Freight Rd
-  const depot = (name: string, x: number, z: number, dist: number, hw: number, hd: number, text: string, bg: string, ink: string, tint?: Col, turn = 0) => {
+  // Blender-modelled warehouses: one here on Freight Rd, the others spread around the county
+  const depot = (fr: Road, name: string, x: number, z: number, dist: number, hw: number, hd: number, text: string, bg: string, ink: string, tint?: Col, turn = 0) => {
     const f = beside(pl, fr, x, z, fr.full + dist);
     const apron = dist - hd + 2;
     addLotPad(...(Placer.world(f.x, f.z, f.ry, 0, apron / 2 - 1) as [number, number]), hw * 2 + 10, hd * 2 + apron + 6, f.ry, heightAt(f.x, f.z), 6);
@@ -388,6 +388,8 @@ export function freight(pl: Placer) {
         signBoard(pl.c, `wh.${name}`, fc[0], fc[2], -fc[1] + 0.012, fc[3] * 0.97, fc[4] * 0.94, bg, [{ text, font: F_OS, weight: '800', color: ink, y: 0.56, size: 0.6, maxW: 0.92 }], { frame: undefined });
     }, y);
     pl.c.occ.add(f.x, f.z, hw * 2, hd * 2, f.ry, 1);
+    wire(pl, f, [[-hw - 5, dist - 3], [-hw - 5, -hd - 4], [hw + 5, -hd - 4], [hw + 5, dist - 3]]);
+    for (let i = 0; i < 9; i++) tree(pl, f, rng.pick(['douglas_fir_tall', 'douglas_fir_medium', 'cedar_broad']), i < 5 ? rng.range(-hw - 8, hw + 8) : (i % 2 ? 1 : -1) * (hw + 9 + rng.range(0, 5)), i < 5 ? -hd - 8 - rng.range(0, 10) : rng.range(-hd, dist - 12), rng.range(0.8, 1.1));
     return f;
   };
   const clutter = (f: Frame, x0: number, x1: number, z0: number, z1: number, n: number, kinds: string[]) => {
@@ -395,7 +397,7 @@ export function freight(pl: Placer) {
   };
   const DOCK = ['pallet_stack', 'pallet_stack', 'pallet', 'crate_wood_a', 'crate_wood_b', 'barrel_steel', 'cardboard_box_stack', 'barrel_steel_rusty'];
   {
-    const f = depot('warehouse_steel', 742, 150, 36, 19.5, 13.5, 'NORTHWEST TRANSFER & STORAGE', '#f1eee4', '#2f4f7a', 0x3f6ea4);
+    const f = depot(fr, 'warehouse_steel', 742, 150, 36, 19.5, 13.5, 'NORTHWEST TRANSFER & STORAGE', '#f1eee4', '#2f4f7a', 0x3f6ea4);
     car(pl, f, 'semi', -13.6, 23.2, PI / 2, 0xe9e6dc, 'trailer_box');
     car(pl, f, 'semi', -2.4, 25, PI / 2, 0xb3402e, 'semi_conventional', true);
     at(pl, f, 'yard_ramp', 12.5, 17.5, PI, 1.3);
@@ -406,7 +408,7 @@ export function freight(pl: Placer) {
     for (let i = 0; i < 5; i++) car(pl, f, rng.pick(['sedan', 'pickup', 'wagon', 'coupe'] as const), 9 + i * 3.1, 31, PI + rng.range(-0.05, 0.05), rng.pick(CAR_COLORS));
   }
   {
-    const f = depot('warehouse_brick', 783, 150, 30, 15.6, 10, 'PINE HOLLOW FRUIT GROWERS ASSN · EST. 1924', '#d8ceb4', '#3d2f28');
+    const f = depot(pl.net.byName('Orchard Rd'), 'warehouse_brick', 520, -300, 30, 15.6, 10, 'PINE HOLLOW FRUIT GROWERS ASSN · EST. 1924', '#d8ceb4', '#3d2f28');
     clutter(f, -13, 13, 8.2, 10, 10, ['crate_wood_a', 'crate_wood_b', 'crate_wood_a', 'barrel_wood', 'pallet_stack', 'cardboard_box_stack']);
     clutter(f, -18, 18, 13, 26, 6, ['pallet', 'crate_wood_b', 'barrel_steel_rusty', 'tyre_stack']);
     car(pl, f, 'semi', 6, 17, PI / 2, 0xd9a21c, 'flatbed_truck');
@@ -414,9 +416,10 @@ export function freight(pl: Placer) {
     at(pl, f, 'water_tank_roof', -9, -2, 0, false);
     at(pl, f, 'dumpster_blue_open', 19, -4, PI / 2, 1.4);
     at(pl, f, 'oil_tank', -18.5, -6, PI / 2, 1.2);
+    pl.landmarks.push({ name: 'Fruit Growers Warehouse', x: f.x, z: f.z, kind: 'industrial' });
   }
   {
-    const f = depot('warehouse_quonset', 752, 40, 15, 13.4, 6.2, 'SURPLUS', '#f1eee4', '#8e2b26', 0x5f6b4f, PI / 2);
+    const f = depot(pl.net.byName('Old Hwy 10 W'), 'warehouse_quonset', -960, -30, 17, 13.4, 6.2, 'SURPLUS', '#f1eee4', '#8e2b26', 0x5f6b4f, PI / 2);
     clutter(f, -12, 12, 7.4, 9, 7, ['barrel_steel_rusty', 'tyre_stack', 'pallet', 'barrel_steel', 'crate_wood_b']);
     clutter(f, -19, -15, -4, 4, 4, ['pallet_stack', 'barrel_steel', 'crate_wood_a']);
     clutter(f, 15, 18, -4, 4, 4, ['pallet_stack', 'barrel_steel', 'crate_wood_a']);
@@ -424,7 +427,7 @@ export function freight(pl: Placer) {
     at(pl, f, 'fuel_tank_stand', 17, 9, 0, 1.6);
   }
   {
-    const f = depot('warehouse_pole_shed', 700, 40, 19, 13, 6, 'CASCADE BUILDING SUPPLY · YARD', '#f1eee4', '#2c5644');
+    const f = depot(pl.net.byName('Mill Rd'), 'warehouse_pole_shed', -940, 266, 19, 13, 6, 'CASCADE BUILDING SUPPLY · YARD', '#f1eee4', '#2c5644');
     clutter(f, -12, 12, 8, 16, 8, ['pallet_stack', 'pallet', 'pallet_stack', 'traffic_cone', 'barrel_steel']);
     car(pl, f, 'pickup', 9, 12, -PI / 2 + 0.2, 0xb3402e);
   }
