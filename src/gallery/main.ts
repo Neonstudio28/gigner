@@ -21,6 +21,10 @@ const SETS: Record<string, () => Promise<BuildingDef[]>> = {
   civic: async () => (await import('../world/buildings/civic2')).CIVIC,
   town: async () => (await import('../world/buildings/town')).TOWN,
   b2: async () => (await import('../world/b2')).B2,
+  homes: async () => {
+    const h = await import('../world/b2/houses');
+    return [...h.HOUSES.slice(8), ...h.SUBURBAN, ...h.CABINS];
+  },
   people: async () => {
     const { person, cast, randomPerson, POSES } = await import('../world/people');
     const { assetNames } = await import('../world/assets');

@@ -45,6 +45,9 @@ interface DriveSpec {
 /** Sites that are reached by car and so get a paved entrance from their lot to the street. */
 const SITE_TAGS = ['medical', 'school', 'retail', 'apartments', 'warehouse', 'storage', 'industrial', 'highway', 'service', 'hotel', 'office', 'media'];
 
+/** Residential building tags (kept out of zoned commercial and civic land). */
+const HOME_TAGS = ['house', 'shack', 'estate', 'trailer'];
+
 /** Shared placement state for the zone builders. */
 export class Placer {
   readonly trees: PlacedTree[] = [];
@@ -70,6 +73,21 @@ export class Placer {
   readonly sites: { def: BuildingDef; x: number; z: number; ry: number }[] = [];
   placed = 0;
   skipped: string[] = [];
+  /** Zoned non-residential land (downtown, civic blocks): homes may not be sited inside these polygons. */
+  readonly noHomes: [number, number][][] = [];
+
+  /** True where the zoning keeps houses, shacks and trailers out. */
+  zonedOut(x: number, z: number) {
+    return this.noHomes.some((poly) => {
+      let inside = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, zi] = poly[i];
+        const [xj, zj] = poly[j];
+        if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+      }
+      return inside;
+    });
+  }
   static failed = new Set<string>();
 
   constructor(
@@ -118,6 +136,10 @@ export class Placer {
   }
 
   put(def: BuildingDef, x: number, z: number, ry: number, seed: number, o: PlaceOpts = {}): boolean {
+    if (def.tags?.some((t) => HOME_TAGS.includes(t)) && this.zonedOut(x, z)) {
+      this.skipped.push(def.id);
+      return false;
+    }
     const f = this.free(x, z, def.w, def.d, ry, o.maxSlope ?? 6);
     if (!f) {
       this.skipped.push(def.id);

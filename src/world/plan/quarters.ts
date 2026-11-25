@@ -1,7 +1,7 @@
 import type { BuildingDef } from '../buildings/catalog';
 import { Rng } from '../core/rng';
 import { Placer } from './placer';
-import { HOUSES, ESTATES, SHACKS, TRAILERS } from '../b2/houses';
+import { HOUSES, ESTATES, SHACKS, TRAILERS, SUBURBAN, CABINS } from '../b2/houses';
 import { heightAt, isWater } from '../terrain';
 import { put } from '../b2/hull';
 import { CAR_COLORS } from '../palette';
@@ -13,6 +13,8 @@ const PI = Math.PI;
 /** The highway strip west of downtown: gas, motel, diner, supermarket, donut shop and a used-car lot, each on its own paved lot. */
 export function strip(pl: Placer) {
   const rng = new Rng(5150);
+  // zoning: the strip's back lots stay commercial, no homes between the highway and the Meadowbrook buffer
+  pl.noHomes.push([[-452, 10], [-262, 2], [-262, 72], [-300, 96], [-452, 104]]);
   const w = pl.net.byName('W Main St');
   const hwy = pl.net.byName('Old Hwy 10 W');
   const L = (f: { x: number; z: number; ry: number }, lx: number, lz: number) => Placer.world(f.x, f.z, f.ry, lx, lz);
@@ -144,15 +146,16 @@ export function homes(pl: Placer) {
   // the streets people live on first, then the avenues take whatever corner lots are left
   both('Maple St');
   both('Alder St');
-  pl.along(R('Lakeshore Dr'), N, 10, R('Lakeshore Dr').length - 10, pickOf(HOUSES), o);
+  pl.along(R('Lakeshore Dr'), N, 10, R('Lakeshore Dr').length - 10, pickOf([...HOUSES, ...CABINS, ...CABINS]), o);
   both('E Main St', pickOf(HOUSES), tight);
   // Riverside Dr faces the park: houses all along its town side wherever the downtown blocks leave room behind their lots
   pl.along(R('Riverside Dr'), S, sAt(R('Riverside Dr'), -196, 'x'), R('Riverside Dr').length - 12, pickOf(HOUSES), tight);
-  both('Heron Ct');
-  both('Birch Ct');
-  pl.bulb(R('Heron Ct'), pickOf(HOUSES), 4, o);
-  pl.bulb(R('Birch Ct'), pickOf(HOUSES), 4, o);
-  both('Lake Hill Rd');
+  const newer = pickOf([...HOUSES.slice(8), ...SUBURBAN]);
+  both('Heron Ct', newer);
+  both('Birch Ct', newer);
+  pl.bulb(R('Heron Ct'), newer, 4, o);
+  pl.bulb(R('Birch Ct'), newer, 4, o);
+  both('Lake Hill Rd', pickOf([...HOUSES, ...SUBURBAN]));
   for (const n of ['Division St S', '1st Ave W S', '1st Ave E S']) both(n);
   both('2nd Ave E', pickOf(HOUSES), tight);
   both('3rd Ave E', mixed, tight);
@@ -193,6 +196,7 @@ const local = (s: Site) => (lx: number, lz: number): [number, number] => {
   return [x, z];
 };
 const free = (pl: Placer, x: number, z: number, pad = 0.4) => !isWater(x, z) && !pl.c.occ.blocked(x, z, pad) && !pl.onStreet(x, z, 0.5) && !pl.drives.blocked(x, z, pad);
+const xy = (p: [number, number]) => ({ x: p[0], z: p[1] });
 const drop = (pl: Placer, name: string, p: [number, number], ry = 0, solid: boolean | number = 0.5) => {
   if (free(pl, p[0], p[1])) prop(pl, name, p[0], p[1], ry, solid);
 };
@@ -316,9 +320,9 @@ export function flats(pl: Placer) {
 }
 
 /** Whispering Pines: single-wides set at an angle round a gravel loop off Fairground Rd, a shared green with mailboxes and bins in the middle. */
-export function trailerCourt(pl: Placer) {
-  const rng = new Rng(2727);
-  const loop = pl.net.byName('Pine Loop');
+export function trailerCourt(pl: Placer, road = 'Pine Loop', label = 'Whispering Pines', mark: [number, number] = [-512, -84], seed = 2727, rows?: [1 | -1, number, number][]) {
+  const rng = new Rng(seed);
+  const loop = pl.net.byName(road);
   const first = pl.sites.length;
   const lean = 0.32;
   const row = (side: 1 | -1, s0: number, s1: number, step: number) => {
@@ -329,10 +333,8 @@ export function trailerCourt(pl: Placer) {
       pl.put(def, f.x, f.z, f.ry + PI / 2 - lean, (rng.next() * 1e6) | 0, { maxSlope: 6 });
     }
   };
-  row(N, 10, loop.length - 6, 12.5);
-  row(S, 16, 78, 12.5);
-  row(S, loop.length - 74, loop.length - 14, 12.5);
-  pl.landmarks.push({ name: 'Whispering Pines', x: -512, z: -84, kind: 'district' });
+  for (const [sd, a, b] of rows ?? [[N, 10, loop.length - 6], [S, 16, 78], [S, loop.length - 74, loop.length - 14]]) row(sd, a < 0 ? loop.length + a : a, b < 0 ? loop.length + b : b, 12.5);
+  pl.landmarks.push({ name: label, x: mark[0], z: mark[1], kind: 'district' });
   const YARD = ['patio_chair', 'patio_chair', 'bbq_grill', 'kiddie_pool', 'satellite_dish_yard', 'tyre', 'bicycle', 'bmx_bike', 'garden_gnome', 'wheelie_bin', 'trash_can_metal', 'lawn_mower', 'gas_can', 'crate_wood_a', 'doghouse', 'planter_round'];
   for (const s of pl.sites.slice(first)) {
     const W = local(s);
@@ -349,13 +351,83 @@ export function trailerCourt(pl: Placer) {
       const q = W(rng.range(-hw - 1, hw + 1), rng.range(-s.def.d / 2 - 2, -s.def.d / 2 + 0.4));
       if (free(pl, q[0], q[1], 0.2)) pl.trees.push({ kind: rng.pick(['weeds_a', 'weeds_b', 'grass_tall_a', 'fern']), x: q[0], z: q[1], s: rng.range(0.9, 1.4), ry: rng.range(0, 6) });
     }
+    // front yard life around the deck: chairs round a fire ring, flamingos, planters, spinners, junk by the hitch
+    const fz = s.def.d / 2;
+    const dz = (a: number, b: number) => fz + rng.range(a, b);
+    const face = s.ry + PI;
+    if (rng.chance(0.7)) for (const sx of [-1, 1]) drop(pl, rng.pick(['lawn_chair', 'lawn_chair_b', 'patio_chair']), W(-hw * 0.14 + 2.6 + sx * 0.8, dz(1.2, 1.8)), face + sx * 0.3 + rng.range(-0.2, 0.2), 0.2);
+    if (rng.chance(0.35)) {
+      const fx = rng.pick([-hw + 2.5, hw - 2.5]);
+      drop(pl, 'firepit_ring', W(fx, fz + 3.4), 0, 0.3);
+      for (let i = 0; i < 3; i++) {
+        const a = rng.range(0, PI * 2);
+        drop(pl, rng.pick(['lawn_chair', 'lawn_chair_b', 'crate_wood_a', 'lawn_chair']), W(fx + Math.cos(a) * 1.6, fz + 3.4 + Math.sin(a) * 1.6), s.ry - a - PI / 2, 0.2);
+      }
+    }
+    if (rng.chance(0.35)) for (let i = 0; i < rng.int(2, 4); i++) drop(pl, 'pink_flamingo', W(rng.range(-hw + 1, hw - 1), dz(0.6, 2.6)), rng.range(0, 6), false);
+    if (rng.chance(0.4)) for (let i = 0; i < 2; i++) drop(pl, 'tyre_planter', W(-hw * 0.14 - 2.2 - i * 0.9, dz(0.4, 0.9)), 0, 0.2);
+    if (rng.chance(0.3)) drop(pl, 'wind_spinner', W(rng.range(-hw + 1, hw - 1), dz(0.5, 2)), rng.range(0, 6), false);
+    if (rng.chance(0.15)) for (const sx of [-1, 1]) drop(pl, 'tiki_torch', W(-hw * 0.14 + sx * 1.9, fz + 2.2), 0, false);
+    if (rng.chance(0.2)) drop(pl, 'chest_freezer', W(-hw * 0.14 - 2.2, fz + 0.2), s.ry, 0.5);
+    if (rng.chance(0.18)) drop(pl, 'porch_couch', W(rng.range(-hw + 2, hw - 2), fz + 2.6), face, 0.5);
+    if (rng.chance(0.25)) drop(pl, rng.pick(['tarp_heap', 'cinder_blocks', 'tyre_stack', 'cinder_blocks']), W(rng.pick([-1, 1]) * (hw + 1.2), rng.range(-1.5, 1.5)), s.ry + PI / 2, 0.5);
+    if (rng.chance(0.3)) for (let i = 0; i < 3; i++) pl.trees.push({ kind: 'flower_bed', ...xy(W(hw * 0.2 + i * 1.7, fz - 0.6)), s: 1, ry: s.ry });
+    // carport over the car pad
+    if (rng.chance(0.4) && free(pl, p[0], p[1], 0.5)) drop(pl, 'carport_metal', p, s.ry + PI / 2, 0.3);
+    // the back: one big thing for the kids or the summer, a shed, a dog
+    const bz = -s.def.d / 2 - 3.2;
+    const back = rng.next();
+    if (back < 0.14) drop(pl, 'pool_above_ground', W(rng.range(-hw + 3, hw - 3), bz - 1.4), 0, 0.6);
+    else if (back < 0.3) drop(pl, 'trampoline', W(rng.range(-hw + 3, hw - 3), bz - 0.8), 0, 0.5);
+    else if (back < 0.45) drop(pl, 'kids_slide', W(rng.range(-hw + 2, hw - 2), bz), rng.range(0, 6), 0.4);
+    if (rng.chance(0.3)) drop(pl, 'garden_shed', W(rng.pick([-1, 1]) * (hw - 1.8), bz - 0.6), s.ry + rng.pick([0, PI]), 0.6);
+    if (rng.chance(0.2)) drop(pl, 'doghouse', W(rng.range(-hw + 2, hw - 2), bz + 0.6), s.ry + PI, 0.4);
+    // a run of chain-link along one side of some lots, with a gate gap at the front
+    if (rng.chance(0.3)) {
+      const sx = rng.pick([-1, 1]) * (hw + 1.3);
+      const a = W(sx, fz + 0.5);
+      const b = W(sx, -s.def.d / 2 - 4.5);
+      if (free(pl, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0.4)) fence(pl, 'chain', [a, b]);
+    }
+    if (rng.chance(0.2)) drop(pl, 'string_lights', W(-hw * 0.14, fz + 1.6), s.ry, false);
     const t = W(-hw - 2.5, -s.def.d / 2 - 3);
     if (rng.chance(0.55) && free(pl, t[0], t[1], 1.2)) pl.trees.push({ kind: rng.pick(['pine_tall', 'pine_medium', 'douglas_fir_medium', 'pine_tall']), x: t[0], z: t[1], s: rng.range(0.8, 1.05), ry: rng.range(0, 6) });
   }
   // the green in the middle: mailboxes, bins, a picnic table, swings, the park's propane tank and a row of pines
-  const [cx, cz] = [-512, -84];
+  const [cx, cz] = mark;
   const at = (name: string, dx: number, dz: number, ry = 0, solid: boolean | number = 0.5) => drop(pl, name, [cx + dx, cz + dz], ry, solid);
-  for (let i = 0; i < 4; i++) at('mailbox_post', -6 + i * 0.9, 9, 0, 0.2);
+  at('cluster_mailbox', -5, 9, 0, 0.4);
+  at('cluster_mailbox', -3.6, 9, 0, 0.4);
+  at('bench_wood', -4.3, 7.4, PI, 0.4);
+  at('firepit_ring', 3, -6, 0, 0.3);
+  for (let i = 0; i < 4; i++) at(rng.pick(['lawn_chair', 'lawn_chair_b']), 3 + Math.cos(i * 1.6) * 1.7, -6 + Math.sin(i * 1.6) * 1.7, -i * 1.6 - PI / 2, 0.2);
+  at('kids_slide', 8, -1, 0.6, 0.4);
+  at('trampoline', -9, 2, 0, 0.5);
+  // the commons: worn gravel paths, a pavilion, a half court, a sandbox and a fenced community garden
+  for (const a of [0, PI / 2, PI, -PI / 2]) paveR(pl, cx + Math.cos(a) * 11, cz + Math.sin(a) * 11, -a, 18, 1.6, 0x9a8c74, 'gravel', 0.025, false);
+  paveR(pl, cx, cz, 0, 7, 7, 0x9a8c74, 'gravel', 0.03, false);
+  at('bandstand_gazebo', 16, -9, 0.4, 0.6);
+  for (const [dx, dz, r] of [[12.5, -5, 0.4], [19.5, -12.5, 2]] as const) at('picnic_table', dx, dz, r, 0.4);
+  at('bbq_grill', 13.5, -12.5, 0, 0.3);
+  at('trash_can_metal', 20, -6, 0, 0.2);
+  paveR(pl, cx - 18, cz + 6, 0, 9, 8, 0x6f6f6c, 'asphalt', 0.04, false);
+  at('basketball_hoop', -18, 10, PI, 0.4);
+  at('sandbox', 10, 4, 0.2, 0.3);
+  at('wheelbarrow', -11.5, -17, 1.1, 0.3);
+  for (let i = 0; i < 6; i++) at('planter_box', -19 + (i % 3) * 2.6, -14 - Math.floor(i / 3) * 2.4, 0, 0.3);
+  fence(pl, 'chain', [[cx - 22, cz - 11], [cx - 22, cz - 18.5], [cx - 12.5, cz - 18.5], [cx - 12.5, cz - 11], [cx - 15.5, cz - 11]]);
+  at('garden_hose_reel', -13.2, -11.6, 0, 0.2);
+  at('scarecrow', -16.5, -18, 0, 0.2);
+  for (const [dx, dz] of [[-24, 0], [22, 6], [0, 18], [-6, -22], [24, -20]] as const) {
+    const q: [number, number] = [cx + dx + rng.range(-2, 2), cz + dz + rng.range(-2, 2)];
+    if (free(pl, q[0], q[1], 2)) pl.trees.push({ kind: rng.pick(['maple_medium', 'cedar_broad', 'birch_cluster', 'maple_large']), x: q[0], z: q[1], s: rng.range(0.85, 1.1), ry: rng.range(0, 6) });
+  }
+  for (let i = 0; i < 26; i++) {
+    const a = rng.range(0, PI * 2);
+    const r = rng.range(4, 26);
+    const q: [number, number] = [cx + Math.cos(a) * r, cz + Math.sin(a) * r];
+    if (free(pl, q[0], q[1], 0.6)) pl.trees.push({ kind: rng.pick(['weeds_a', 'grass_tall_a', 'stump', 'weeds_b', 'stump_mossy']), x: q[0], z: q[1], s: rng.range(0.8, 1.2), ry: rng.range(0, 6) });
+  }
   at('dumpster_green', 6, 9, 0);
   at('dumpster_blue_open', 8.6, 9, 0);
   at('picnic_table', -2, 0, 0.3);
@@ -365,9 +437,13 @@ export function trailerCourt(pl: Placer) {
   at('payphone_post', -8.5, 9, 0, 0.3);
   scatter(pl, rng, RUBBISH, cx + 3, cz + 7, cx + 11, cz + 12, 8);
   // sign and lamp where the loop leaves Fairground Rd
-  const fair = pl.net.byName('Fairground Rd');
-  const g = pl.net.frontage(fair, 40, S, fair.full + 2.2);
-  poleSign(pl, 'pines', g.x, g.z, g.ry + PI / 2, 'WHISPERING PINES', 'MOBILE HOME PARK', '#f1e9cf', '#2f4f3a');
+  const fair = road === 'Pine Loop' ? pl.net.byName('Fairground Rd') : loop;
+  const g = road === 'Pine Loop' ? pl.net.frontage(fair, 40, S, fair.full + 2.2) : pl.net.frontage(loop, 8, N, loop.full + 2.2);
+  poleSign(pl, road === 'Pine Loop' ? 'pines' : 'sunset', g.x, g.z, g.ry + PI / 2, label.toUpperCase(), 'MOBILE HOME PARK', '#f1e9cf', road === 'Pine Loop' ? '#2f4f3a' : '#9a4a2a');
+  for (const sd of [N, S]) {
+    const q = pl.net.frontage(loop, sd === N ? 18 : loop.length - 18, S, loop.full + 0.8);
+    drop(pl, 'sign_slow_kids', [q.x, q.z], q.ry + PI / 2, 0.2);
+  }
   const pts: [number, number][] = [];
   for (let s = 6; s < loop.length; s += 30) pts.push(xz(pl.net.frontage(loop, s, S, loop.full + 1)));
   poleLine(pl, pts, { h: 8.5, lamps: true });
