@@ -147,10 +147,10 @@ def yard_pool_kidney():
     k = Kit('yard_pool_kidney')
     N = 44
     shape = lambda g: kidney(3.7, 2.35, 0.32, N, g)
-    W, L = 10.4, 7.6
-    slab(k, W, L, 0.25, shape(0.40), N)
+    W, L = 10.5, 7.5        # 7 x 5 cells of the 1.5 m yard paving grid
+    slab(k, W, L, 0.02, shape(0.40), N)
     pool_shell(k, shape)
-    pavers(k, W - 0.1, L - 0.1, shape(0.5), 0.62, seed=3)
+    pavers(k, W, L, shape(0.5), 0.5, seed=3)
     ladder(k, -3.55, -0.5, -70)
     # a sunken step you can see through the water at the shallow end
     k.prism('by_tile2', [(x * 0.34 + 2.35, y * 0.5 - 0.35) for x, y in kidney(3.7, 2.35, 0.1, 16)], WATER - 0.035, WATER + 0.004)
@@ -162,16 +162,19 @@ def yard_pool_rect():
     k = Kit('yard_pool_rect')
     N = 56
     shape = lambda g: rrect_arc(8.2 + 2 * g, 3.9 + 2 * g, 0.8 + g, N)
-    W, L = 11.4, 6.6
-    slab(k, W, L, 0.15, shape(0.40), N, mat='by_conc', rect=rrect_arc)
+    W, L = 12.0, 7.5        # 8 x 5 cells of the 1.5 m yard paving grid
+    slab(k, W, L, 0.02, shape(0.40), N, mat='by_conc', rect=rrect_arc)
     pool_shell(k, shape, mat='by_conc')
     # expansion joints saw-cut across the deck
-    for i in range(-4, 5):
-        x = i * 1.27
+    for i in range(-3, 4):
+        x = i * 1.5
         for sy in (-1, 1):
-            k.ext('by_joint', x - 0.012, x + 0.012, sy * 2.42, sy * (L / 2 - 0.02), DECK - 0.01, DECK + 0.003)
+            k.ext('by_joint', x - 0.012, x + 0.012, sy * 2.42, sy * L / 2, DECK - 0.01, DECK + 0.003)
+    for sy in (-1, 1):
+        k.ext('by_joint', -W / 2, W / 2, sy * 3.0 - 0.012, sy * 3.0 + 0.012, DECK - 0.01, DECK + 0.003)
     for sx in (-1, 1):
-        k.ext('by_joint', sx * 4.56, sx * (W / 2 - 0.02), -0.012, 0.012, DECK - 0.01, DECK + 0.003)
+        k.ext('by_joint', sx * 4.56, sx * W / 2, -0.75 - 0.012, -0.75 + 0.012, DECK - 0.01, DECK + 0.003)
+        k.ext('by_joint', sx * 4.56, sx * W / 2, 0.75 - 0.012, 0.75 + 0.012, DECK - 0.01, DECK + 0.003)
     # lane line tiles on the floor and a rope of floats at the shallow break
     for y in (-0.9, 0.9):
         k.ext('by_tile', -3.4, 3.4, y - 0.09, y + 0.09, WATER - 0.03, WATER + 0.003)
@@ -476,15 +479,70 @@ def pool_toys():
     return k.done(G, height=0.4)
 
 
+def _pave(name, n, conc):
+    """n x n cells (1.5 m each) of yard paving that butts against the pool decks: terracotta pavers or saw-cut concrete."""
+    k = Kit(name)
+    S = 1.5 * n
+    k.ext('by_conc' if conc else 'by_grout', -S / 2, S / 2, -S / 2, S / 2, -0.35, DECK)
+    if conc:
+        for i in range(n + 1):
+            c = -S / 2 + i * 1.5
+            lo, hi = (c, c + 0.012) if i == 0 else (c - 0.012, c) if i == n else (c - 0.012, c + 0.012)
+            k.ext('by_joint', lo, hi, -S / 2, S / 2, DECK - 0.01, DECK + 0.003)
+            k.ext('by_joint', -S / 2, S / 2, lo, hi, DECK - 0.01, DECK + 0.003)
+    else:
+        pavers(k, S, S, None, 0.5, seed=7 + n)
+    return k.done(G, height=0.3)
+
+
+def yard_pave_tc(): return _pave('yard_pave_tc', 1, False)
+def yard_pave_tc2(): return _pave('yard_pave_tc2', 2, False)
+def yard_pave_conc(): return _pave('yard_pave_conc', 1, True)
+def yard_pave_conc2(): return _pave('yard_pave_conc2', 2, True)
+
+
+def bed_edging():
+    """1.5 m of soldier-course brick edging between paving and a planting bed, with the mulch behind it."""
+    k = Kit('bed_edging')
+    for i in range(7):
+        k.box('by_tc2' if i % 2 else 'by_tc3', -0.75 + (i + 0.5) * 1.5 / 7, 0.06, -0.1, 1.5 / 7 - 0.012, 0.11, 0.1 + DECK + 0.07, 0.01)
+    return k.done(G, height=0.3)
+
+
+def stepping_stones():
+    """Garden path: 3 m of irregular flagstones set in the lawn, running along Y."""
+    k = Kit('stepping_stones')
+    rnd = random.Random(5)
+    for i in range(5):
+        y = -1.2 + i * 0.6
+        n = 7
+        r0 = rnd.uniform(0.24, 0.3)
+        pts = [((r0 + rnd.uniform(-0.05, 0.05)) * math.cos(2 * math.pi * j / n) * 1.25 + rnd.uniform(-0.08, 0.08), (r0 + rnd.uniform(-0.04, 0.04)) * math.sin(2 * math.pi * j / n) + y) for j in range(n)]
+        k.prism('by_stone' if i % 2 else 'by_stone2', pts, -0.05, 0.035)
+    return k.done(G, height=0.1)
+
+
+def yard_planter():
+    """Big terracotta pot with a clipped shrub, for terraces and pool decks."""
+    k = Kit('yard_planter')
+    k.lathe('by_tc3', [(0.0, 0.0), (0.2, 0.0), (0.3, 0.42), (0.33, 0.42), (0.33, 0.5), (0.27, 0.5), (0.26, 0.44), (0.0, 0.44)], 12)
+    k.cyl('by_soil', 0, 0, 0.44, 0.26, 0.02, 12)
+    k.cyl('by_wood3', 0, 0, 0.45, 0.025, 0.3, 6)
+    k.cbox('by_leaf', 0, 0, 0.95, 0.56, 0.56, 0.56, 0.16)
+    k.cbox('by_leaf2', 0, 0, 0.95, 0.44, 0.44, 0.7, 0.14, rz=45)
+    return k.done(G, height=1.3)
+
+
 def build():
     for f in ALL:
         f()
 
 
-ALL = (yard_pool_kidney, yard_pool_rect, yard_patio, yard_patio_conc, yard_deck, pergola, picnic_table_yard, picnic_table_party, sun_lounger, adirondack_chair, swing_set_yard, raised_beds, hot_tub, pool_toys)
+ALL = (yard_pool_kidney, yard_pool_rect, yard_patio, yard_patio_conc, yard_deck, pergola, picnic_table_yard, picnic_table_party, sun_lounger, adirondack_chair, swing_set_yard, raised_beds, hot_tub, pool_toys, yard_pave_tc, yard_pave_tc2, yard_pave_conc, yard_pave_conc2, bed_edging, stepping_stones, yard_planter)
 SHEETS = [
     ('backyard_decks', ['yard_patio', 'yard_patio_conc', 'yard_deck', 'pergola'], 'shot', dict(elev=24, azim=-32, gap=1.0)),
     ('backyard_furn', ['picnic_table_party', 'picnic_table_yard', 'sun_lounger', 'adirondack_chair'], 'shot', dict(elev=22, azim=-32, gap=0.5)),
     ('backyard_play', ['swing_set_yard', 'raised_beds', 'hot_tub', 'pool_toys'], 'shot', dict(elev=24, azim=-32, gap=0.6)),
+    ('backyard_pave', ['yard_pave_tc', 'yard_pave_tc2', 'yard_pave_conc', 'yard_pave_conc2', 'bed_edging', 'stepping_stones', 'yard_planter'], 'shot', dict(elev=30, azim=-32, gap=0.5)),
     ('backyard_pools', ['yard_pool_kidney', 'yard_pool_rect'], 'shot', dict(elev=34, azim=-30, gap=1.0)),
 ]

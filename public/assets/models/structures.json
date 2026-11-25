@@ -173,6 +173,22 @@
   ],
   "tris": 632
  },
+ "bed_edging": {
+  "height": 0.3,
+  "min": [
+   -0.744,
+   0.005,
+   -0.1
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.488,
+   0.11,
+   0.37
+  ],
+  "tris": 308
+ },
  "boat_trailer": {
   "bunk_z": 0.6799999999999999,
   "hitch": [
@@ -4029,6 +4045,22 @@
   ],
   "tris": 1160
  },
+ "stepping_stones": {
+  "height": 0.1,
+  "min": [
+   -0.419,
+   -1.453,
+   -0.05
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.844,
+   2.946,
+   0.085
+  ],
+  "tris": 120
+ },
  "steps_wide": {
   "min": [
    -4.05,
@@ -4458,11 +4490,91 @@
   ],
   "tris": 132
  },
+ "yard_pave_conc": {
+  "height": 0.3,
+  "min": [
+   -0.75,
+   -0.75,
+   -0.35
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.5,
+   1.5,
+   0.553
+  ],
+  "tris": 60
+ },
+ "yard_pave_conc2": {
+  "height": 0.3,
+  "min": [
+   -1.5,
+   -1.5,
+   -0.35
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.0,
+   3.0,
+   0.553
+  ],
+  "tris": 84
+ },
+ "yard_pave_tc": {
+  "height": 0.3,
+  "min": [
+   -0.75,
+   -0.75,
+   -0.35
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.5,
+   1.5,
+   0.565
+  ],
+  "tris": 120
+ },
+ "yard_pave_tc2": {
+  "height": 0.3,
+  "min": [
+   -1.5,
+   -1.5,
+   -0.35
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.0,
+   3.0,
+   0.568
+  ],
+  "tris": 444
+ },
+ "yard_planter": {
+  "height": 1.3,
+  "min": [
+   -0.33,
+   -0.33,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.66,
+   0.66,
+   1.3
+  ],
+  "tris": 296
+ },
  "yard_pool_kidney": {
   "height": 1.2,
   "min": [
-   -5.2,
-   -3.8,
+   -5.25,
+   -3.75,
    -0.35
   ],
   "mount": "ground",
@@ -4474,17 +4586,17 @@
    2.5
   ],
   "size": [
-   10.4,
-   7.6,
+   10.5,
+   7.5,
    1.472
   ],
-  "tris": 3380
+  "tris": 4244
  },
  "yard_pool_rect": {
   "height": 1.2,
   "min": [
-   -5.7,
-   -3.3,
+   -6.0,
+   -3.75,
    -0.35
   ],
   "mount": "ground",
@@ -4496,8 +4608,8 @@
    2.2
   ],
   "size": [
-   11.4,
-   6.6,
+   12.0,
+   7.5,
    1.472
   ],
   "tris": 3560
