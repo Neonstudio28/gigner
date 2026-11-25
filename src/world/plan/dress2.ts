@@ -147,6 +147,16 @@ export function yards(pl: Placer) {
       if (rng.chance(0.3)) for (let i = 0; i < 3; i++) plant(s, 'flower_bed', -hw + 1.6 + i * 1.7, zb - yd + 1.2, 1, s.ry);
       for (let i = 0; i < 7; i++) plant(s, rng.pick(['weeds_a', 'weeds_b', 'grass_tall_a', 'grass_tall_b', 'dandelion_patch', 'dandelion_patch']), rng.pick([-1, 1]) * (hw - rng.range(0.3, 0.9)), zb - rng.range(0, yd), rng.range(0.8, 1.3));
     }
+    // the driveway: a hoop over the garage, the kids' bikes, a hose reel by the front wall
+    if (s.def.drive !== undefined) {
+      const dx = s.def.drive;
+      const zd = s.def.d / 2 + 0.6;
+      k.at(s.x, s.z, s.ry, () => {
+        if (rng.chance(0.22)) put(k, 'basketball_hoop', dx + rng.range(-0.4, 0.4), 0, zd, 0, { solid: 0.3 });
+        if (rng.chance(0.15)) put(k, rng.pick(['bicycle', 'bmx_bike']), dx + rng.range(-1.6, 1.6), 0, zd + rng.range(1.5, 4), rng.range(0, 6), { solid: false });
+        if (rng.chance(0.2)) put(k, 'garden_hose_reel', dx + rng.pick([-1, 1]) * 2.4, 0, s.def.d / 2 + 0.4, 0, { solid: 0.2 });
+      }, base);
+    }
     // foundation planting and a front-lawn tree
     for (const sd of [-1, 1]) {
       const m = rng.pick([0, 1, 2, 3]);

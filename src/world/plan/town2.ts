@@ -51,7 +51,7 @@ export function town(pl: Placer) {
   ridge(pl);
   flats(pl);
   trailerCourt(pl);
-  trailerCourt(pl, 'Sunset Loop', 'Sunset Acres', [1655, 60], 6161, [[1, 10, -10], [-1, 14, -14]]);
+  trailerCourt(pl, 'Sunset Loop', 'Sunset Acres', [1655, 60], 6161, [[1, 10, -10], [-1, 14, -14]], 'Sunset Ct');
   schools(pl);
   meadowbrook(pl);
   yards(pl);
