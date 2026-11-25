@@ -15,6 +15,7 @@ import { put } from '../b2/hull';
 import { yards } from './dress2';
 import { townsfolk } from './folk';
 import { DISTRICT } from '../b2/district';
+import { eateries } from './eats';
 import { farms, lumberYard, freight, lakefront, pylons } from './districts2';
 import { core } from './core';
 import { meadowbrook } from './meadow';
@@ -27,8 +28,8 @@ void PI;
 /** Flattens the building sites; must run before anything samples the terrain. */
 export function registerTownPads() {
   addFlatPad(0, -45, 170, 62, 30);
-  addFlatPad(-76, -250, 134, 132, 30);
-  addFlatPad(116, -252, 212, 140, 30);
+  addFlatPad(-660, 88, 134, 140, 30);
+  addFlatPad(1032, -110, 220, 142, 30);
 }
 
 /** Prop from the Blender families standing on the ground. */
@@ -41,7 +42,7 @@ export function town(pl: Placer) {
   core(pl);
   strip(pl);
   lakefront(pl);
-  farms(pl);
+  eateries(pl);
   pylons(pl);
   lumberYard(pl);
   freight(pl);
@@ -53,6 +54,8 @@ export function town(pl: Placer) {
   trailerCourt(pl);
   trailerCourt(pl, 'Sunset Loop', 'Sunset Acres', [1655, 60], 6161, [[1, 10, -10], [-1, 14, -14]], 'Sunset Ct');
   schools(pl);
+  // last of all, so the fields fit round everything already standing
+  farms(pl);
   meadowbrook(pl);
   yards(pl);
   streets(pl);

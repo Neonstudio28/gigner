@@ -634,3 +634,97 @@ export function furnishOffice(k: Kit, rng: Rng, a: number, b: number, doorX: num
   cabinet(k, 0, -b + 0.32, 0, Math.max(2, Math.floor(a * 1.4)));
   for (const s of [-1, 1]) plaque(k, s * (a - 0.02), 1.5, 0, 1.4, 0.9, rng.pick([0x6f8a9a, 0x8a7a5a, 0x4d5a4a]), (-s * Math.PI) / 2);
 }
+
+/**
+ * Fast-food dining room: order counter with tills under lit menu boards, a kitchen line behind a pass, booths
+ * along the windows, loose tables, a drinks station and a tray-return bin. `drive` is the side (±1) of the
+ * drive-through window, which gets its own till.
+ */
+export function furnishFastFood(k: Kit, rng: Rng, a: number, b: number, doorX: number, vinyl: Col, accent: Col, drive: 1 | -1 = 1) {
+  const cz = -b + 3.6;
+  const len = a * 2 - 3.2;
+  // order counter, tills, heat lamps and tray stacks
+  counter(k, -drive * 0.4, cz, len, 0, accent, 0xe9e2d2, 0.75, 1.02);
+  for (let i = 0; i < 3; i++) register(k, -drive * 0.4 - len / 2 + 1.2 + i * ((len - 2.4) / 2), cz, 0);
+  for (const s of [-1, 1]) k.box(-drive * 0.4 + s * (len / 2 - 0.35), 1.02, cz + 0.05, 0.4, 0.14, 0.32, 0x7a5a3c, 'paint', { cast: false });
+  // menu boards hung over the counter
+  for (let i = 0; i < 4; i++) {
+    const x = -drive * 0.4 - len / 2 + ((i + 0.5) * len) / 4;
+    k.box(x, 2.25, cz - 0.7, len / 4 - 0.12, 0.62, 0.08, 0x2a2623, 'paint', { rx: 0.18, cast: false });
+    k.box(x, 2.27, cz - 0.655, len / 4 - 0.2, 0.54, 0.02, i === 1 ? accent : 0xfff3c8, 'light', { rx: 0.18, cast: false });
+    for (let j = 0; j < 3; j++) k.box(x - len / 16 + 0.25, 2.34 + j * 0.13, cz - 0.64 + j * 0.025, len / 8, 0.05, 0.01, 0x3a2c20, 'paint', { rx: 0.18, cast: false });
+  }
+  // kitchen line against the back wall: fryers, grill, hood, prep table, shake machine
+  counter(k, 0, -b + 0.4, a * 2 - 1.2, 0, 0xb9bcc0, STEELC, 0.7, 0.92);
+  k.box(0, 1.95, -b + 0.45, a * 2 - 3, 0.5, 0.85, STEELC, 'metal');
+  for (let i = 0; i < 4; i++) k.box(-a + 2 + i * 0.75, 0.92, -b + 0.42, 0.6, 0.16, 0.55, 0x2a2a2c, 'paint', { cast: false });
+  k.box(a - 2.2, 0.92, -b + 0.42, 0.7, 0.85, 0.6, 0xe9e6dc, 'gloss');
+  k.box(drive * (a - 2.4) * 0 + 1.2, 0.92, -b + 0.42, 1.4, 0.06, 0.6, 0x3a3a3c, 'metal', { cast: false });
+  // the pass: a steel shelf with heat lamps between kitchen and counter
+  k.box(-drive * 0.4, 0, cz - 1.5, len - 1.6, 0.9, 0.6, STEELC, 'metal');
+  k.box(-drive * 0.4, 1.35, cz - 1.5, len - 1.6, 0.05, 0.6, STEELC, 'chrome');
+  for (const s of [-1, 1]) k.box(-drive * 0.4 + s * (len / 2 - 0.85), 0.9, cz - 1.5, 0.05, 0.45, 0.5, STEELC, 'chrome');
+  for (let i = 0; i < 3; i++) k.box(-drive * 0.4 - 1.6 + i * 1.6, 1.28, cz - 1.5, 0.5, 0.05, 0.3, 0xffb060, 'light', { cast: false });
+  low(k, -drive * 0.4, cz - 1.5, len - 1.6, 0.6);
+  // drive-through till at the side window
+  counter(k, drive * (a - 0.45), cz - 1.7, 1.6, Math.PI / 2, 0xb9bcc0, STEELC, 0.6, 1.0);
+  register(k, drive * (a - 0.45), cz - 1.7, (-drive * Math.PI) / 2);
+  // dining room: booths along the front glass and the far wall, loose tables between
+  for (let x = -a + 1.3; x < a - 1.0; x += 2.3) if (Math.abs(x - doorX) > 1.9) booth(k, x, b - 0.7, 0, vinyl);
+  for (let z = cz + 2.6; z < b - 2.2; z += 1.5) booth(k, -drive * (a - 0.7), z, Math.PI / 2, vinyl);
+  for (let x = -a + 3.2; x < a - 2.6; x += 2.6)
+    for (let z = cz + 2.6; z < b - 2.6; z += 2.4) if (Math.abs(x - doorX) > 1.2 || z < b - 4) tableSet(k, x + rng.range(-0.15, 0.15), z, 0xe9e2d2, vinyl);
+  // drinks station and the tray-return bin by the door
+  const sx = drive * (a - 0.45);
+  counter(k, sx, cz + 2.2, 1.8, Math.PI / 2, accent, 0xe9e2d2, 0.6, 0.95);
+  k.box(sx, 0.95, cz + 2.2, 0.45, 0.6, 1.2, 0x3b3f43, 'gloss');
+  for (let i = 0; i < 4; i++) k.box(sx - drive * 0.24, 1.15, cz + 1.75 + i * 0.3, 0.02, 0.22, 0.2, [0xc0392b, 0xe8c547, 0x3f9b5b, 0x2e86c1][i], 'light', { cast: false });
+  k.box(doorX + (doorX > 0 ? -1.5 : 1.5), 0, b - 0.4, 0.7, 1.15, 0.6, 0x7a5a3c, 'paint');
+  k.box(doorX + (doorX > 0 ? -1.5 : 1.5), 0.78, b - 0.72, 0.4, 0.22, 0.03, 0x2a2623, 'paint', { cast: false });
+  low(k, doorX + (doorX > 0 ? -1.5 : 1.5), b - 0.4, 0.7, 0.6);
+  for (const [px, col] of [[-a + 0.03, accent], [a - 0.03, 0xf4f1ea]] as const) plaque(k, px, 1.9, 1.2, 1.5, 0.9, col, px < 0 ? Math.PI / 2 : -Math.PI / 2);
+}
+
+/** Lakeside fish house: host stand, a long bar with stools, linen tables, a stone hearth and trophy fish. */
+export function furnishFishHouse(k: Kit, rng: Rng, a: number, b: number, doorX: number) {
+  // bar along the left wall
+  const len = b * 2 - 5;
+  k.at(-a + 0.25, -0.6, Math.PI / 2, () => {
+    k.box(0, 0, 0, len, 0.95, 0.45, DARKWOOD, 'gloss');
+    k.box(0, 0.95, -0.14, len, 1.4, 0.12, DARKWOOD);
+    for (const y of [0.97, 1.45, 1.9]) {
+      k.box(0, y - 0.03, 0.05, len, 0.03, 0.28, DARKWOOD);
+      bottles(k, rng, 0, y, 0.06, len - 0.3);
+    }
+    low(k, 0, 0, len, 0.45);
+  });
+  counter(k, -a + 1.9, -0.6, len, Math.PI / 2, DARKWOOD, 0x6b4428, 0.7, 1.08);
+  k.box(-a + 2.32, 0.18, -0.6, 0.04, 0.04, len, 0xc9a24a, 'metal');
+  for (let z = -0.6 - len / 2 + 0.6; z < -0.6 + len / 2 - 0.3; z += 0.95) stool(k, -a + 2.75, z, 0x5a2a22);
+  // kitchen pass at the back
+  counter(k, 2, -b + 0.4, a * 2 - 7, 0, 0xb9bcc0, STEELC, 0.7, 0.95);
+  k.box(2, 1.9, -b + 0.4, a * 2 - 8, 0.45, 0.7, STEELC, 'metal');
+  // hearth on the right wall
+  k.box(a - 0.45, 0, -b + 4, 0.9, 3.0, 2.4, 0x8a857c, 'stone');
+  k.box(a - 0.75, 0.3, -b + 4, 0.35, 0.9, 1.2, 0x1a1816, 'paint', { cast: false });
+  k.box(a - 0.7, 0.32, -b + 4, 0.2, 0.3, 0.8, 0xff8a3a, 'light', { cast: false });
+  k.box(a - 0.6, 1.4, -b + 4, 1.1, 0.12, 2.7, DARKWOOD);
+  low(k, a - 0.45, -b + 4, 0.9, 2.4, 3);
+  // dining tables in rows towards the lake windows
+  for (let x = -a + 5; x < a - 1.6; x += 2.7)
+    for (let z = -b + 3.4; z < b - 1.6; z += 2.5) {
+      if (x > a - 3.2 && z < -b + 6.5) continue;
+      if (Math.abs(x - doorX) < 1.8 && z > b - 3.6) continue;
+      table(k, x, z, 1.0, 1.0, 0xf1ede2);
+      k.cyl(x, 0.74, z, 0.05, 0.06, 0.16, 6, 0xffd97a, 'light');
+      for (const [dx, dz, r] of [[-0.78, 0, -Math.PI / 2], [0.78, 0, Math.PI / 2], [0, -0.78, 0], [0, 0.78, Math.PI]] as const) chair(k, x + dx, z + dz, r, DARKWOOD);
+    }
+  // host stand, trophy fish, oars and a ship's wheel
+  k.box(doorX + 1.6, 0, b - 1.3, 0.6, 1.1, 0.45, DARKWOOD, 'gloss');
+  low(k, doorX + 1.6, b - 1.3, 0.6, 0.45);
+  for (let i = 0; i < 3; i++) {
+    plaque(k, -2 + i * 3.2, 2.2, -b + 0.03, 1.3, 0.5, 0x6b4428);
+    k.box(-2 + i * 3.2, 2.2, -b + 0.08, 0.95, 0.24, 0.06, [0x7f9aa8, 0xb98e62, 0x6f8f6a][i], 'gloss', { cast: false });
+  }
+  k.torus(a - 0.06, 2.3, 1.5, 0.45, 0.05, 6, 14, 0x6b4428, 'paint', { ry: Math.PI / 2 });
+}

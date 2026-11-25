@@ -3,7 +3,8 @@ import type { Road } from '../roads/network';
 import type { Col } from '../core/kit';
 import { Rng } from '../core/rng';
 import { Placer } from './placer';
-import { heightAt, isWater, LAKE } from '../terrain';
+import { heightAt, isWater, LAKE, river, addFieldTint } from '../terrain';
+import { CROP_TILE, CROP_GROUND, type Crop } from '../crops';
 import { put } from '../b2/hull';
 import { HOUSES } from '../b2/houses';
 import { DISTRICT } from '../b2/district';
@@ -143,11 +144,67 @@ export function pylons(pl: Placer) {
   for (let i = 0; i < towers.length - 1; i++) for (let j = 0; j < towers[i].length; j++) cable(k, towers[i][j], towers[i + 1][j], 0.022, 0.035);
 }
 
-function farm(pl: Placer, r: Road, x: number, z: number, seed: number, o: { corn?: boolean; cows?: number; silo?: boolean; stock?: 'pigs' | 'horses' | 'sheep' | 'goats' } = {}) {
+type FarmO = { crops: Crop[]; cows?: number; silo?: boolean; stock?: 'pigs' | 'horses' | 'sheep' | 'goats'; name: string; half?: [number, number]; back?: number };
+
+/** Crop tiles already planted, hashed on a coarse grid, so neighbouring farms never plant the same ground twice. */
+const planted = new Map<string, [number, number][]>();
+const isPlanted = (x: number, z: number) => {
+  for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const [px, pz] of planted.get(`${Math.floor(x / 16) + i},${Math.floor(z / 16) + j}`) ?? []) if (Math.abs(px - x) < CROP_TILE && Math.abs(pz - z) < CROP_TILE) return true;
+  return false;
+};
+
+/** Plants a field (frame rectangle) with one crop, tile by tile, leaving out tiles on roads, water, buildings or steep ground. */
+function field(pl: Placer, f: Frame, rng: Rng, crop: Crop, x0: number, x1: number, z0: number, z1: number) {
+  const T = CROP_TILE;
+  const nx = Math.floor((x1 - x0) / T);
+  const nz = Math.floor((z1 - z0) / T);
+  if (nx < 2 || nz < 2) return;
+  let n = 0;
+  const kept: [number, number][] = [];
+  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+    const [x, z] = Placer.world(f.x, f.z, f.ry, x0 + (i + 0.5) * T, z0 + (j + 0.5) * T);
+    if (Math.hypot(x, z) > 1780 || isPlanted(x, z)) continue;
+    let ok = true;
+    const hs: number[] = [];
+    for (const [dx, dz] of [[0, 0], [-T / 2, -T / 2], [T / 2, -T / 2], [-T / 2, T / 2], [T / 2, T / 2]]) {
+      const [px, pz] = [x + dx, z + dz];
+      if (isWater(px, pz) || pl.c.occ.blocked(px, pz, 1.5) || pl.net.near(px, pz).some((h) => Math.abs(h.lat) < h.road.full + 2.5)) { ok = false; break; }
+      hs.push(heightAt(px, pz));
+    }
+    if (!ok || Math.max(...hs) - Math.min(...hs) > 1.5) continue;
+    const rv = river.query(x, z);
+    if (rv && rv.dist < rv.hw + 14) continue;
+    pl.cropTiles.push({ x, z, ry: f.ry, crop });
+    addFieldTint(x, z, T, f.ry, CROP_GROUND[crop]);
+    kept.push([x, z]);
+    n++;
+  }
+  for (const [x, z] of kept) {
+    const k = `${Math.floor(x / 16)},${Math.floor(z / 16)}`;
+    if (!planted.has(k)) planted.set(k, []);
+    planted.get(k)!.push([x, z]);
+  }
+  if (!n) return;
+  const [cx, cz] = Placer.world(f.x, f.z, f.ry, (x0 + x1) / 2, (z0 + z1) / 2);
+  pl.cornFields.push({ x: cx, z: cz, w: x1 - x0, d: z1 - z0, ry: f.ry, crop });
+  // what stands in the field: scarecrows in the corn, round bales on the cut hay and stubble
+  const spot = (name: string, solid: boolean | number = false) => at(pl, f, name, rng.range(x0 + 8, x1 - 8), rng.range(z0 + 8, z1 - 8), rng.range(0, 6), solid);
+  if (crop === 'corn' || crop === 'sunflower' || crop === 'veg') spot('scarecrow');
+  if (crop === 'stubble' || crop === 'hay') for (let i = 0; i < (crop === 'stubble' ? 14 : 5); i++) spot(rng.chance(0.75) ? 'hay_bale_round' : 'hay_bale_square', 0.8);
+}
+
+function farm(pl: Placer, r: Road, seed: number, o: FarmO) {
   const rng = new Rng(seed);
-  const f = beside(pl, r, x, z, r.full + 16);
+  // the yard stands at the end of the lane: local +z looks back down it, and the lane runs in to the gravel at (-14, 15)
+  const e = r.pts[r.pts.length - 1];
+  const ry = Math.atan2(-e.tx, -e.tz);
+  const [ox, oz] = Placer.world(e.x, e.z, ry, 14, -15);
+  const f: Frame = { x: ox, z: oz, ry };
   const k = pl.k;
-  clearing(pl, f, -86, 112, (o.corn ?? true) ? -132 : -50, 18);
+  const [hl, hr] = o.half ?? [200, 200];
+  const back = o.back ?? 150;
+  const Ln = r.length;
+  clearing(pl, f, -hl - 6, hr + 6, -58 - back - 6, Ln + 10);
   build(pl, f, rng.pick(HOUSES), 0, 0, 0, seed);
   build(pl, f, D('barn'), -30, -26, 0, seed + 1);
   build(pl, f, D('machineShed'), -38, -1, PI / 2, seed + 2);
@@ -185,33 +242,56 @@ function farm(pl: Placer, r: Road, x: number, z: number, seed: number, o: { corn
     at(pl, f, 'hay_bale_round', -53, -14, 0.3);
     tree(pl, f, 'oak_large', -66, -22, 0.9);
   }
-  if (o.corn ?? true) {
-    const [cx, cz] = Placer.world(f.x, f.z, f.ry, 40, -88);
-    pl.cornFields.push({ x: cx, z: cz, w: 130, d: 70, ry: f.ry });
-    at(pl, f, 'scarecrow', 6, -62, 0, false);
-    fence(pl, f, [[-22, -48], [78, -48]]);
-  }
   if (o.stock) livestock(pl, f, rng, o.stock);
   // shelter belt and yard trees
   for (let i = 0; i < 6; i++) tree(pl, f, 'poplar_tall', 30, -30 + i * 7, rng.range(0.8, 1));
   for (const [tx, tz, kind] of [[-9, 9, 'maple_large'], [10, 8, 'oak_medium'], [-4, -14, 'apple_tree'], [3, -18, 'apple_tree'], [22, 2, 'birch_cluster']] as const) tree(pl, f, kind, tx, tz, rng.range(0.85, 1.05));
-  fence(pl, f, [[-48, 13], [-12, 13]], 0xf1ede2);
+  fence(pl, f, [[-48, 13], [-19, 13]], 0xf1ede2);
+  fence(pl, f, [[-9, 13], [12, 13]], 0xf1ede2);
   fence(pl, f, [[12, 13], [34, 13], [34, -44]], 0xf1ede2);
-  pl.landmarks.push({ name: rng.pick(['Hansen Farm', 'Miller Farm', 'Okafor Farm', 'Lindqvist Farm', 'Cedar Row Farm', 'Whitlock Farm', 'Sorensen Farm', 'Twin Oaks Farm']), x: f.x, z: f.z, kind: 'farm' });
+  pl.landmarks.push({ name: o.name, x: f.x, z: f.z, kind: 'farm' });
+  // the fields: either side of the lane, either side of the yard, and one great field behind it
+  const [c1, c2, c3, c4, c5] = o.crops;
+  const side = o.stock ? 90 : 42;
+  field(pl, f, rng, c1, -hl, -25, 24, Ln - 4);
+  field(pl, f, rng, c2, -3, hr, 24, Ln - 4);
+  field(pl, f, rng, c3, -hl, hr, -58 - back, -58);
+  field(pl, f, rng, c4, -hl, -92, -52, 20);
+  field(pl, f, rng, c5, side, hr, -52, 20);
+  // wire fence and a pole line down the lane, a mailbox and name board where it leaves the county road
+  for (const sd of [-1, 1]) {
+    const pts: [number, number][] = [];
+    for (let s0 = 14; s0 <= Ln - 6; s0 += 12) {
+      const q = r.at(s0);
+      pts.push([q.x - q.tz * sd * 5.2, q.z + q.tx * sd * 5.2]);
+    }
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [ax, az] = pts[i];
+      const [bx, bz] = pts[i + 1];
+      k.at(0, 0, 0, () => railFence(k, ax, az, bx, bz, 0x7a6248), heightAt((ax + bx) / 2, (az + bz) / 2));
+    }
+  }
+  const g = r.at(11);
+  k.at(g.x - g.tz * 4.2, g.z + g.tx * 4.2, Math.atan2(g.tx, g.tz), () => put(k, 'mailbox_post', 0, 0, 0, 0, { solid: 0.2 }), heightAt(g.x - g.tz * 4.2, g.z + g.tx * 4.2));
+  for (let i = 0; i < 5; i++) {
+    const q = r.at(20 + i * ((Ln - 30) / 4));
+    const [tx, tz] = [q.x + q.tz * 8.5, q.z - q.tx * 8.5];
+    if (rng.chance(0.7)) pl.trees.push({ kind: rng.pick(['oak_large', 'maple_large', 'poplar_tall']), x: tx, z: tz, s: rng.range(0.85, 1.05), ry: rng.range(0, 6) });
+  }
 }
 
 export function farms(pl: Placer) {
+  planted.clear();
   const R = (n: string) => pl.net.byName(n);
-  farm(pl, R('Orchard Rd'), 200, -400, 301);
-  farm(pl, R('Orchard Rd'), 440, -280, 302, { cows: 0, stock: 'pigs' });
-  farm(pl, R('Hansen Rd'), -220, -500, 303);
-  farm(pl, R('Hansen Rd'), -470, -360, 304, { corn: false, cows: 9, stock: 'horses' });
-  farm(pl, R('County Rd 5'), -60, -560, 305);
-  farm(pl, R('Miller Dairy Rd'), -1500, 110, 306, { cows: 10, corn: false, stock: 'sheep' });
-  farm(pl, R('Ridgeview Ln'), -1150, -110, 307);
-  farm(pl, R('Eastside Rd'), 1210, -240, 308, { stock: 'pigs' });
-  farm(pl, R('Homestead Rd'), 1340, 170, 309, { cows: 5, stock: 'horses' });
-  farm(pl, R('Cougar Creek Rd'), -1010, 200, 310, { silo: false, stock: 'goats' });
+  farm(pl, R('Hansen Farm Ln'), 301, { name: 'Hansen Farm', crops: ['corn', 'wheat', 'corn', 'hay', 'sunflower'], cows: 8 });
+  farm(pl, R('Lindqvist Farm Ln'), 302, { name: 'Lindqvist Farm', crops: ['wheat', 'hay', 'wheat', 'veg', 'stubble'], cows: 0, stock: 'pigs', back: 60 });
+  farm(pl, R('Okafor Farm Ln'), 303, { name: 'Okafor Farm', crops: ['sunflower', 'corn', 'wheat', 'veg', 'hay'], back: 170 });
+  farm(pl, R('Whitlock Farm Ln'), 304, { name: 'Whitlock Farm', crops: ['hay', 'stubble', 'corn', 'wheat', 'veg'], cows: 9, stock: 'horses' });
+  farm(pl, R('Sorensen Farm Ln'), 305, { name: 'Sorensen Farm', crops: ['corn', 'wheat', 'stubble', 'hay', 'corn'] });
+  farm(pl, R('Miller Dairy Ln'), 306, { name: 'Miller Dairy', crops: ['hay', 'corn', 'hay', 'wheat', 'stubble'], cows: 12, stock: 'sheep' });
+  farm(pl, R('Twin Oaks Farm Ln'), 307, { name: 'Twin Oaks Farm', crops: ['wheat', 'sunflower', 'corn', 'veg', 'hay'], silo: false, stock: 'goats' });
+  farm(pl, R('Cedar Row Farm Ln'), 308, { name: 'Cedar Row Farm', crops: ['corn', 'wheat', 'hay', 'sunflower', 'corn'], stock: 'pigs' });
+  farm(pl, R('Homestead Farm Ln'), 309, { name: 'Homestead Farm', crops: ['wheat', 'corn', 'stubble', 'hay', 'veg'], cows: 5, stock: 'horses' });
 }
 
 /** Gravel pad over a rectangle of a lot frame (skips anything built). */

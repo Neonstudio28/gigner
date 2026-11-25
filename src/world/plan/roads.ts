@@ -70,6 +70,22 @@ function alley(i: number, side: 1 | -1, to?: number): Pt[] {
   return [hit(f.left), to === undefined ? hit(f.right) : [f.x + f.ux * to + f.nx * ALLEY, f.z + f.uz * to + f.nz * ALLEY]];
 }
 
+/** Humps and pot-holes of a dirt track (m), fading in over the first metres off the county road. */
+const bumpy = (_x: number, _z: number, s: number) => Math.min(1, Math.max(0, (s - 5) / 10)) * (0.17 * Math.sin(s * 0.47) + 0.11 * Math.sin(s * 1.31 + 1.3) + 0.07 * Math.sin(s * 2.9));
+
+/** Farm lanes [name, points]: each starts on a county road and ends at its farmyard in the middle of the fields. */
+export const FARM_LANES: [string, Pt[]][] = [
+  ['Hansen Farm Ln', [[-320, -428], [-326, -490], [-314, -560], [-320, -626]]],
+  ['Lindqvist Farm Ln', [[-150, -436], [-144, -390], [-154, -340], [-150, -296]]],
+  ['Okafor Farm Ln', [[-6, -520], [70, -526], [150, -516], [226, -522]]],
+  ['Whitlock Farm Ln', [[460, -340], [466, -400], [456, -470], [462, -540]]],
+  ['Sorensen Farm Ln', [[-1198, -140], [-1204, -200], [-1194, -260], [-1200, -316]]],
+  ['Miller Dairy Ln', [[-1450, 130], [-1444, 190], [-1456, 250], [-1450, 316]]],
+  ['Twin Oaks Farm Ln', [[-1060, 120], [-1120, 126], [-1180, 116], [-1240, 122]]],
+  ['Cedar Row Farm Ln', [[1150, -220], [1210, -214], [1280, -226], [1346, -220]]],
+  ['Homestead Farm Ln', [[1400, 230], [1406, 290], [1394, 350], [1400, 410]]],
+];
+
 /** Every road in Pine Hollow. */
 export const ROADS: RoadDef[] = [
   // ---------------------------------------------------------------- Highway 10 -> the strip -> Main Street
@@ -147,6 +163,8 @@ export const ROADS: RoadDef[] = [
   { name: 'Sunset Loop', label: 'Sunset Acres', kind: 'gravel', pts: [[1600, -6], [1596, 50], [1612, 96], [1652, 120], [1700, 108], [1720, 60], [1704, 10], [1690, -17]] },
   { name: 'Sunset Ct', kind: 'gravel', pts: [[1596, 50], [1640, 54], [1688, 58]], culdesac: true },
   { name: 'Homestead Rd', kind: 'gravel', pts: [[1400, 10], [1402, 110], [1400, 230]], culdesac: true },
+  // farm lanes: long, narrow, rutted dirt tracks from the county roads in to each farmyard
+  ...FARM_LANES.map(([name, pts]): RoadDef => ({ name, kind: 'dirt', pts, elev: bumpy })),
 ];
 
 export function buildNetwork(): RoadNetwork {

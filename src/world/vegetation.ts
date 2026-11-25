@@ -6,6 +6,7 @@ import { groundHeight, forestDensity, valley, isWater, river, MAP_RADIUS } from 
 import { addWindSway } from './materials';
 import { P } from './palette';
 import { asset, hasAsset } from './assets';
+import { CROPS, cropMid, cropHi, type Crop } from './crops';
 
 export type TreeKind = 'fir' | 'pine' | 'oak' | 'bush' | 'young' | 'apple';
 /** A generic kind, or the name of one model from the vegetation family. */
@@ -408,7 +409,9 @@ export interface PlacedTree {
 export interface VegetationInput {
   occ: Occupancy;
   trees: PlacedTree[];
-  cornFields: { x: number; z: number; w: number; d: number; ry: number }[];
+  cornFields: { x: number; z: number; w: number; d: number; ry: number; crop?: Crop }[];
+  /** Crop tiles (CROP_TILE square, rows along local z), one instance each. */
+  cropTiles?: { x: number; z: number; ry: number; crop: Crop }[];
   grassPatches: { x: number; z: number; w: number; d: number; n: number }[];
   /** Open ground (farmyards, substation) where the forest scatter must not plant trees. */
   clearings?: { x: number; z: number; w: number; d: number }[];
@@ -593,7 +596,9 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
     add(cover(), x, groundHeight(x, z), z, rng.range(0, 6), rng.range(0.7, 1.4));
   }
 
+  for (const t of input.cropTiles ?? []) add(`crop_${t.crop}`, t.x, groundHeight(t.x, t.z), t.z, t.ry, 1, rng.range(0.94, 1.08));
   for (const f of input.cornFields) {
+    if (f.crop) continue;
     const c = Math.cos(f.ry);
     const s = Math.sin(f.ry);
     const [du, dv] = models ? [0.95, 3.6] : [1.25, 0.9];
@@ -631,7 +636,10 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
       // rocks, logs and stumps do not move in the wind
       still: [mk('still-mid', 0, 0, -1), mk('still-near', 0, 0, 1), mk('still', 0, 0, 0)],
     };
+    const cornRow = hasAsset('corn_row_far') ? modelGeo('corn_row_far') : undefined;
+    for (const crop of CROPS) defs[`crop_${crop}`] = { geo: cropMid(crop), mat: mats.small[0], cat: 'corn', low: null, hi: { geo: cropHi(crop, cornRow), mat: mats.small[1] } };
     for (const name of items.keys()) {
+      if (name.startsWith('crop_')) continue;
       const cat = catOf(name);
       const set = /^(rock|boulder|shore|stump|log|firewood|branch|mushroom)/.test(name) ? mats.still : cat === 'tree' ? mats.tree : mats.small;
       const far = asset(name)!.info.far as string | undefined;
@@ -652,6 +660,7 @@ export function createVegetation(input: VegetationInput): { veg: Vegetation; tre
       grass1: [grassGeo(10), null],
       corn0: [cornGeo(11), null],
     };
+    for (const crop of CROPS) defs[`crop_${crop}`] = { geo: cropHi(crop), mat: lowMat, cat: 'corn', low: null };
     for (const [k, [geo, low]] of Object.entries(old)) {
       const cat: Cat = k.startsWith('grass') ? 'grass' : k.startsWith('bush') ? 'bush' : k.startsWith('corn') ? 'corn' : 'tree';
       defs[k] = { geo, mat: cat === 'tree' ? treeMat : lowMat, cat, low };
