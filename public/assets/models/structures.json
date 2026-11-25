@@ -60,6 +60,22 @@
   ],
   "tris": 420
  },
+ "adirondack_chair": {
+  "height": 1.0,
+  "min": [
+   -0.4,
+   -0.456,
+   -0.004
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.8,
+   0.975,
+   0.988
+  ],
+  "tris": 292
+ },
  "antenna_tv": {
   "min": [
    -0.85,
@@ -156,6 +172,22 @@
    3.945
   ],
   "tris": 632
+ },
+ "bed_edging": {
+  "height": 0.3,
+  "min": [
+   -0.744,
+   0.005,
+   -0.1
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.488,
+   0.11,
+   0.37
+  ],
+  "tris": 308
  },
  "boat_trailer": {
   "bunk_z": 0.6799999999999999,
@@ -1615,6 +1647,22 @@
   ],
   "tris": 788
  },
+ "hot_tub": {
+  "height": 1.3,
+  "min": [
+   -1.106,
+   -1.7,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.212,
+   3.111,
+   1.252
+  ],
+  "tris": 1480
+ },
  "house_frame_a": {
   "floor": 0.3,
   "height": 3.05,
@@ -2113,6 +2161,56 @@
   ],
   "tris": 372
  },
+ "pergola": {
+  "height": 2.85,
+  "min": [
+   -2.5,
+   -1.95,
+   -0.1
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   5.0,
+   3.9,
+   2.915
+  ],
+  "tris": 1164
+ },
+ "picnic_table_party": {
+  "height": 1.1,
+  "min": [
+   -0.92,
+   -0.874,
+   -0.026
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.84,
+   1.748,
+   1.133
+  ],
+  "surface": 0.76,
+  "tris": 1502
+ },
+ "picnic_table_yard": {
+  "height": 0.76,
+  "min": [
+   -0.92,
+   -0.874,
+   -0.026
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.84,
+   1.748,
+   0.786
+  ],
+  "surface": 0.76,
+  "tris": 516
+ },
  "pier_end_ladder": {
   "deck_z": 0.9,
   "min": [
@@ -2463,6 +2561,22 @@
   "tris": 1616,
   "water_z": -0.15
  },
+ "pool_toys": {
+  "height": 0.4,
+  "min": [
+   -1.7,
+   -1.2,
+   -0.005
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.925,
+   2.3,
+   0.407
+  ],
+  "tris": 828
+ },
  "porch_bracket": {
   "anchor": "corner",
   "min": [
@@ -2626,6 +2740,22 @@
    1.53
   ],
   "tris": 872
+ },
+ "raised_beds": {
+  "height": 1.4,
+  "min": [
+   -1.47,
+   -1.32,
+   -0.08
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   2.94,
+   2.64,
+   1.48
+  ],
+  "tris": 3956
  },
  "roof_billboard": {
   "face": [
@@ -3915,6 +4045,22 @@
   ],
   "tris": 1160
  },
+ "stepping_stones": {
+  "height": 0.1,
+  "min": [
+   -0.419,
+   -1.453,
+   -0.05
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.844,
+   2.946,
+   0.085
+  ],
+  "tris": 120
+ },
  "steps_wide": {
   "min": [
    -4.05,
@@ -3962,6 +4108,38 @@
    0.493
   ],
   "tris": 788
+ },
+ "sun_lounger": {
+  "height": 0.8,
+  "min": [
+   -0.32,
+   -0.95,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.64,
+   1.914,
+   0.757
+  ],
+  "tris": 412
+ },
+ "swing_set_yard": {
+  "height": 2.25,
+  "min": [
+   -1.679,
+   -0.976,
+   -0.012
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   6.079,
+   1.952,
+   2.197
+  ],
+  "tris": 568
  },
  "tarp_heap": {
   "height": 1.0,
@@ -4262,5 +4440,178 @@
    1.4
   ],
   "tris": 416
+ },
+ "yard_deck": {
+  "height": 1.6,
+  "min": [
+   -2.54,
+   -2.69,
+   -0.3
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   5.08,
+   4.49,
+   1.875
+  ],
+  "top": 0.55,
+  "tris": 3108
+ },
+ "yard_patio": {
+  "height": 0.1,
+  "min": [
+   -2.7,
+   -2.1,
+   -0.3
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   5.4,
+   4.2,
+   0.388
+  ],
+  "tris": 588
+ },
+ "yard_patio_conc": {
+  "height": 0.1,
+  "min": [
+   -2.5,
+   -2.0,
+   -0.3
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   5.0,
+   4.0,
+   0.373
+  ],
+  "tris": 132
+ },
+ "yard_pave_conc": {
+  "height": 0.3,
+  "min": [
+   -0.75,
+   -0.75,
+   -0.35
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.5,
+   1.5,
+   0.553
+  ],
+  "tris": 60
+ },
+ "yard_pave_conc2": {
+  "height": 0.3,
+  "min": [
+   -1.5,
+   -1.5,
+   -0.35
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.0,
+   3.0,
+   0.553
+  ],
+  "tris": 84
+ },
+ "yard_pave_tc": {
+  "height": 0.3,
+  "min": [
+   -0.75,
+   -0.75,
+   -0.35
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   1.5,
+   1.5,
+   0.565
+  ],
+  "tris": 120
+ },
+ "yard_pave_tc2": {
+  "height": 0.3,
+  "min": [
+   -1.5,
+   -1.5,
+   -0.35
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   3.0,
+   3.0,
+   0.568
+  ],
+  "tris": 444
+ },
+ "yard_planter": {
+  "height": 1.3,
+  "min": [
+   -0.33,
+   -0.33,
+   0.0
+  ],
+  "mount": "ground",
+  "parts": {},
+  "size": [
+   0.66,
+   0.66,
+   1.3
+  ],
+  "tris": 296
+ },
+ "yard_pool_kidney": {
+  "height": 1.2,
+  "min": [
+   -5.25,
+   -3.75,
+   -0.35
+  ],
+  "mount": "ground",
+  "parts": {},
+  "pool": [
+   0,
+   0,
+   3.9,
+   2.5
+  ],
+  "size": [
+   10.5,
+   7.5,
+   1.472
+  ],
+  "tris": 4244
+ },
+ "yard_pool_rect": {
+  "height": 1.2,
+  "min": [
+   -6.0,
+   -3.75,
+   -0.35
+  ],
+  "mount": "ground",
+  "parts": {},
+  "pool": [
+   0,
+   0,
+   4.3,
+   2.2
+  ],
+  "size": [
+   12.0,
+   7.5,
+   1.472
+  ],
+  "tris": 3560
  }
 }

@@ -57,6 +57,8 @@ interface Brand {
   signInk: string;
   top: (c: Ctx, w: number, d: number, H: number) => void;
   y0?: number;
+  /** Carry-out shop: no drive-through window on the right wall. */
+  noPick?: boolean;
 }
 
 const sig = (c: Ctx, b: Brand, key: string, x: number, y: number, z: number, w: number, h = 0.9, lamps = 0) =>
@@ -86,7 +88,7 @@ function fastFood(b: Brand) {
           k.cone(px, 0.6, 1.3, 0.38, 0.6, 7, 0x4f7a3f, 'paint');
         }
       });
-      face(k, 'r', w, d, () => {
+      if (!b.noPick) face(k, 'r', w, d, () => {
         // pick-up window: bumped-out bay, shelf, awning and a lit sign over it
         k.box(0, 0.18, 0.2, 2.3, 0.82, 0.4, b.wall, b.wallMat);
         k.box(0, 1.0, 0.42, 1.9, 0.06, 0.5, 0xc9ccd0, 'chrome');
@@ -180,6 +182,88 @@ const BRANDS: Brand[] = [
       k.cone(cx, H + 0.5, cz, 0.75, 1.9, 10, 0xd9a05b, 'paint', { rx: PI });
       for (const [r, y] of [[0.95, 2.4], [0.78, 2.95], [0.58, 3.4], [0.36, 3.8]] as const) k.cyl(cx, H + y, cz, r * 0.7, r, 0.55, 10, 0xfdf6e8, 'gloss');
       k.cone(cx, H + 4.3, cz, 0.24, 0.5, 8, 0xfdf6e8, 'gloss');
+    } },
+  // --- the three national chains as they were built in small towns around 1990 ---
+  { id: 'pizzaHutch', name: 'Pizza Hutch', w: 16, d: 12, wall: 0x7a4a36, wallMat: 'brickRed', frame: 0x3a2c20, accent: 0xb3262e, vinyl: 0x8f2424, look: { ...L_FAST, wall: 0xe4d3b0, wains: 0x4f3222, floor: 0x6f2a26, floorMat: 'carpet', lights: 'pendant', step: 2.8 }, sign: 'PIZZA HUTCH', signBg: '#b3262e', signInk: '#fff6e0',
+    top: (c, w, d, H) => {
+      const k = c.kit;
+      const RED = 0xb02a22;
+      // the hat: a broad shallow brim over the walls, then a steep crown with a flat top
+      mansard(k, w, d, H, 0.9, RED, 'shingle', 1.0, 3.2);
+      mansard(k, w - 6.2, d - 6.2, H + 0.9, 1.9, RED, 'shingle', 0.05, 0.9);
+      k.box(0, H + 2.78, 0, w - 7.8, 0.14, d - 7.8, 0x8a211b);
+      // lit roof sign in the shape of the roof itself, on both street sides
+      const b = BRANDS.find((x) => x.id === 'pizzaHutch')!;
+      face(k, 'f', w, d, () => {
+        k.box(0, H + 1.05, -2.2, 6.4, 0.16, 0.5, 0x8a211b);
+        sig(c, b, 'f', 0, H + 1.2, -2.2, 5.6, 0.9, 3);
+        k.box(0, H + 2.1, -2.2, 6.4, 0.22, 0.34, RED, 'gloss');
+        k.box(0, H + 2.3, -2.2, 3.6, 0.5, 0.3, RED, 'gloss');
+      });
+      face(k, 'l', w, d, () => sig(c, b, 'l', 0, H + 1.2, -2.2, 4.6, 0.8));
+      // brick piers between the windows and lantern lamps by the door
+      face(k, 'f', w, d, (len) => {
+        for (const px of spread(5, len - 0.5)) k.box(px, 0.18, 0.12, 0.5, H - 0.18, 0.24, 0x6a3f2e, 'brickRed');
+        for (const px of [-len / 2 + 1.2, -len / 2 + 3.2]) {
+          k.box(px, 2.3, 0.3, 0.2, 0.34, 0.2, 0x2a2622, 'metal');
+          k.box(px, 2.34, 0.3, 0.14, 0.24, 0.14, 0xffe2a0, 'gloss', { cast: false });
+        }
+      });
+    } },
+  { id: 'burgerBaron', name: 'Burger Baron', w: 16, d: 12, wall: 0xb08a66, wallMat: 'brickTan', frame: 0x4a3a2c, accent: 0x2b5ea8, vinyl: 0xc26a2a, look: { ...L_FAST, wall: 0xf0e2c6, wains: 0x8a5a36, floor: 0x9a5a3a }, sign: 'BURGER BARON', signBg: '#fff3d6', signInk: '#c8322c',
+    top: (c, w, d, H) => {
+      const k = c.kit;
+      const BLUE = 0x2b5ea8;
+      // blue standing-seam mansard over a red light band
+      mansard(k, w, d, H, 1.5, BLUE, 'roofMetal', 0.5, 0.8);
+      for (const [fc, ln] of [['f', w], ['b', w], ['l', d], ['r', d]] as const) face(k, fc, w, d, () => k.box(0, H - 0.42, 0.06, ln + 0.1, 0.3, 0.1, 0xc8322c, 'gloss', { cast: false }));
+      const b = BRANDS.find((x) => x.id === 'burgerBaron')!;
+      // bun-halves logo on the mansard, front and side
+      const bun = (key: string, x: number) => {
+        k.cyl(x, H + 0.72, 0.62, 1.35, 1.35, 0.16, 16, 0xe89a2c, 'gloss', { rx: PI / 2 - 0.3 });
+        sig(c, b, key, x, H + 0.5, 0.86, 3.4, 0.62);
+      };
+      face(k, 'f', w, d, () => bun('f', 2.2));
+      face(k, 'l', w, d, () => bun('l', 0));
+      // the greenhouse dining room: a glazed lean-to across the front windows
+      face(k, 'f', w, d, (len) => {
+        const [gx, gw, gd, gh] = [1.4, len - 6.6, 2.5, 2.3];
+        const BR = 0x4a3a2c;
+        k.box(gx, 0.16, gd / 2, gw, 0.5, gd, 0xb08a66, 'brickTan');
+        k.box(gx, 0.66, gd - 0.04, gw - 0.1, gh - 0.66, 0.04, 0x9fc4cf, 'glass', { cast: false });
+        for (const sx of [-1, 1]) k.box(gx + sx * (gw / 2 - 0.03), 0.66, gd / 2, 0.04, gh - 0.66, gd - 0.1, 0x9fc4cf, 'glass', { cast: false });
+        k.box(gx, gh + 0.42, gd / 2 - 0.05, gw, 0.05, gd + 0.35, 0x9fc4cf, 'glass', { rx: 0.36, cast: false });
+        for (const px of spread(Math.max(3, Math.round(gw / 1.3)), gw)) {
+          k.box(gx + px, 0.66, gd - 0.02, 0.08, gh - 0.66, 0.1, BR);
+          k.box(gx + px, gh + 0.45, gd / 2 - 0.05, 0.08, 0.08, gd + 0.4, BR, undefined, { rx: 0.36 });
+        }
+        k.box(gx, gh, gd - 0.02, gw + 0.08, 0.1, 0.12, BR);
+        k.solid(gx, gd / 2, gw, gd);
+      });
+    } },
+  { id: 'domingos', name: "Domingo's Pizza", w: 10, d: 8, noPick: true, wall: 0xf2efe6, wallMat: 'stucco', frame: 0x2456a6, accent: 0x2456a6, vinyl: 0xc8322c, look: { ...L_FAST, wall: 0xf7f3ea, wains: 0x2456a6, floor: 0xd8d3c6 }, sign: "DOMINGO'S PIZZA", signBg: '#fdfbf4', signInk: '#2456a6',
+    top: (c, w, d, H) => {
+      const k = c.kit;
+      parapetRoof(k, w, d, H, { wall: 0xf2efe6, wallMat: 'stucco', h: 0.7, cap: 0x2456a6 });
+      // red-over-blue stripes all the way round under the parapet
+      for (const [fc, ln] of [['f', w], ['b', w], ['l', d], ['r', d]] as const)
+        face(k, fc, w, d, () => {
+          k.box(0, H - 0.34, 0.05, ln + 0.08, 0.26, 0.08, 0xc8322c, 'gloss', { cast: false });
+          k.box(0, H - 0.64, 0.05, ln + 0.08, 0.26, 0.08, 0x2456a6, 'gloss', { cast: false });
+        });
+      const b = BRANDS.find((x) => x.id === 'domingos')!;
+      face(k, 'f', w, d, (len) => {
+        // the domino tile: red half with one pip, blue half with two, tilted on the parapet
+        const [tx, ty] = [-len / 2 + 1.7, H + 0.55];
+        k.box(tx - 0.42, ty, 0.2, 0.8, 0.8, 0.14, 0xc8322c, 'gloss');
+        k.box(tx + 0.42, ty, 0.2, 0.8, 0.8, 0.14, 0x2456a6, 'gloss');
+        for (const [px, py] of [[-0.42, 0.4], [0.22, 0.6], [0.62, 0.2]]) k.cyl(tx + px, ty + py, 0.28, 0.11, 0.11, 0.04, 10, 0xffffff, 'gloss', { rx: PI / 2, cast: false });
+        sig(c, b, 'f', 1.3, H + 0.1, 0.1, 5.6, 0.62, 2);
+        awning(k, -len / 2 + 2.2, 2.75, 2.6, { a: 0x2456a6, b: 0xc8322c, proj: 1.0, drop: 0.45 });
+        signBoard(c, 'domingos.promise', 1.6, 0.5, 0.08, 3.2, 0.36, '#c8322c', [{ text: '30 MINUTES OR IT’S FREE', font: F_OS, weight: '800', color: '#ffffff', y: 0.58, size: 0.6, maxW: 0.92 }], {});
+        // insulated delivery bags stacked by the door
+        for (let i = 0; i < 3; i++) k.box(len / 2 - 1.9, 0.16 + i * 0.16, 0.5, 0.6, 0.15, 0.6, 0xc8322c, 'paint');
+      });
     } },
 ];
 

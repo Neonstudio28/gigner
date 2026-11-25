@@ -30,6 +30,9 @@ const EATS: Eatery[] = [
   { id: 'cluckers', road: 'Old Hwy 10 W', at: [-618, -40], label: "CLUCKER'S", strap: 'FRIED CHICKEN · BUCKET 7.99', bg: '#f6f1e4', ink: '#c0272d', menu: ['2 PC DINNER  2.99', 'BUCKET  7.99', 'BISCUIT  .39', 'SLAW  .89', 'ICED TEA  .69'] },
   { id: 'tacoShack', road: 'Old Hwy 10 E', at: [1096, -20], label: 'TACO SHACK', strap: 'TACOS 59¢ · OPEN LATE', bg: '#d9862b', ink: '#4a1f6a', menu: ['TACO  .59', 'BURRITO  1.29', 'NACHOS  1.49', 'TOSTADA  .99', 'COLA  .69'] },
   { id: 'dairyDream', road: 'Lakeshore Dr', at: [-172, 320], label: 'DAIRY DREAM', strap: 'CONES · SHAKES · SUNDAES', bg: '#f6f1e4', ink: '#2f5f95', menu: ['CONE  .60', 'DIP CONE  .85', 'SUNDAE  1.35', 'SHAKE  1.25', 'HOT DOG  .99'], walkUp: true },
+  { id: 'pizzaHutch', road: 'E Main St', at: [388, 40], label: 'PIZZA HUTCH', strap: 'PAN PIZZA · SALAD BAR · BOOK CLUB', bg: '#b3262e', ink: '#fff6e0', menu: ['PERSONAL PAN  1.99', 'LARGE PAN  9.99', 'BREADSTICKS  1.79', 'SALAD BAR  2.99', 'PITCHER  2.75'] },
+  { id: 'burgerBaron', road: 'Old Hwy 10 E', at: [444, 40], label: 'BURGER BARON', strap: 'FLAME BROILED · HAVE IT YOUR WAY', bg: '#fff3d6', ink: '#c8322c', menu: ['WHAMMER  .99', 'DBL CHEESE  1.49', 'ONION RINGS  .89', 'CHICKEN TENDERS  1.99', 'COLA  .69'] },
+  { id: 'domingos', road: 'Old Hwy 10 E', at: [492, 40], label: "DOMINGO'S", strap: 'DELIVERY · 30 MIN OR FREE · 555-3030', bg: '#fdfbf4', ink: '#2456a6', menu: ['MEDIUM  5.99', 'LARGE  7.99', '2 LARGE  10.99', 'COLA 2L  1.29'], walkUp: true },
 ];
 
 /** Frontage frame on the side of the road facing (x, z), at the road point nearest it. */
